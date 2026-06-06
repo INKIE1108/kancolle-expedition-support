@@ -1200,3 +1200,186 @@ button.small,
     width: 100%;
   }
 }
+
+/* v1.4: mobile UI / v1.5 account / v2.0 server notification foundation */
+.account-card {
+  border-color: rgba(120, 220, 255, 0.24);
+  background: linear-gradient(135deg, rgba(11, 24, 45, 0.96), rgba(6, 33, 42, 0.94));
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.4fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.account-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.account-form input {
+  min-width: 0;
+}
+
+.cloud-message {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(4, 13, 31, 0.54);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.mobile-tabbar {
+  display: none;
+}
+
+.compact-fleets .fleet-card {
+  gap: 12px;
+}
+
+.compact-fleets .fleet-card .helper-text,
+.compact-fleets .fleet-card .fleet-pinned-shortcuts,
+.compact-fleets .fleet-card .mini-info div:nth-child(2),
+.compact-fleets .fleet-card .mini-info div:nth-child(3) {
+  display: none;
+}
+
+.compact-fleets .fleet-card .timer-box {
+  padding: 16px;
+}
+
+.compact-fleets .fleet-card .timer-box strong {
+  font-size: clamp(2rem, 6vw, 3.3rem);
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    padding: 16px 12px 92px;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .hero-clock {
+    width: 100%;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .account-grid,
+  .settings-grid,
+  .guide-layout,
+  .two-column,
+  .section-head,
+  .pwa-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-form,
+  .custom-preset-form,
+  .search-row-v04 {
+    grid-template-columns: 1fr;
+  }
+
+  .preset-grid,
+  .guide-recommendations,
+  .fleet-grid,
+  .daily-total-grid,
+  .resource-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fleet-card {
+    padding: 18px;
+  }
+
+  .timer-box strong {
+    font-size: clamp(2.6rem, 14vw, 4.8rem);
+  }
+
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tabbar {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid rgba(134, 197, 255, 0.28);
+    border-radius: 20px;
+    background: rgba(8, 18, 36, 0.92);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+  }
+
+  .mobile-tabbar button {
+    padding: 12px 6px;
+    border-radius: 14px;
+    font-size: 0.86rem;
+  }
+
+  .mobile-tabbar button.active {
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+    color: white;
+  }
+
+  .mobile-tab-timers .account-card,
+  .mobile-tab-timers .pwa-card,
+  .mobile-tab-timers .settings-card,
+  .mobile-tab-timers .preset-card,
+  .mobile-tab-timers .guide-card,
+  .mobile-tab-timers .detail-search-fold,
+  .mobile-tab-timers .log-card {
+    display: none;
+  }
+
+  .mobile-tab-assist .account-card,
+  .mobile-tab-assist .pwa-card,
+  .mobile-tab-assist .settings-card,
+  .mobile-tab-assist .preset-card,
+  .mobile-tab-assist .fleet-grid,
+  .mobile-tab-assist .detail-search-fold,
+  .mobile-tab-assist .log-card {
+    display: none;
+  }
+
+  .mobile-tab-search .account-card,
+  .mobile-tab-search .pwa-card,
+  .mobile-tab-search .settings-card,
+  .mobile-tab-search .preset-card,
+  .mobile-tab-search .guide-card,
+  .mobile-tab-search .fleet-grid,
+  .mobile-tab-search .log-card {
+    display: none;
+  }
+
+  .mobile-tab-account .fleet-grid,
+  .mobile-tab-account .preset-card,
+  .mobile-tab-account .guide-card,
+  .mobile-tab-account .detail-search-fold {
+    display: none;
+  }
+
+  .mobile-tab-account .account-card,
+  .mobile-tab-account .pwa-card,
+  .mobile-tab-account .settings-card,
+  .mobile-tab-account .log-card {
+    display: block;
+  }
+}

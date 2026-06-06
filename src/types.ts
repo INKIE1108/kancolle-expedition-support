@@ -43,4 +43,5 @@ export type FleetTimer = {
 export type AppSettings = {
   discordWebhookUrl: string;
   discordNotifyMode?: "direct" | "server";
+  serverNotificationMode?: "off" | "supabase";
 };

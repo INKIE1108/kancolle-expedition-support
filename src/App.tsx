@@ -5,6 +5,17 @@ import type { AppSettings, Expedition, FleetTimer, ResourceRewards } from "./typ
 import { formatClock, formatDateTime, formatRemaining, minutesToLabel } from "./utils/time";
 import { loadFromStorage, saveToStorage } from "./utils/storage";
 import {
+  buildRewardSummary,
+  getCurrentAuthState,
+  isSupabaseConfigured,
+  loadCloudSnapshot,
+  saveCloudSnapshot,
+  scheduleCloudNotification,
+  supabase,
+  type AuthState,
+  type CloudSnapshot
+} from "./utils/cloud";
+import {
   requestPcNotificationPermission,
   sendDiscordNotification,
   sendPcNotification
@@ -59,9 +70,11 @@ type GuideMode =
   | "授業・バイト"
   | "短時間";
 
-type CollapsibleKey = "pwa" | "notifications" | "presets" | "strategy" | "details" | "log";
+type CollapsibleKey = "account" | "pwa" | "notifications" | "presets" | "strategy" | "details" | "log";
 
 type CollapseState = Record<CollapsibleKey, boolean>;
+
+type MobileTab = "timers" | "assist" | "search" | "account";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -114,6 +127,7 @@ const sortModes: SortMode[] = [
 const guideModes: GuideMode[] = ["燃料", "弾薬", "鋼材", "ボーキ", "バケツ", "寝る前", "授業・バイト", "短時間"];
 
 const defaultCollapsedPanels: CollapseState = {
+  account: false,
   pwa: false,
   notifications: true,
   presets: false,
@@ -145,7 +159,8 @@ const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
 
 const initialSettings: AppSettings = {
   discordWebhookUrl: "",
-  discordNotifyMode: "direct"
+  discordNotifyMode: "direct",
+  serverNotificationMode: "off"
 };
 
 const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授業・バイト" | "短時間">, keyof ResourceRewards> = {
@@ -243,6 +258,16 @@ function getGuideDescription(mode: GuideMode): string {
   return `${mode}の時給目安が高い遠征を優先表示。資材不足の時の候補探し向け。`;
 }
 
+function buildDiscordContent(fleet: FleetTimer, expedition: Expedition, endAt: number): string {
+  return [
+    `⏰ **第${fleet.fleetNo}艦隊 遠征完了**`,
+    `遠征：${expedition.name}`,
+    `終了予定：${formatDateTime(endAt)}`,
+    `報酬目安：${buildRewardSummary(expedition.rewards)}`,
+    `補給・再出発は手動で確認してね。`
+  ].join("\n");
+}
+
 function App() {
   const [expeditions, setExpeditions] = useState<Expedition[]>(fallbackExpeditions);
   const [dataStatus, setDataStatus] = useState<"loading" | "external" | "fallback" | "error">("loading");
@@ -285,6 +310,15 @@ function App() {
     return window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true;
   });
   const [updateReady, setUpdateReady] = useState<boolean>(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("timers");
+  const [compactFleetCards, setCompactFleetCards] = useState<boolean>(() =>
+    loadFromStorage("kancolle-expedition-compact-fleet-v1", false)
+  );
+  const [authState, setAuthState] = useState<AuthState>({ session: null, user: null });
+  const [authEmail, setAuthEmail] = useState<string>("");
+  const [authPassword, setAuthPassword] = useState<string>("");
+  const [cloudSyncBusy, setCloudSyncBusy] = useState<boolean>(false);
+  const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
 
   const allPresets = useMemo(() => [...defaultPresets, ...customPresets], [customPresets]);
   const expeditionTags = useMemo(
@@ -445,6 +479,21 @@ function App() {
   }, [collapsedPanels]);
 
   useEffect(() => {
+    saveToStorage("kancolle-expedition-compact-fleet-v1", compactFleetCards);
+  }, [compactFleetCards]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    getCurrentAuthState().then(setAuthState).catch(() => undefined);
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthState({ session, user: session?.user ?? null });
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     const handleInstallPrompt = (event: Event) => {
@@ -572,6 +621,26 @@ function App() {
     const endAt = startAt + expedition.durationMinutes * 60 * 1000;
     updateFleet(fleet.fleetNo, { startAt, endAt, notifiedAt: null, recordedAt: null });
     addLog(`開始: 第${fleet.fleetNo}艦隊 ${expedition.name}`);
+
+    if (fleet.discordNotify && settings.serverNotificationMode === "supabase") {
+      if (!authState.user) {
+        addLog("サーバー側通知はログイン後に予約できるよ");
+        return;
+      }
+      scheduleCloudNotification({
+        userId: authState.user.id,
+        fleetNo: fleet.fleetNo,
+        expeditionId: expedition.id,
+        expeditionName: expedition.name,
+        endAt,
+        content: buildDiscordContent(fleet, expedition, endAt)
+      })
+        .then(() => addLog(`サーバー側通知を予約: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : "サーバー側通知予約に失敗";
+          addLog(message);
+        });
+    }
   }
 
   function restartFleet(fleet: FleetTimer) {
@@ -662,11 +731,11 @@ function App() {
   }
 
   function openAllPanels() {
-    setCollapsedPanels({ pwa: false, notifications: false, presets: false, strategy: false, details: false, log: false });
+    setCollapsedPanels({ account: false, pwa: false, notifications: false, presets: false, strategy: false, details: false, log: false });
   }
 
   function compactAssistPanels() {
-    setCollapsedPanels({ pwa: false, notifications: true, presets: true, strategy: true, details: false, log: true });
+    setCollapsedPanels({ account: false, pwa: true, notifications: true, presets: true, strategy: true, details: false, log: true });
   }
 
   async function installPwa() {
@@ -694,7 +763,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "1.3.0",
+      version: "2.0.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -737,6 +806,116 @@ function App() {
     }
   }
 
+  function createCloudSnapshot(): CloudSnapshot {
+    return {
+      fleets,
+      settings,
+      pinnedExpeditionIds,
+      customPresets,
+      history,
+      collapsedPanels,
+      savedAt: new Date().toISOString(),
+      appVersion: "2.0.0"
+    };
+  }
+
+  async function signUp() {
+    if (!supabase) {
+      setCloudSyncMessage("Supabase環境変数が未設定です");
+      return;
+    }
+    if (!authEmail.trim() || !authPassword.trim()) {
+      setCloudSyncMessage("メールアドレスとパスワードを入力してね");
+      return;
+    }
+    setCloudSyncBusy(true);
+    try {
+      const { error } = await supabase.auth.signUp({ email: authEmail.trim(), password: authPassword });
+      if (error) throw error;
+      setCloudSyncMessage("アカウント作成を受け付けたよ。メール確認が必要な設定ならメールも確認してね。");
+      addLog("提督アカウント作成");
+    } catch (error) {
+      setCloudSyncMessage(error instanceof Error ? error.message : "アカウント作成に失敗");
+    } finally {
+      setCloudSyncBusy(false);
+    }
+  }
+
+  async function signIn() {
+    if (!supabase) {
+      setCloudSyncMessage("Supabase環境変数が未設定です");
+      return;
+    }
+    if (!authEmail.trim() || !authPassword.trim()) {
+      setCloudSyncMessage("メールアドレスとパスワードを入力してね");
+      return;
+    }
+    setCloudSyncBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword });
+      if (error) throw error;
+      setCloudSyncMessage("ログインしたよ");
+      addLog("提督アカウントでログイン");
+    } catch (error) {
+      setCloudSyncMessage(error instanceof Error ? error.message : "ログインに失敗");
+    } finally {
+      setCloudSyncBusy(false);
+    }
+  }
+
+  async function signOut() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setCloudSyncMessage("ログアウトしたよ");
+    addLog("ログアウト");
+  }
+
+  async function saveCloud() {
+    if (!authState.user) {
+      setCloudSyncMessage("クラウド保存はログイン後に使えるよ");
+      return;
+    }
+    setCloudSyncBusy(true);
+    try {
+      await saveCloudSnapshot(authState.user.id, createCloudSnapshot());
+      setCloudSyncMessage("クラウドへ保存したよ");
+      addLog("クラウド保存完了");
+    } catch (error) {
+      setCloudSyncMessage(error instanceof Error ? error.message : "クラウド保存に失敗");
+    } finally {
+      setCloudSyncBusy(false);
+    }
+  }
+
+  async function loadCloud() {
+    if (!authState.user) {
+      setCloudSyncMessage("クラウド読込はログイン後に使えるよ");
+      return;
+    }
+    const ok = window.confirm("クラウド保存データで現在のローカル設定を上書きしますか？");
+    if (!ok) return;
+    setCloudSyncBusy(true);
+    try {
+      const snapshot = await loadCloudSnapshot(authState.user.id);
+      if (!snapshot) {
+        setCloudSyncMessage("クラウド保存データはまだないよ");
+        return;
+      }
+      setFleets(snapshot.fleets ?? initialFleets);
+      setSettings((snapshot.settings as AppSettings) ?? initialSettings);
+      setPinnedExpeditionIds(snapshot.pinnedExpeditionIds ?? []);
+      setCustomPresets((snapshot.customPresets as ExpeditionPreset[]) ?? []);
+      setHistory((snapshot.history as ExpeditionHistory[]) ?? []);
+      setCollapsedPanels((snapshot.collapsedPanels as CollapseState) ?? defaultCollapsedPanels);
+      setCloudSyncMessage(`クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）`);
+      addLog("クラウド読込完了");
+    } catch (error) {
+      setCloudSyncMessage(error instanceof Error ? error.message : "クラウド読込に失敗");
+    } finally {
+      setCloudSyncBusy(false);
+    }
+  }
+
   async function testDiscord() {
     const dummyFleet: FleetTimer = {
       fleetNo: 2,
@@ -759,13 +938,13 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v1.3</p>
+          <p className="eyebrow">KanColle Expedition Support v2.0</p>
           <h1>艦これ遠征サポート</h1>
           <p>
-            遠征タイマー、終了予定時刻、PC通知、Discord通知、成功条件確認、攻略支援、帰投記録、PWA、Web公開対応、バックアップをまとめた手動操作前提ツール。
+            遠征タイマー、終了予定時刻、PC通知、Discord通知、成功条件確認、攻略支援、帰投記録、PWA、ログイン同期、サーバー側通知の土台をまとめた手動操作前提ツール。
             現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
@@ -778,8 +957,46 @@ function App() {
         <div className="hero-actions">
           <button type="button" className="secondary small" onClick={compactAssistPanels}>補助機能を折りたたむ</button>
           <button type="button" className="ghost small" onClick={openAllPanels}>すべて開く</button>
+          <button type="button" className="ghost small" onClick={() => setCompactFleetCards((value) => !value)}>
+            {compactFleetCards ? "通常カード" : "簡易カード"}
+          </button>
         </div>
       </header>
+
+      <details
+        className="account-card fold-card"
+        open={!collapsedPanels.account}
+        onToggle={(event) => handlePanelToggle("account", event.currentTarget.open)}
+      >
+        <summary className="fold-summary">
+          <span><small>Account / Cloud</small><strong>提督ログイン・クラウド同期</strong></span>
+          <em>{collapsedPanels.account ? "開く" : "閉じる"}</em>
+        </summary>
+        <div className="fold-content account-grid">
+          <div>
+            <h2>提督アカウント</h2>
+            <p>Supabaseを設定すると、お気に入り・プリセット・履歴などを提督ごとにクラウド保存できる。未設定なら今まで通りこのブラウザ内だけで使えるよ。</p>
+            <p className="helper-text">状態：{isSupabaseConfigured ? (authState.user ? `ログイン中：${authState.user.email}` : "Supabase設定済み / 未ログイン") : "Supabase未設定"}</p>
+          </div>
+          <div className="account-form">
+            {!authState.user ? (
+              <>
+                <input value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="メールアドレス" type="email" />
+                <input value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="パスワード" type="password" />
+                <button type="button" onClick={signIn} disabled={!isSupabaseConfigured || cloudSyncBusy}>ログイン</button>
+                <button type="button" className="secondary" onClick={signUp} disabled={!isSupabaseConfigured || cloudSyncBusy}>新規登録</button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={saveCloud} disabled={cloudSyncBusy}>クラウドへ保存</button>
+                <button type="button" className="secondary" onClick={loadCloud} disabled={cloudSyncBusy}>クラウドから読込</button>
+                <button type="button" className="ghost" onClick={signOut}>ログアウト</button>
+              </>
+            )}
+          </div>
+          <div className="cloud-message">{cloudSyncMessage || "v1.5相当：ログインと提督別データ保存の土台。RLS付きSupabaseテーブルを作ると使える。"}</div>
+        </div>
+      </details>
 
       <details
         className="pwa-card fold-card"
@@ -848,11 +1065,21 @@ function App() {
             type="password"
             disabled={settings.discordNotifyMode === "server"}
           />
+          <select
+            value={settings.serverNotificationMode ?? "off"}
+            onChange={(event) =>
+              setSettings((current) => ({ ...current, serverNotificationMode: event.target.value as AppSettings["serverNotificationMode"] }))
+            }
+            title="サーバー側通知"
+          >
+            <option value="off">端末内タイマー通知</option>
+            <option value="supabase">サーバー側通知予約</option>
+          </select>
           <button className="secondary" onClick={testDiscord} disabled={settings.discordNotifyMode !== "server" && !settings.discordWebhookUrl.trim()}>
             Discordテスト
           </button>
         </div>
-        <p className="helper-text">安全モードはVercelの環境変数 DISCORD_WEBHOOK_URL にWebhook URLを保存して、ブラウザにはURLを置かない方式。未設定なら個人URLモードを使ってね。</p>
+        <p className="helper-text">安全モードはVercelの環境変数 DISCORD_WEBHOOK_URL にWebhook URLを保存して、ブラウザにはURLを置かない方式。サーバー側通知予約はSupabaseログイン後、遠征開始時に通知予定をDBへ保存する。</p>
         </div>
       </details>
 
@@ -1304,6 +1531,13 @@ function App() {
         </aside>
         </section>
       </details>
+
+      <nav className="mobile-tabbar" aria-label="スマホ用ナビゲーション">
+        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => setMobileTab("timers")}>タイマー</button>
+        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => setMobileTab("assist")}>攻略</button>
+        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => setMobileTab("search")}>一覧</button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => setMobileTab("account")}>設定</button>
+      </nav>
 
       <details
         className="log-card fold-card"
