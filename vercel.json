@@ -3,7 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!assets/|icon.svg|icon-192.png|icon-512.png|manifest.webmanifest|sw.js|robots.txt).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|data/|assets/|icon.svg|icon-192.png|icon-512.png|manifest.webmanifest|sw.js|robots.txt).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

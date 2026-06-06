@@ -1,53 +1,56 @@
-# 艦これ遠征サポート v1.1
+# 艦これ遠征サポート v1.3
 
 艦これの遠征タイマー、終了予定時刻、PC通知、Discord通知、成功条件確認、攻略支援、帰投記録、PWA、バックアップをまとめた手動操作前提ツールです。
 
-v1.1では、Vercel / Cloudflare Pages / GitHub Pages へ公開しやすい構成を追加しました。
+## v1.2 / v1.3 の主な変更
 
-## できること
+- v1.2: 遠征データをJSON化
+  - 実データ: `public/data/expeditions.json`
+  - フォールバック: `src/data/expeditions-fallback.json`
+  - 起動時に `/data/expeditions.json` を読み込み、失敗時は内蔵フォールバックで継続します。
+- v1.3: Discord Webhook安全モードを追加
+  - `api/discord-notify.js` 経由で通知します。
+  - VercelのEnvironment Variablesに `DISCORD_WEBHOOK_URL` を設定すると、ブラウザ側にWebhook URLを保存せずに通知できます。
+  - 既存の「個人URLモード」も残してあります。
 
-- 第2〜第4艦隊の遠征タイマー管理
-- 全63件の遠征データ表示
-- お気に入り追加・解除・並び替え
-- おすすめ遠征セット
-- カスタムプリセット作成
-- 攻略支援
-- 今日の獲得資材記録
-- PC通知
-- Discord Webhook通知
-- PWAインストール
-- オフライン用Service Worker
-- 設定バックアップ書き出し/読み込み
-- 補助パネルの折りたたみ表示
-
-## ローカル実行
+## ローカル起動
 
 ```bash
 npm install
 npm run dev
 ```
 
-表示されたURLをブラウザで開きます。
-
-## 本番ビルド確認
+## ビルド確認
 
 ```bash
-npm run deploy:check
+npm run build
 npm run preview
 ```
 
 ## Web公開
 
-詳しい手順は [DEPLOY.md](./DEPLOY.md) を見てください。
-
-おすすめは Vercel です。
+Vercel推奨です。
 
 - Build Command: `npm run build`
 - Output Directory: `dist`
 - Framework: `Vite`
 
+## Discord安全モードの使い方
+
+1. Vercel Dashboardを開く
+2. 対象Projectを開く
+3. Settings → Environment Variables
+4. Name: `DISCORD_WEBHOOK_URL`
+5. Value: DiscordのWebhook URL
+6. Environment: Production / Preview / Development 必要に応じて選択
+7. Save
+8. DeploymentsからRedeploy、またはGitHubへpushして再デプロイ
+9. アプリの通知設定で「安全モード」を選び、Discordテストを押す
+
+## ユーザーログインについて
+
+現時点ではログイン機能は未実装です。提督ごとのデータ管理を入れる場合は、Supabase Auth + Supabase Database、または Firebase Authentication + Firestore が候補です。
+
 ## 注意
 
-このツールは艦これ本体の通信取得、自動クリック、自動補給、自動遠征再出発などは行いません。補給や再出発はユーザーが手動で行う前提です。
-
-遠征条件は更新・検証変更が起こる可能性があります。マンスリー遠征やドラム缶系遠征は、出撃前に最新情報も確認してください。
+このツールは艦これ本体の通信取得・自動操作・補給/再出発の自動クリックは行いません。補給、再出発、編成確認は手動で行う前提です。

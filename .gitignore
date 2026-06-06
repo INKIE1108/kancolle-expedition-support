@@ -9,3 +9,5 @@ pnpm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+# ZIP配布時の環境依存ロックファイル混入防止
+package-lock.json

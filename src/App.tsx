@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
-import { expeditionTags, expeditions } from "./data/expeditions";
+import { expeditions as fallbackExpeditions } from "./data/expeditions";
 import type { AppSettings, Expedition, FleetTimer, ResourceRewards } from "./types";
 import { formatClock, formatDateTime, formatRemaining, minutesToLabel } from "./utils/time";
 import { loadFromStorage, saveToStorage } from "./utils/storage";
@@ -134,7 +134,7 @@ const backupStorageKeys = [
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
   fleetNo: fleetNo as 2 | 3 | 4,
-  expeditionId: expeditions[0]?.id ?? "",
+  expeditionId: fallbackExpeditions[0]?.id ?? "",
   startAt: null,
   endAt: null,
   notifiedAt: null,
@@ -144,7 +144,8 @@ const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
 }));
 
 const initialSettings: AppSettings = {
-  discordWebhookUrl: ""
+  discordWebhookUrl: "",
+  discordNotifyMode: "direct"
 };
 
 const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授業・バイト" | "短時間">, keyof ResourceRewards> = {
@@ -154,8 +155,8 @@ const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授
   ボーキ: "bauxite"
 };
 
-function getExpedition(expeditionId: string): Expedition {
-  return expeditions.find((item) => item.id === expeditionId) ?? expeditions[0];
+function getFallbackExpedition(expeditionId: string): Expedition {
+  return fallbackExpeditions.find((item) => item.id === expeditionId) ?? fallbackExpeditions[0];
 }
 
 function getResourceRate(expedition: Expedition): ResourceRewards {
@@ -192,7 +193,7 @@ function addResources(a: ResourceRewards, b: ResourceRewards): ResourceRewards {
 
 function getPresetRates(preset: ExpeditionPreset): ResourceRewards {
   return Object.values(preset.fleetExpeditionIds).reduce<ResourceRewards>(
-    (total, expeditionId) => addResources(total, getResourceRate(getExpedition(expeditionId))),
+    (total, expeditionId) => addResources(total, getResourceRate(getFallbackExpedition(expeditionId))),
     { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
   );
 }
@@ -243,6 +244,10 @@ function getGuideDescription(mode: GuideMode): string {
 }
 
 function App() {
+  const [expeditions, setExpeditions] = useState<Expedition[]>(fallbackExpeditions);
+  const [dataStatus, setDataStatus] = useState<"loading" | "external" | "fallback" | "error">("loading");
+  const [dataMessage, setDataMessage] = useState<string>("遠征データJSONを読み込み中...");
+
   const [fleets, setFleets] = useState<FleetTimer[]>(() =>
     loadFromStorage(FLEET_STORAGE_KEY, initialFleets)
   );
@@ -258,7 +263,7 @@ function App() {
   const [history, setHistory] = useState<ExpeditionHistory[]>(() =>
     loadFromStorage(HISTORY_STORAGE_KEY, [])
   );
-  const [selectedDetailId, setSelectedDetailId] = useState<string>(expeditions[0]?.id ?? "");
+  const [selectedDetailId, setSelectedDetailId] = useState<string>(fallbackExpeditions[0]?.id ?? "");
   const [tagFilter, setTagFilter] = useState<string>("すべて");
   const [keyword, setKeyword] = useState<string>("");
   const [sortMode, setSortMode] = useState<SortMode>(() => loadFromStorage(SORT_STORAGE_KEY, "ID順" as SortMode));
@@ -282,10 +287,26 @@ function App() {
   const [updateReady, setUpdateReady] = useState<boolean>(false);
 
   const allPresets = useMemo(() => [...defaultPresets, ...customPresets], [customPresets]);
+  const expeditionTags = useMemo(
+    () => Array.from(new Set(expeditions.flatMap((expedition) => expedition.purposeTags))).sort(),
+    [expeditions]
+  );
 
-  const pinnedExpeditions = useMemo(
-    () => pinnedExpeditionIds.map(getExpedition).filter(Boolean),
-    [pinnedExpeditionIds]
+  function findExpedition(expeditionId: string): Expedition {
+    return expeditions.find((item) => item.id === expeditionId) ?? fallbackExpeditions[0];
+  }
+
+  function getPresetRatesFor(preset: ExpeditionPreset): ResourceRewards {
+    return Object.values(preset.fleetExpeditionIds).reduce<ResourceRewards>(
+      (total, expeditionId) => addResources(total, getResourceRate(findExpedition(expeditionId))),
+      { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
+    );
+  }
+
+
+  const pinnedExpeditions = useMemo<Expedition[]>(
+    () => pinnedExpeditionIds.map((id) => findExpedition(id)).filter(Boolean),
+    [pinnedExpeditionIds, expeditions]
   );
 
   const filteredExpeditions = useMemo(() => {
@@ -350,9 +371,9 @@ function App() {
       .slice(0, 6);
   }, [guideMode]);
 
-  const selectedDetail = getExpedition(selectedDetailId);
+  const selectedDetail = findExpedition(selectedDetailId);
   const totalExpeditionCount = expeditions.length;
-  const activeExpeditions = fleets.map((fleet) => getExpedition(fleet.expeditionId));
+  const activeExpeditions = fleets.map((fleet) => findExpedition(fleet.expeditionId));
   const activeHourlyTotal = activeExpeditions.reduce<ResourceRewards>(
     (total, expedition) => addResources(total, getResourceRate(expedition)),
     { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
@@ -364,6 +385,36 @@ function App() {
   );
   const todayGreatCount = todayHistory.filter((item) => item.result === "great").length;
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExpeditionsJson() {
+      try {
+        const response = await fetch(`${import.meta.env.BASE_URL}data/expeditions.json`, { cache: "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const parsed = (await response.json()) as Expedition[];
+        if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("遠征データJSONが空です");
+        if (!cancelled) {
+          setExpeditions(parsed);
+          setDataStatus("external");
+          setDataMessage(`${parsed.length}件を /data/expeditions.json から読み込み`);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "不明なエラー";
+          setExpeditions(fallbackExpeditions);
+          setDataStatus("fallback");
+          setDataMessage(`外部JSON読込失敗: ${message}。内蔵データで継続`);
+        }
+      }
+    }
+
+    loadExpeditionsJson();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     saveToStorage(FLEET_STORAGE_KEY, fleets);
@@ -438,14 +489,14 @@ function App() {
     if (completedFleets.length === 0) return;
 
     completedFleets.forEach((fleet) => {
-      const expedition = getExpedition(fleet.expeditionId);
+      const expedition = findExpedition(fleet.expeditionId);
 
       if (fleet.pcNotify) {
         sendPcNotification(fleet, expedition);
       }
 
       if (fleet.discordNotify) {
-        sendDiscordNotification(settings.discordWebhookUrl, fleet, expedition)
+        sendDiscordNotification(settings.discordWebhookUrl, fleet, expedition, settings.discordNotifyMode)
           .then(() => addLog(`Discord通知: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
           .catch((error: unknown) => {
             const message = error instanceof Error ? error.message : "Discord通知に失敗しました";
@@ -516,7 +567,7 @@ function App() {
   }
 
   function startFleet(fleet: FleetTimer) {
-    const expedition = getExpedition(fleet.expeditionId);
+    const expedition = findExpedition(fleet.expeditionId);
     const startAt = Date.now();
     const endAt = startAt + expedition.durationMinutes * 60 * 1000;
     updateFleet(fleet.fleetNo, { startAt, endAt, notifiedAt: null, recordedAt: null });
@@ -581,7 +632,7 @@ function App() {
 
   function recordFleetResult(fleet: FleetTimer, result: HistoryResult) {
     if (fleet.recordedAt) return;
-    const expedition = getExpedition(fleet.expeditionId);
+    const expedition = findExpedition(fleet.expeditionId);
     const rewards = result === "great" ? multiplyResources(expedition.rewards, 1.5) : expedition.rewards;
     const record: ExpeditionHistory = {
       id: `${Date.now()}-${fleet.fleetNo}-${expedition.id}-${result}`,
@@ -643,7 +694,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "1.1.0",
+      version: "1.3.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -699,7 +750,7 @@ function App() {
     };
 
     try {
-      await sendDiscordNotification(settings.discordWebhookUrl, dummyFleet, expeditions[0]);
+      await sendDiscordNotification(settings.discordWebhookUrl, dummyFleet, expeditions[0], settings.discordNotifyMode);
       addLog("Discordテスト通知に成功");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Discordテスト通知に失敗";
@@ -711,11 +762,13 @@ function App() {
     <main className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v1.1</p>
+          <p className="eyebrow">KanColle Expedition Support v1.3</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             遠征タイマー、終了予定時刻、PC通知、Discord通知、成功条件確認、攻略支援、帰投記録、PWA、Web公開対応、バックアップをまとめた手動操作前提ツール。
             現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            <br />
+            遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
         </div>
         <div className="hero-clock">
@@ -769,25 +822,37 @@ function App() {
         <div>
           <h2>通知設定</h2>
           <p>
-            PC通知はブラウザの許可が必要。スマホ通知はDiscord Webhookを使うとDiscordアプリ経由で受け取れる。
+            PC通知はブラウザの許可が必要。Discord通知は、個人URLモードまたはVercel環境変数を使う安全モードを選べる。
           </p>
         </div>
         <div className="settings-grid">
           <button className="secondary" onClick={requestPcNotificationPermission}>
             PC通知を許可
           </button>
+          <select
+            value={settings.discordNotifyMode ?? "direct"}
+            onChange={(event) =>
+              setSettings((current) => ({ ...current, discordNotifyMode: event.target.value as AppSettings["discordNotifyMode"] }))
+            }
+            title="Discord通知方式"
+          >
+            <option value="direct">個人URLモード</option>
+            <option value="server">安全モード</option>
+          </select>
           <input
             value={settings.discordWebhookUrl}
             onChange={(event) =>
               setSettings((current) => ({ ...current, discordWebhookUrl: event.target.value }))
             }
-            placeholder="Discord Webhook URL"
+            placeholder={settings.discordNotifyMode === "server" ? "安全モードでは入力不要" : "Discord Webhook URL"}
             type="password"
+            disabled={settings.discordNotifyMode === "server"}
           />
-          <button className="secondary" onClick={testDiscord} disabled={!settings.discordWebhookUrl.trim()}>
+          <button className="secondary" onClick={testDiscord} disabled={settings.discordNotifyMode !== "server" && !settings.discordWebhookUrl.trim()}>
             Discordテスト
           </button>
         </div>
+        <p className="helper-text">安全モードはVercelの環境変数 DISCORD_WEBHOOK_URL にWebhook URLを保存して、ブラウザにはURLを置かない方式。未設定なら個人URLモードを使ってね。</p>
         </div>
       </details>
 
@@ -814,9 +879,9 @@ function App() {
         </div>
         <div className="preset-grid">
           {allPresets.map((preset) => {
-            const rates = getPresetRates(preset);
+            const rates = getPresetRatesFor(preset);
             const presetNames = [2, 3, 4]
-              .map((fleetNo) => `${fleetNo}: ${getExpedition(preset.fleetExpeditionIds[fleetNo as 2 | 3 | 4]).name}`)
+              .map((fleetNo) => `${fleetNo}: ${findExpedition(preset.fleetExpeditionIds[fleetNo as 2 | 3 | 4]).name}`)
               .join(" / ");
             return (
               <div className={`preset-button-wrap ${preset.custom ? "custom" : ""}`} key={preset.id}>
@@ -935,7 +1000,7 @@ function App() {
 
       <section className="fleet-grid">
         {fleets.map((fleet) => {
-          const expedition = getExpedition(fleet.expeditionId);
+          const expedition = findExpedition(fleet.expeditionId);
           const running = fleet.endAt !== null && now < fleet.endAt;
           const completed = fleet.endAt !== null && now >= fleet.endAt;
           const remainingMs = fleet.endAt ? fleet.endAt - now : 0;

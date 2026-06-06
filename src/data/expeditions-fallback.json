@@ -1,0 +1,2014 @@
+[
+  {
+    "id": "01",
+    "area": "鎮守府海域",
+    "name": "練習航海",
+    "durationMinutes": 15,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 30,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "なし",
+    "requirements": {
+      "flagshipLevel": "Lv1以上",
+      "ships": "最低2隻",
+      "formation": "艦種自由／例：駆逐2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "短時間",
+      "入門"
+    ],
+    "memo": "弾薬を少量入手できる最短級遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "02",
+    "area": "鎮守府海域",
+    "name": "長距離練習航海",
+    "durationMinutes": 30,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 100,
+      "steel": 30,
+      "bauxite": 0
+    },
+    "itemReward": "高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv2以上",
+      "ships": "最低4隻",
+      "formation": "艦種自由／例：駆逐4",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "バケツ",
+      "短時間",
+      "定番"
+    ],
+    "memo": "バケツ回収でよく使う短時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "03",
+    "area": "鎮守府海域",
+    "name": "警備任務",
+    "durationMinutes": 20,
+    "rewards": {
+      "fuel": 30,
+      "ammo": 30,
+      "steel": 40,
+      "bauxite": 0
+    },
+    "itemReward": "なし",
+    "requirements": {
+      "flagshipLevel": "Lv3以上",
+      "ships": "最低3隻",
+      "formation": "艦種自由／例：駆逐3",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "短時間"
+    ],
+    "memo": "こまめに触れる時の資材補助向け。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "04",
+    "area": "鎮守府海域",
+    "name": "対潜警戒任務",
+    "durationMinutes": 50,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 70,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "高速修復材 0〜1 / 家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv3以上",
+      "ships": "最低3隻",
+      "formation": "軽巡1 + 駆逐/海防2 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "バケツ",
+      "短時間"
+    ],
+    "memo": "バケツ狙いも兼ねられる短時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "05",
+    "area": "鎮守府海域",
+    "name": "海上護衛任務",
+    "durationMinutes": 90,
+    "rewards": {
+      "fuel": 200,
+      "ammo": 200,
+      "steel": 20,
+      "bauxite": 20
+    },
+    "itemReward": "なし",
+    "requirements": {
+      "flagshipLevel": "Lv3以上",
+      "ships": "最低4隻",
+      "formation": "軽巡1 + 駆逐/海防2 + 自由1 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "中時間",
+      "定番"
+    ],
+    "memo": "燃料・弾薬を安定して増やせる定番遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "06",
+    "area": "鎮守府海域",
+    "name": "防空射撃演習",
+    "durationMinutes": 40,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 80
+    },
+    "itemReward": "家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv4以上",
+      "ships": "最低4隻",
+      "formation": "艦種自由／例：駆逐4",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "ボーキ",
+      "短時間",
+      "定番"
+    ],
+    "memo": "ボーキ回収用の代表的な短時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "07",
+    "area": "鎮守府海域",
+    "name": "観艦式予行",
+    "durationMinutes": 60,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 50,
+      "bauxite": 30
+    },
+    "itemReward": "高速建造材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv5以上",
+      "ships": "全6隻",
+      "formation": "艦種自由／例：駆逐6",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "短時間"
+    ],
+    "memo": "任務消化や序盤の鋼材・ボーキ補助。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "08",
+    "area": "鎮守府海域",
+    "name": "観艦式",
+    "durationMinutes": 180,
+    "rewards": {
+      "fuel": 50,
+      "ammo": 100,
+      "steel": 50,
+      "bauxite": 50
+    },
+    "itemReward": "高速建造材 0〜2 / 開発資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv6以上",
+      "ships": "全6隻",
+      "formation": "艦種自由／例：駆逐6",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "中時間"
+    ],
+    "memo": "資材を少しずつ広く回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "A1",
+    "area": "鎮守府海域",
+    "name": "兵站強化任務",
+    "durationMinutes": 25,
+    "rewards": {
+      "fuel": 45,
+      "ammo": 45,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "なし",
+    "requirements": {
+      "flagshipLevel": "Lv5以上 / 艦隊合計Lv10以上",
+      "ships": "最低4隻",
+      "formation": "駆逐/海防3 + 自由1 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "短時間"
+    ],
+    "memo": "燃料・弾薬を短時間で補助。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "A2",
+    "area": "鎮守府海域",
+    "name": "海峡警備行動",
+    "durationMinutes": 55,
+    "rewards": {
+      "fuel": 70,
+      "ammo": 40,
+      "steel": 0,
+      "bauxite": 10
+    },
+    "itemReward": "開発資材 0〜1 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv20以上",
+      "ships": "最低4隻",
+      "formation": "駆逐/海防4",
+      "stats": "火力50 / 対空70 / 対潜180 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "ボーキ",
+      "バケツ",
+      "開発資材",
+      "短時間"
+    ],
+    "memo": "ステータス要求あり。対潜値に注意。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "A3",
+    "area": "鎮守府海域",
+    "name": "長時間対潜警戒",
+    "durationMinutes": 135,
+    "rewards": {
+      "fuel": 120,
+      "ammo": 0,
+      "steel": 60,
+      "bauxite": 60
+    },
+    "itemReward": "高速修復材 0〜1 / 開発資材 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv35以上 / 艦隊合計Lv185以上",
+      "ships": "最低5隻",
+      "formation": "軽巡1 + 駆逐/海防3 + 自由1 など",
+      "stats": "対潜280 / 索敵60 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "開発資材",
+      "中時間"
+    ],
+    "memo": "対潜と索敵要求あり。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "A4",
+    "area": "鎮守府海域",
+    "name": "南西方面連絡線哨戒",
+    "durationMinutes": 110,
+    "rewards": {
+      "fuel": 80,
+      "ammo": 120,
+      "steel": 0,
+      "bauxite": 100
+    },
+    "itemReward": "高速修復材 0〜2 / 高速建造材 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv40以上 / 艦隊合計Lv200以上",
+      "ships": "最低5隻",
+      "formation": "軽巡1 + 駆逐2 + 自由2 など",
+      "stats": "火力300 / 対空200 / 対潜200 / 索敵120 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "ボーキ",
+      "バケツ",
+      "中時間",
+      "マンスリー"
+    ],
+    "memo": "マンスリー遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "A5",
+    "area": "鎮守府海域",
+    "name": "小笠原沖哨戒線",
+    "durationMinutes": 180,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 300,
+      "steel": 0,
+      "bauxite": 100
+    },
+    "itemReward": "開発資材 0〜4 / 高速修復材 0〜3",
+    "requirements": {
+      "flagshipLevel": "Lv45以上 / 艦隊合計Lv230以上",
+      "ships": "最低5隻",
+      "formation": "軽巡1 + 駆逐3 + 自由1 など",
+      "stats": "火力280 / 対空220 / 対潜240 / 索敵150 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "ボーキ",
+      "バケツ",
+      "開発資材",
+      "中時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦I型。A4とB3達成後に出現。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "A6",
+    "area": "鎮守府海域",
+    "name": "小笠原沖戦闘哨戒",
+    "durationMinutes": 210,
+    "rewards": {
+      "fuel": 100,
+      "ammo": 500,
+      "steel": 100,
+      "bauxite": 200
+    },
+    "itemReward": "開発資材 0〜5 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv55以上 / 艦隊合計Lv290以上",
+      "ships": "全6隻",
+      "formation": "軽巡1 + 駆逐3 + 自由2 など",
+      "stats": "火力330 / 対空300 / 対潜270 / 索敵180 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "ネジ",
+      "中時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦II型。A5とB4達成後に出現。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "09",
+    "area": "南西諸島海域",
+    "name": "タンカー護衛任務",
+    "durationMinutes": 240,
+    "rewards": {
+      "fuel": 350,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "家具箱(小) 0〜1 / 高速修復材 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv3以上",
+      "ships": "最低4隻",
+      "formation": "軽巡1 + 駆逐/海防2 + 自由1 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "バケツ",
+      "中時間",
+      "定番"
+    ],
+    "memo": "燃料とバケツを狙いやすい定番遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "10",
+    "area": "南西諸島海域",
+    "name": "強行偵察任務",
+    "durationMinutes": 90,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 50,
+      "steel": 0,
+      "bauxite": 40
+    },
+    "itemReward": "高速修復材 0〜1 / 高速建造材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv3以上",
+      "ships": "最低3隻",
+      "formation": "軽巡2 + 自由1",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "ボーキ",
+      "バケツ",
+      "中時間"
+    ],
+    "memo": "短めで弾薬・ボーキを補助。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "11",
+    "area": "南西諸島海域",
+    "name": "ボーキサイト輸送任務",
+    "durationMinutes": 300,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 250
+    },
+    "itemReward": "家具箱(小) 0〜1 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv6以上",
+      "ships": "最低4隻",
+      "formation": "駆逐/海防2 + 自由2 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "ボーキ",
+      "バケツ",
+      "長時間",
+      "定番"
+    ],
+    "memo": "ボーキ不足時に便利。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "12",
+    "area": "南西諸島海域",
+    "name": "資源輸送任務",
+    "durationMinutes": 480,
+    "rewards": {
+      "fuel": 50,
+      "ammo": 250,
+      "steel": 200,
+      "bauxite": 50
+    },
+    "itemReward": "家具箱(中) 0〜1 / 開発資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv4以上",
+      "ships": "最低4隻",
+      "formation": "駆逐/海防2 + 自由2 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "長時間で複数資材を回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "13",
+    "area": "南西諸島海域",
+    "name": "鼠輸送作戦",
+    "durationMinutes": 240,
+    "rewards": {
+      "fuel": 240,
+      "ammo": 300,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "高速修復材 0〜2 / 家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv5以上",
+      "ships": "全6隻",
+      "formation": "軽巡1 + 駆逐4 + 自由1",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "バケツ",
+      "中時間"
+    ],
+    "memo": "燃料・弾薬・バケツを狙える。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "14",
+    "area": "南西諸島海域",
+    "name": "包囲陸戦隊撤収作戦",
+    "durationMinutes": 360,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 280,
+      "steel": 200,
+      "bauxite": 30
+    },
+    "itemReward": "高速修復材 0〜1 / 開発資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv6以上",
+      "ships": "全6隻",
+      "formation": "軽巡1 + 駆逐3 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "弾薬・鋼材寄り。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "15",
+    "area": "南西諸島海域",
+    "name": "囮機動部隊支援作戦",
+    "durationMinutes": 720,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 300,
+      "bauxite": 400
+    },
+    "itemReward": "家具箱(大) 0〜1 / 開発資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv8以上",
+      "ships": "全6隻",
+      "formation": "空母系2 + 駆逐2 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "鋼材・ボーキ回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "16",
+    "area": "南西諸島海域",
+    "name": "艦隊決戦援護作戦",
+    "durationMinutes": 900,
+    "rewards": {
+      "fuel": 500,
+      "ammo": 500,
+      "steel": 200,
+      "bauxite": 200
+    },
+    "itemReward": "高速建造材 0〜2 / 開発資材 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv10以上",
+      "ships": "全6隻",
+      "formation": "軽巡1 + 駆逐2 + 自由3",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "長時間で広く資材回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "B1",
+    "area": "南西諸島海域",
+    "name": "南西方面航空偵察作戦",
+    "durationMinutes": 35,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 20,
+      "bauxite": 30
+    },
+    "itemReward": "家具箱(小) 0〜1 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv40以上 / 艦隊合計Lv150以上",
+      "ships": "全6隻",
+      "formation": "水母1 + 軽巡1 + 駆逐/海防2 + 自由2",
+      "stats": "対空200 / 対潜200 / 索敵140 以上"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "短時間"
+    ],
+    "memo": "短時間だがステータス要求あり。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "B2",
+    "area": "南西諸島海域",
+    "name": "敵泊地強襲反撃作戦",
+    "durationMinutes": 520,
+    "rewards": {
+      "fuel": 300,
+      "ammo": 200,
+      "steel": 100,
+      "bauxite": 0
+    },
+    "itemReward": "開発資材 0〜2 / 高速修復材 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv45以上 / 艦隊合計Lv220以上",
+      "ships": "全6隻",
+      "formation": "重巡1 + 軽巡1 + 駆逐3 + 自由1",
+      "stats": "火力360 / 対空160 / 対潜160 / 索敵140 以上"
+    },
+    "greatSuccess": {
+      "type": "unknown",
+      "note": "固有の大成功確定条件は不明寄り。キラ艦多めで出すのが無難。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "バケツ",
+      "開発資材",
+      "長時間",
+      "マンスリー"
+    ],
+    "memo": "マンスリー遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "B3",
+    "area": "南西諸島海域",
+    "name": "南西諸島離島哨戒作戦",
+    "durationMinutes": 170,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 100,
+      "steel": 100,
+      "bauxite": 180
+    },
+    "itemReward": "家具箱(大) 0〜1 / 高速修復材 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv50以上 / 艦隊合計Lv250以上",
+      "ships": "全6隻",
+      "formation": "水母1 + 軽巡1 + 駆逐/海防4",
+      "stats": "火力400 / 対空220 / 対潜220 / 索敵190 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "中時間",
+      "マンスリー"
+    ],
+    "memo": "マンスリー遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "B4",
+    "area": "南西諸島海域",
+    "name": "南西諸島離島防衛作戦",
+    "durationMinutes": 450,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 1200,
+      "bauxite": 650
+    },
+    "itemReward": "開発資材 0〜4 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv55以上 / 艦隊合計Lv300以上",
+      "ships": "全6隻",
+      "formation": "重巡2 + 軽巡1 + 駆逐2 + 潜水1",
+      "stats": "火力500 / 対空280 / 対潜280 / 索敵170 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "ネジ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦I型。編成固定寄り。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "B5",
+    "area": "南西諸島海域",
+    "name": "南西諸島捜索撃滅戦",
+    "durationMinutes": 390,
+    "rewards": {
+      "fuel": 500,
+      "ammo": 500,
+      "steel": 1000,
+      "bauxite": 750
+    },
+    "itemReward": "高速修復材 0〜4 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv60以上 / 艦隊合計Lv330以上",
+      "ships": "全6隻",
+      "formation": "水母1 + 軽巡1 + 駆逐2 + 自由2",
+      "stats": "火力510 / 対空400 / 対潜285 / 索敵385 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "ネジ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦II型。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "B6",
+    "area": "南西諸島海域",
+    "name": "精鋭水雷戦隊夜襲",
+    "durationMinutes": 350,
+    "rewards": {
+      "fuel": 600,
+      "ammo": 1000,
+      "steel": 600,
+      "bauxite": 600
+    },
+    "itemReward": "開発資材 0〜5 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv75以上 / 艦隊合計Lv400以上",
+      "ships": "全6隻",
+      "formation": "軽巡(旗艦固定)1 + 駆逐5",
+      "stats": "火力410 / 対空390 / 対潜410 / 索敵340 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "ネジ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦II型。A4とB4達成後に出現。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "17",
+    "area": "北方海域",
+    "name": "敵地偵察作戦",
+    "durationMinutes": 45,
+    "rewards": {
+      "fuel": 70,
+      "ammo": 90,
+      "steel": 50,
+      "bauxite": 0
+    },
+    "itemReward": "なし",
+    "requirements": {
+      "flagshipLevel": "Lv20以上",
+      "ships": "全6隻",
+      "formation": "軽巡1 + 駆逐3 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "短時間"
+    ],
+    "memo": "短時間で燃料・弾薬・鋼材を回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "18",
+    "area": "北方海域",
+    "name": "航空機輸送作戦",
+    "durationMinutes": 300,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 300,
+      "bauxite": 150
+    },
+    "itemReward": "高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv15以上",
+      "ships": "全6隻",
+      "formation": "空母系3 + 駆逐2 + 自由1",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "長時間"
+    ],
+    "memo": "鋼材・ボーキ寄り。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "19",
+    "area": "北方海域",
+    "name": "北号作戦",
+    "durationMinutes": 360,
+    "rewards": {
+      "fuel": 400,
+      "ammo": 50,
+      "steel": 50,
+      "bauxite": 30
+    },
+    "itemReward": "家具箱(小) 0〜1 / 開発資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv20以上",
+      "ships": "全6隻",
+      "formation": "航空戦艦2 + 駆逐2 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "燃料多め。航空戦艦が必要。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "20",
+    "area": "北方海域",
+    "name": "潜水艦哨戒任務",
+    "durationMinutes": 120,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 150,
+      "bauxite": 0
+    },
+    "itemReward": "開発資材 0〜1 / 家具箱(中) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv1以上",
+      "ships": "最低2隻",
+      "formation": "潜水1 + 軽巡1",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "開発資材",
+      "中時間"
+    ],
+    "memo": "鋼材と開発資材狙い。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "21",
+    "area": "北方海域",
+    "name": "北方鼠輸送作戦",
+    "durationMinutes": 140,
+    "rewards": {
+      "fuel": 320,
+      "ammo": 270,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv15以上 / 艦隊合計Lv30以上",
+      "ships": "最低5隻",
+      "formation": "軽巡1 + 駆逐4／ドラム缶3隻合計3個以上",
+      "stats": "ドラム缶(輸送用)3隻3個以上"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶3隻4個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "中時間",
+      "定番",
+      "ドラム缶"
+    ],
+    "memo": "燃料・弾薬の定番ドラム缶遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "22",
+    "area": "北方海域",
+    "name": "艦隊演習",
+    "durationMinutes": 180,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 10,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "なし",
+    "requirements": {
+      "flagshipLevel": "Lv30以上 / 艦隊合計Lv45以上",
+      "ships": "全6隻",
+      "formation": "重巡1 + 軽巡1 + 駆逐2 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "中時間",
+      "演習"
+    ],
+    "memo": "資材目的というより艦娘経験値寄り。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "23",
+    "area": "北方海域",
+    "name": "航空戦艦運用演習",
+    "durationMinutes": 240,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 50,
+      "steel": 0,
+      "bauxite": 130
+    },
+    "itemReward": "家具箱(中) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv50以上 / 艦隊合計Lv200以上",
+      "ships": "全6隻",
+      "formation": "航空戦艦2 + 駆逐2 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "ボーキ",
+      "中時間",
+      "演習"
+    ],
+    "memo": "航空戦艦が必要な演習系。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "24",
+    "area": "北方海域",
+    "name": "北方航路海上護衛",
+    "durationMinutes": 500,
+    "rewards": {
+      "fuel": 500,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 150
+    },
+    "itemReward": "開発資材 0〜2 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv50以上 / 艦隊合計Lv200以上",
+      "ships": "全6隻",
+      "formation": "軽巡(旗艦固定)1 + 駆逐/海防4 + 自由1",
+      "stats": "ドラム缶(輸送用)合計2個以上で大成功条件に関係"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶合計2個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "ボーキ",
+      "バケツ",
+      "開発資材",
+      "長時間",
+      "ドラム缶"
+    ],
+    "memo": "燃料とボーキ、バケツも狙える長時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "41",
+    "area": "南西海域",
+    "name": "ブルネイ泊地沖哨戒",
+    "durationMinutes": 60,
+    "rewards": {
+      "fuel": 100,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 20
+    },
+    "itemReward": "開発資材 0〜1 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv30以上 / 艦隊合計Lv100以上",
+      "ships": "最低3隻",
+      "formation": "駆逐/海防3",
+      "stats": "火力60 / 対空80 / 対潜210 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "ボーキ",
+      "バケツ",
+      "開発資材",
+      "短時間"
+    ],
+    "memo": "燃料・バケツ狙いの短時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "42",
+    "area": "南西海域",
+    "name": "ミ船団護衛(一号船団)",
+    "durationMinutes": 480,
+    "rewards": {
+      "fuel": 800,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 200
+    },
+    "itemReward": "家具箱(大) 0〜1 / 高速建造材 0〜3",
+    "requirements": {
+      "flagshipLevel": "Lv45以上 / 艦隊合計Lv200以上",
+      "ships": "最低4隻",
+      "formation": "軽巡1 + 駆逐2 + 自由1 など",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "ボーキ",
+      "長時間",
+      "マンスリー"
+    ],
+    "memo": "マンスリー遠征。燃料が大きい。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "43",
+    "area": "南西海域",
+    "name": "ミ船団護衛(二号船団)",
+    "durationMinutes": 720,
+    "rewards": {
+      "fuel": 2000,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 400
+    },
+    "itemReward": "開発資材 0〜4 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv55以上 / 艦隊合計Lv300以上",
+      "ships": "全6隻",
+      "formation": "護衛空母/軽空母(旗艦固定)を含む護衛部隊",
+      "stats": "火力500 / 対空280 / 対潜280 / 索敵170 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "ボーキ",
+      "開発資材",
+      "ネジ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦I型。燃料報酬が非常に大きい。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "44",
+    "area": "南西海域",
+    "name": "航空装備輸送任務",
+    "durationMinutes": 600,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 200,
+      "steel": 0,
+      "bauxite": 800
+    },
+    "itemReward": "開発資材 0〜4 / 家具箱(大) 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv35以上 / 艦隊合計Lv210以上",
+      "ships": "全6隻",
+      "formation": "空母系1 + 水母1 + 軽巡1 + 駆逐/海防2 + 自由1",
+      "stats": "対空200 / 対潜200 / 索敵150 以上、ドラム缶3隻6個以上"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶3隻8個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "ボーキ",
+      "開発資材",
+      "長時間",
+      "マンスリー",
+      "ドラム缶"
+    ],
+    "memo": "マンスリー。ボーキ報酬が大きい。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "45",
+    "area": "南西海域",
+    "name": "ボーキサイト船団護衛",
+    "durationMinutes": 200,
+    "rewards": {
+      "fuel": 40,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 220
+    },
+    "itemReward": "家具箱(中) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv50以上 / 艦隊合計Lv240以上",
+      "ships": "最低5隻",
+      "formation": "護衛空母または軽空母(旗艦固定)1 + 駆逐/海防4",
+      "stats": "対空240 / 対潜300 / 索敵180 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "ボーキ",
+      "中時間"
+    ],
+    "memo": "ボーキを中時間で回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "46",
+    "area": "南西海域",
+    "name": "南西海域戦闘哨戒",
+    "durationMinutes": 210,
+    "rewards": {
+      "fuel": 300,
+      "ammo": 0,
+      "steel": 150,
+      "bauxite": 380
+    },
+    "itemReward": "開発資材 0〜3 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv60以上 / 艦隊合計Lv300以上",
+      "ships": "最低5隻",
+      "formation": "重巡2 + 軽巡1 + 駆逐2",
+      "stats": "火力350 / 対空250 / 対潜220 / 索敵190 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "ネジ",
+      "中時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦II型。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "25",
+    "area": "西方海域",
+    "name": "通商破壊作戦",
+    "durationMinutes": 2400,
+    "rewards": {
+      "fuel": 900,
+      "ammo": 0,
+      "steel": 500,
+      "bauxite": 0
+    },
+    "itemReward": "家具箱(中) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv25以上",
+      "ships": "最低4隻",
+      "formation": "重巡2 + 駆逐2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "鋼材",
+      "長時間"
+    ],
+    "memo": "長時間。燃料と鋼材が多め。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "26",
+    "area": "西方海域",
+    "name": "敵母港空襲作戦",
+    "durationMinutes": 4800,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 900
+    },
+    "itemReward": "高速修復材 0〜3 / 家具箱(大) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv30以上",
+      "ships": "最低4隻",
+      "formation": "空母系1 + 軽巡1 + 駆逐2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "ボーキ",
+      "バケツ",
+      "長時間"
+    ],
+    "memo": "非常に長いボーキ遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "27",
+    "area": "西方海域",
+    "name": "潜水艦通商破壊作戦",
+    "durationMinutes": 1200,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 800,
+      "bauxite": 0
+    },
+    "itemReward": "開発資材 0〜2 / 家具箱(小) 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv1以上",
+      "ships": "最低2隻",
+      "formation": "潜水2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "潜水艦で鋼材回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "28",
+    "area": "西方海域",
+    "name": "西方海域封鎖作戦",
+    "durationMinutes": 1500,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 900,
+      "bauxite": 350
+    },
+    "itemReward": "開発資材 0〜3 / 家具箱(中) 0〜2",
+    "requirements": {
+      "flagshipLevel": "Lv30以上",
+      "ships": "最低3隻",
+      "formation": "潜水3",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "潜水艦で鋼材・ボーキ回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "29",
+    "area": "西方海域",
+    "name": "潜水艦派遣演習",
+    "durationMinutes": 1440,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 50,
+      "steel": 0,
+      "bauxite": 100
+    },
+    "itemReward": "開発資材 0〜1 / 家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv50以上",
+      "ships": "最低3隻",
+      "formation": "潜水3",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "潜水艦演習系。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "30",
+    "area": "西方海域",
+    "name": "潜水艦派遣作戦",
+    "durationMinutes": 2880,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 50,
+      "steel": 0,
+      "bauxite": 100
+    },
+    "itemReward": "開発資材 0〜3 / 家具箱(大) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv55以上",
+      "ships": "最低4隻",
+      "formation": "潜水4",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "潜水艦派遣任務関連で使うことがある長時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "31",
+    "area": "西方海域",
+    "name": "海外艦との接触",
+    "durationMinutes": 120,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 30,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv60以上 / 艦隊合計Lv200以上",
+      "ships": "最低4隻",
+      "formation": "潜水4",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "中時間"
+    ],
+    "memo": "潜水艦4隻で短め。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "32",
+    "area": "西方海域",
+    "name": "遠洋練習航海",
+    "durationMinutes": 1440,
+    "rewards": {
+      "fuel": 50,
+      "ammo": 50,
+      "steel": 50,
+      "bauxite": 50
+    },
+    "itemReward": "家具箱(大) 0〜1 / 開発資材 0〜3",
+    "requirements": {
+      "flagshipLevel": "Lv5以上",
+      "ships": "最低3隻",
+      "formation": "練巡(旗艦固定)1 + 駆逐2",
+      "stats": "旗艦指定あり"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "練習巡洋艦旗艦の特殊寄り遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "D1",
+    "area": "西方海域",
+    "name": "西方海域偵察作戦",
+    "durationMinutes": 120,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 20,
+      "steel": 20,
+      "bauxite": 100
+    },
+    "itemReward": "高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv50以上 / 艦隊合計Lv200以上",
+      "ships": "最低5隻",
+      "formation": "水母(旗艦固定)1 + 駆逐3 + 自由1",
+      "stats": "対空240 / 対潜240 / 索敵300 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "中時間"
+    ],
+    "memo": "水母旗艦固定。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "D2",
+    "area": "西方海域",
+    "name": "西方潜水艦作戦",
+    "durationMinutes": 600,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 400,
+      "bauxite": 800
+    },
+    "itemReward": "給糧艦「伊良湖」0〜1 / 家具箱(大) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv55以上 / 艦隊合計Lv270以上",
+      "ships": "最低5隻",
+      "formation": "潜水母艦(旗艦固定)1 + 潜水3 + 自由1",
+      "stats": "火力60 / 対空80 / 対潜50 / 索敵70 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦I型。潜水母艦旗艦。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "D3",
+    "area": "西方海域",
+    "name": "欧州方面友軍との接触",
+    "durationMinutes": 720,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 800,
+      "steel": 500,
+      "bauxite": 400
+    },
+    "itemReward": "高速修復材 0〜3 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv65以上 / 艦隊合計Lv350以上",
+      "ships": "最低5隻",
+      "formation": "潜水母艦(旗艦固定)1 + 潜水3 + 自由1",
+      "stats": "火力115 / 対空90 / 対潜70 / 索敵95 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "ネジ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦II型。潜水母艦旗艦。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "33",
+    "area": "南方海域",
+    "name": "前衛支援任務",
+    "durationMinutes": 15,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "なし（支援艦隊用）",
+    "requirements": {
+      "flagshipLevel": "-",
+      "ships": "最低2隻",
+      "formation": "駆逐2",
+      "stats": "支援艦隊の仕様に依存"
+    },
+    "greatSuccess": {
+      "type": "unknown",
+      "note": "支援艦隊用の特殊遠征。通常の資材獲得遠征とは扱いが異なる。"
+    },
+    "purposeTags": [
+      "短時間",
+      "支援"
+    ],
+    "memo": "通常遠征ではなく支援艦隊用。達成済みマークなし。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "34",
+    "area": "南方海域",
+    "name": "艦隊決戦支援任務",
+    "durationMinutes": 30,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "なし（支援艦隊用）",
+    "requirements": {
+      "flagshipLevel": "-",
+      "ships": "最低2隻",
+      "formation": "駆逐2",
+      "stats": "支援艦隊の仕様に依存"
+    },
+    "greatSuccess": {
+      "type": "unknown",
+      "note": "支援艦隊用の特殊遠征。通常の資材獲得遠征とは扱いが異なる。"
+    },
+    "purposeTags": [
+      "短時間",
+      "支援"
+    ],
+    "memo": "通常遠征ではなく決戦支援用。達成済みマークなし。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "35",
+    "area": "南方海域",
+    "name": "MO作戦",
+    "durationMinutes": 420,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 240,
+      "bauxite": 280
+    },
+    "itemReward": "家具箱(小) 0〜2 / 開発資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv40以上",
+      "ships": "全6隻",
+      "formation": "空母系2 + 重巡1 + 駆逐1 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "ボーキ",
+      "開発資材",
+      "長時間"
+    ],
+    "memo": "鋼材・ボーキ回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "36",
+    "area": "南方海域",
+    "name": "水上機基地建設",
+    "durationMinutes": 540,
+    "rewards": {
+      "fuel": 480,
+      "ammo": 0,
+      "steel": 200,
+      "bauxite": 200
+    },
+    "itemReward": "家具箱(中) 0〜2 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv30以上",
+      "ships": "全6隻",
+      "formation": "水母2 + 軽巡1 + 駆逐1 + 自由2",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "燃料",
+      "鋼材",
+      "ボーキ",
+      "バケツ",
+      "長時間"
+    ],
+    "memo": "水母2隻が必要。燃料も回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "37",
+    "area": "南方海域",
+    "name": "東京急行",
+    "durationMinutes": 165,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 380,
+      "steel": 270,
+      "bauxite": 0
+    },
+    "itemReward": "家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv50以上 / 艦隊合計Lv200以上",
+      "ships": "全6隻",
+      "formation": "軽巡1 + 駆逐5／ドラム缶3隻4個以上",
+      "stats": "ドラム缶(輸送用)3隻4個以上"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶3隻5個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "中時間",
+      "定番",
+      "ドラム缶"
+    ],
+    "memo": "弾薬・鋼材の定番ドラム缶遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "38",
+    "area": "南方海域",
+    "name": "東京急行(弐)",
+    "durationMinutes": 175,
+    "rewards": {
+      "fuel": 420,
+      "ammo": 0,
+      "steel": 200,
+      "bauxite": 0
+    },
+    "itemReward": "家具箱(小) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv65以上 / 艦隊合計Lv240以上",
+      "ships": "全6隻",
+      "formation": "駆逐5 + 自由1／ドラム缶4隻8個以上",
+      "stats": "ドラム缶(輸送用)4隻8個以上"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶4隻10個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "鋼材",
+      "中時間",
+      "定番",
+      "ドラム缶"
+    ],
+    "memo": "燃料・鋼材の定番ドラム缶遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "39",
+    "area": "南方海域",
+    "name": "遠洋潜水艦作戦",
+    "durationMinutes": 1800,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 0,
+      "steel": 300,
+      "bauxite": 0
+    },
+    "itemReward": "高速修復材 0〜2 / 家具箱(中) 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv3以上 / 艦隊合計Lv180以上",
+      "ships": "最低5隻",
+      "formation": "潜水母艦1 + 潜水4",
+      "stats": "特になし"
+    },
+    "greatSuccess": {
+      "type": "normalKira",
+      "note": "通常型。大成功狙いならキラ艦多めで出す。"
+    },
+    "purposeTags": [
+      "鋼材",
+      "バケツ",
+      "長時間"
+    ],
+    "memo": "潜水母艦が必要な長時間遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "40",
+    "area": "南方海域",
+    "name": "水上機前線輸送",
+    "durationMinutes": 410,
+    "rewards": {
+      "fuel": 300,
+      "ammo": 300,
+      "steel": 0,
+      "bauxite": 100
+    },
+    "itemReward": "家具箱(小) 0〜3 / 高速修復材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv25以上 / 艦隊合計Lv150以上",
+      "ships": "全6隻",
+      "formation": "軽巡(旗艦固定)1 + 水母2 + 駆逐2 + 自由1",
+      "stats": "ドラム缶(輸送用)合計4個以上で大成功条件に関係"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶合計4個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "燃料",
+      "弾薬",
+      "ボーキ",
+      "バケツ",
+      "長時間",
+      "ドラム缶"
+    ],
+    "memo": "燃料・弾薬・ボーキをまとめて回収。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "E1",
+    "area": "南方海域",
+    "name": "ラバウル方面艦隊進出",
+    "durationMinutes": 450,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 600,
+      "steel": 600,
+      "bauxite": 1000
+    },
+    "itemReward": "家具箱(大) 0〜2 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv55以上 / 艦隊合計Lv290以上",
+      "ships": "全6隻",
+      "formation": "重巡(旗艦固定)1 + 軽巡1 + 駆逐3 + 自由1",
+      "stats": "火力450 / 対空350 / 対潜330 / 索敵250 以上"
+    },
+    "greatSuccess": {
+      "type": "special",
+      "note": "旗艦Lv型。旗艦Lv33以上+キラ5隻、または旗艦Lv128以上+キラ4隻が大成功目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "鋼材",
+      "ボーキ",
+      "ネジ",
+      "長時間",
+      "マンスリー",
+      "交戦"
+    ],
+    "memo": "マンスリー・交戦II型。重巡旗艦固定。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  },
+  {
+    "id": "E2",
+    "area": "南方海域",
+    "name": "強行鼠輸送作戦",
+    "durationMinutes": 185,
+    "rewards": {
+      "fuel": 0,
+      "ammo": 480,
+      "steel": 0,
+      "bauxite": 0
+    },
+    "itemReward": "高速修復材 0〜2 / 改修資材 0〜1",
+    "requirements": {
+      "flagshipLevel": "Lv70以上 / 艦隊合計Lv320以上",
+      "ships": "最低5隻",
+      "formation": "駆逐5／ドラム缶3隻4個以上",
+      "stats": "火力280 / 対空240 / 対潜200 / 索敵160 以上、ドラム缶3隻4個以上"
+    },
+    "greatSuccess": {
+      "type": "drum",
+      "note": "ドラム缶3隻6個以上 + キラ4隻以上で大成功確定目安。"
+    },
+    "purposeTags": [
+      "弾薬",
+      "バケツ",
+      "ネジ",
+      "中時間",
+      "マンスリー",
+      "交戦",
+      "ドラム缶"
+    ],
+    "memo": "マンスリー・交戦II型のドラム缶遠征。",
+    "sourceNote": "2026-06-06時点で攻略Wiki等を参照して作成。遠征条件は更新される可能性があるため、出撃前に最新情報も確認してください。"
+  }
+]
