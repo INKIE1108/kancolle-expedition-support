@@ -13,6 +13,7 @@ import {
   loadCloudSnapshot,
   saveActiveTimers,
   saveCloudSnapshot,
+  savePushSubscription,
   scheduleCloudNotification,
   supabase,
   type AuthState,
@@ -267,6 +268,24 @@ function buildDiscordContent(fleet: FleetTimer, expedition: Expedition, endAt: n
   ].join("\n");
 }
 
+
+function getServerApiUrl(path: string): string {
+  return new URL(path, window.location.origin).toString();
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const output = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i += 1) output[i] = rawData.charCodeAt(i);
+  return output;
+}
+
+function isPushSupported(): boolean {
+  return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
 function App() {
   const [expeditions, setExpeditions] = useState<Expedition[]>(fallbackExpeditions);
   const [dataStatus, setDataStatus] = useState<"loading" | "external" | "fallback" | "error">("loading");
@@ -296,7 +315,9 @@ function App() {
   const [customPresetDescription, setCustomPresetDescription] = useState<string>("");
   const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState<number>(0);
   const [timeSyncMessage, setTimeSyncMessage] = useState<string>("端末時刻で動作中");
+  const [timeSyncOk, setTimeSyncOk] = useState<boolean>(false);
   const [now, setNow] = useState<number>(Date.now());
+  const serverTimeAnchorRef = useRef<{ serverTimeMs: number; performanceMs: number } | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [collapsedPanels, setCollapsedPanels] = useState<CollapseState>(() =>
     loadFromStorage(COLLAPSE_STORAGE_KEY, defaultCollapsedPanels)
@@ -320,6 +341,9 @@ function App() {
   const [authPassword, setAuthPassword] = useState<string>("");
   const [cloudSyncBusy, setCloudSyncBusy] = useState<boolean>(false);
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
+  const [pushMessage, setPushMessage] = useState<string>("");
+  const [pushBusy, setPushBusy] = useState<boolean>(false);
+  const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? "";
   const lastAutoLoadedUserRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
 
@@ -334,7 +358,9 @@ function App() {
   }
 
   function getSyncedNow(): number {
-    return Date.now() + serverTimeOffsetMs;
+    const anchor = serverTimeAnchorRef.current;
+    if (!anchor) return Date.now();
+    return anchor.serverTimeMs + (performance.now() - anchor.performanceMs);
   }
 
   function getPresetRatesFor(preset: ExpeditionPreset): ResourceRewards {
@@ -568,29 +594,51 @@ function App() {
 
     async function syncServerTime() {
       try {
-        const requestStartedAt = Date.now();
-        const response = await fetch(`${import.meta.env.BASE_URL}api/server-time`, { cache: "no-cache" });
+        const requestStartedAtDate = Date.now();
+        const requestStartedAtPerf = performance.now();
+        const response = await fetch(getServerApiUrl(`/api/server-time?t=${requestStartedAtDate}`), {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-store" }
+        });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const parsed = (await response.json()) as { serverTimeMs?: number };
         if (typeof parsed.serverTimeMs !== "number") throw new Error("serverTimeMs missing");
 
-        const requestFinishedAt = Date.now();
-        const estimatedNetworkDelay = (requestFinishedAt - requestStartedAt) / 2;
+        const requestFinishedAtDate = Date.now();
+        const requestFinishedAtPerf = performance.now();
+        const roundTripDate = requestFinishedAtDate - requestStartedAtDate;
+        const roundTripPerf = requestFinishedAtPerf - requestStartedAtPerf;
+        const estimatedNetworkDelay = Math.max(0, roundTripPerf / 2);
         const estimatedServerNow = parsed.serverTimeMs + estimatedNetworkDelay;
-        const offset = estimatedServerNow - requestFinishedAt;
+        const offset = estimatedServerNow - requestFinishedAtDate;
 
         if (!cancelled) {
+          serverTimeAnchorRef.current = {
+            serverTimeMs: estimatedServerNow,
+            performanceMs: requestFinishedAtPerf
+          };
           setServerTimeOffsetMs(offset);
+          setTimeSyncOk(true);
           const rounded = Math.round(offset / 1000);
-          setTimeSyncMessage(Math.abs(rounded) <= 1 ? "サーバー時刻と同期中" : `サーバー時刻と同期中（端末差 ${rounded > 0 ? "+" : ""}${rounded}秒）`);
+          const latency = Math.round(roundTripDate);
+          setTimeSyncMessage(
+            Math.abs(rounded) <= 1
+              ? `サーバー時刻で計測中（通信${latency}ms）`
+              : `サーバー時刻で計測中（端末差 ${rounded > 0 ? "+" : ""}${rounded}秒 / 通信${latency}ms）`
+          );
+          setNow(getSyncedNow());
         }
       } catch {
-        if (!cancelled) setTimeSyncMessage("サーバー時刻同期に失敗。端末時刻で継続中");
+        if (!cancelled) {
+          serverTimeAnchorRef.current = null;
+          setTimeSyncOk(false);
+          setTimeSyncMessage("サーバー時刻同期に失敗。端末時刻で暫定計測中");
+        }
       }
     }
 
     syncServerTime();
-    const syncTimer = window.setInterval(syncServerTime, 5 * 60 * 1000);
+    const syncTimer = window.setInterval(syncServerTime, 60 * 1000);
     return () => {
       cancelled = true;
       window.clearInterval(syncTimer);
@@ -598,8 +646,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    setNow(Date.now() + serverTimeOffsetMs);
-    const timer = window.setInterval(() => setNow(Date.now() + serverTimeOffsetMs), 1000);
+    setNow(getSyncedNow());
+    const timer = window.setInterval(() => setNow(getSyncedNow()), 1000);
     return () => window.clearInterval(timer);
   }, [serverTimeOffsetMs]);
 
@@ -832,7 +880,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "2.1.0",
+      version: "2.3.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -884,7 +932,7 @@ function App() {
       history,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.2.0"
+      appVersion: "2.3.0"
     };
   }
 
@@ -1014,12 +1062,87 @@ function App() {
     }
   }
 
+
+  async function enableWebPush() {
+    if (!authState.user) {
+      setPushMessage("スマホ通知は提督ログイン後に有効化してね");
+      return;
+    }
+    if (!vapidPublicKey) {
+      setPushMessage("VITE_VAPID_PUBLIC_KEYが未設定です");
+      return;
+    }
+    if (!isPushSupported()) {
+      setPushMessage("このブラウザはWeb Push通知に未対応です");
+      return;
+    }
+
+    setPushBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("通知が許可されませんでした");
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource
+        }));
+
+      const json = subscription.toJSON();
+      const p256dh = json.keys?.p256dh;
+      const auth = json.keys?.auth;
+      if (!json.endpoint || !p256dh || !auth) throw new Error("Push購読情報を取得できませんでした");
+
+      await savePushSubscription(authState.user.id, {
+        endpoint: json.endpoint,
+        p256dh,
+        auth,
+        userAgent: navigator.userAgent
+      });
+      setPushMessage("スマホ/PWA通知を有効化したよ。通知予約の送信時にDiscordと一緒に届くよ");
+      addLog("Web Push通知を有効化");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "スマホ通知の有効化に失敗";
+      setPushMessage(message);
+      addLog(message);
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function testLocalNotification() {
+    if (!isPushSupported()) {
+      setPushMessage("このブラウザは通知テストに未対応です");
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("通知が許可されませんでした");
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification("艦これ遠征サポート", {
+        body: "スマホ/PWA通知テストだよ。遠征完了時はサーバー側通知予約から届くよ。",
+        icon: `${import.meta.env.BASE_URL}icon-192.png`,
+        badge: `${import.meta.env.BASE_URL}icon-192.png`,
+        tag: "kancolle-test",
+        data: { url: window.location.href }
+      });
+      setPushMessage("端末通知テストを表示したよ");
+      addLog("端末通知テストを表示");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "端末通知テストに失敗";
+      setPushMessage(message);
+      addLog(message);
+    }
+  }
+
   async function testDiscord() {
     const dummyFleet: FleetTimer = {
       fleetNo: 2,
       expeditionId: expeditions[0].id,
-      startAt: Date.now(),
-      endAt: Date.now(),
+      startAt: getSyncedNow(),
+      endAt: getSyncedNow(),
       notifiedAt: null,
       recordedAt: null,
       pcNotify: false,
@@ -1040,7 +1163,7 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.2</p>
+          <p className="eyebrow">KanColle Expedition Support v2.3</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
@@ -1139,7 +1262,7 @@ function App() {
         <div>
           <h2>通知設定</h2>
           <p>
-            Discord Webhook URLを1回登録しておくと、各艦隊の「通知予約」をONにして遠征開始した時に、終了予定時刻と通知先をクラウドへ保存するよ。
+            通知は「通知予約」に一本化。Discord Webhook URLを保存し、必要ならスマホ/PWA通知も有効化しておくと、遠征終了時にDiscordとスマホ通知の両方で受け取りやすくなるよ。
           </p>
         </div>
         <div className="settings-grid simplified">
@@ -1154,8 +1277,15 @@ function App() {
           <button className="secondary" onClick={testDiscord} disabled={!settings.discordWebhookUrl.trim()}>
             Discordテスト
           </button>
+          <button className="secondary" type="button" onClick={enableWebPush} disabled={pushBusy || !authState.user || !vapidPublicKey}>
+            スマホ通知を有効化
+          </button>
+          <button className="ghost" type="button" onClick={testLocalNotification} disabled={!isPushSupported()}>
+            端末通知テスト
+          </button>
         </div>
-        <p className="helper-text">Webhook URLはログイン中ならクラウド保存対象。別端末でも同じ提督アカウントで読み込める。通知はDiscordのサーバー側通知予約に一本化しているので、ブラウザを閉じてもcron-dispatch実行時に送信できるよ。</p>
+        <p className="helper-text">遠征開始時に、終了予定時刻・Discord通知先・スマホ通知先をクラウドへ保存する。実際の送信はcron-dispatchが定期実行された時に行うよ。</p>
+        <p className="helper-text">{pushMessage || (vapidPublicKey ? "スマホ通知は、ホーム画面に追加したPWAや対応ブラウザで通知許可すると使えるよ。" : "スマホ通知を使うにはVAPIDキーの設定が必要です。")}</p>
         </div>
       </details>
 

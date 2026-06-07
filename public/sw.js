@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kancolle-expedition-support-v2.0.0';
+const CACHE_NAME = 'kancolle-expedition-support-v2.3.0';
 
 function scopeUrl(path) {
   return new URL(path, self.registration.scope).toString();
@@ -32,11 +32,56 @@ self.addEventListener('message', (event) => {
   }
 });
 
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : '' };
+  }
+
+  const title = payload.title || '艦これ遠征サポート';
+  const options = {
+    body: payload.body || '遠征が完了したよ。補給・再出発を確認してね。',
+    icon: scopeUrl('./icon-192.png'),
+    badge: scopeUrl('./icon-192.png'),
+    tag: payload.tag || 'kancolle-expedition',
+    data: { url: payload.url || scopeUrl('./') },
+    requireInteraction: false
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || scopeUrl('./');
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.focus();
+          if ('navigate' in client) client.navigate(targetUrl);
+          return;
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const requestUrl = new URL(event.request.url);
   const sameOrigin = requestUrl.origin === self.location.origin;
+
+  // APIレスポンスは時刻や通知状態が命なので絶対にキャッシュしない。
+  if (sameOrigin && requestUrl.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
 
   if (event.request.mode === 'navigate') {
     event.respondWith(

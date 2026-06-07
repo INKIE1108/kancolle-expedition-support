@@ -36,6 +36,13 @@ export type ScheduledNotificationInput = {
   webhookUrl: string;
 };
 
+export type PushSubscriptionInput = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  userAgent?: string;
+};
+
 export type ActiveTimerRecord = {
   fleet_no: number;
   expedition_id: string;
@@ -144,6 +151,32 @@ export async function loadActiveTimers(userId: string): Promise<ActiveTimerRecor
     .order("fleet_no", { ascending: true });
   if (error) throw error;
   return (data ?? []) as ActiveTimerRecord[];
+}
+
+export async function savePushSubscription(userId: string, input: PushSubscriptionInput): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { error } = await supabase.from("push_subscriptions").upsert(
+    {
+      user_id: userId,
+      endpoint: input.endpoint,
+      p256dh: input.p256dh,
+      auth: input.auth,
+      user_agent: input.userAgent ?? null,
+      enabled: true,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "endpoint" }
+  );
+  if (error) throw error;
+}
+
+export async function disablePushSubscription(endpoint: string): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .update({ enabled: false, updated_at: new Date().toISOString() })
+    .eq("endpoint", endpoint);
+  if (error) throw error;
 }
 
 export function buildRewardSummary(resources: ResourceRewards): string {
