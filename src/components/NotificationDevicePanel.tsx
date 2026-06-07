@@ -13,7 +13,7 @@ type Props = {
   supabase: SupabaseClient | null;
   userId: string | null;
   vapidPublicKey: string;
-  onSendTestNotification?: () => Promise<void>;
+  onSendTestNotification?: () => Promise<void | boolean>;
   onStatusChange?: (status: DeviceStatus | null) => void;
 };
 

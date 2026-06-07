@@ -21,6 +21,8 @@ export type CloudSnapshot = {
   pinnedExpeditionIds: string[];
   customPresets: unknown[];
   history: unknown[];
+  monthlyCompletions?: Record<string, string[]>;
+  setupNotificationTestDone?: boolean;
   collapsedPanels: Record<string, boolean>;
   savedAt: string;
   appVersion: string;
@@ -51,6 +53,18 @@ export type ActiveTimerRecord = {
   status: "idle" | "running" | "completed";
   pc_notify?: boolean;
   discord_notify?: boolean;
+};
+
+export type NotificationLogRecord = {
+  id: string;
+  fleet_no: number;
+  expedition_id: string;
+  expedition_name: string;
+  end_at: string | null;
+  status: "pending" | "sent" | "error" | "cancelled" | string;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string | null;
 };
 
 export type AuthState = {
@@ -168,6 +182,18 @@ export async function savePushSubscription(userId: string, input: PushSubscripti
     { onConflict: "endpoint" }
   );
   if (error) throw error;
+}
+
+export async function loadNotificationHistory(userId: string, limit = 30): Promise<NotificationLogRecord[]> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { data, error } = await supabase
+    .from("scheduled_notifications")
+    .select("id, fleet_no, expedition_id, expedition_name, end_at, status, sent_at, error_message, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as NotificationLogRecord[];
 }
 
 export async function disablePushSubscription(endpoint: string): Promise<void> {

@@ -11,13 +11,15 @@ import {
   isSupabaseConfigured,
   loadActiveTimers,
   loadCloudSnapshot,
+  loadNotificationHistory,
   saveActiveTimers,
   saveCloudSnapshot,
   savePushSubscription,
   scheduleCloudNotification,
   supabase,
   type AuthState,
-  type CloudSnapshot
+  type CloudSnapshot,
+  type NotificationLogRecord
 } from "./utils/cloud";
 import { sendDiscordNotification } from "./utils/notify";
 import type { DeviceStatus } from "./utils/deviceNotifications";
@@ -31,6 +33,8 @@ const SORT_STORAGE_KEY = "kancolle-expedition-sort-v1";
 const CUSTOM_PRESETS_STORAGE_KEY = "kancolle-expedition-custom-presets-v1";
 const HISTORY_STORAGE_KEY = "kancolle-expedition-history-v1";
 const COLLAPSE_STORAGE_KEY = "kancolle-expedition-collapse-v1";
+const MONTHLY_STORAGE_KEY = "kancolle-expedition-monthly-v1";
+const SETUP_TEST_STORAGE_KEY = "kancolle-expedition-setup-test-v1";
 
 type SortMode =
   | "ID順"
@@ -63,6 +67,8 @@ type ExpeditionHistory = {
   itemReward: string;
 };
 
+type MonthlyCompletionMap = Record<string, string[]>;
+
 type GuideMode =
   | "燃料"
   | "弾薬"
@@ -73,7 +79,7 @@ type GuideMode =
   | "授業・バイト"
   | "短時間";
 
-type CollapsibleKey = "account" | "pwa" | "notifications" | "presets" | "strategy" | "details" | "log";
+type CollapsibleKey = "account" | "pwa" | "notifications" | "presets" | "monthly" | "strategy" | "details" | "diagnostics" | "log";
 
 type CollapseState = Record<CollapsibleKey, boolean>;
 
@@ -134,8 +140,10 @@ const defaultCollapsedPanels: CollapseState = {
   pwa: false,
   notifications: true,
   presets: false,
+  monthly: false,
   strategy: false,
   details: false,
+  diagnostics: false,
   log: true
 };
 
@@ -146,6 +154,7 @@ const backupStorageKeys = [
   SORT_STORAGE_KEY,
   CUSTOM_PRESETS_STORAGE_KEY,
   HISTORY_STORAGE_KEY,
+  MONTHLY_STORAGE_KEY,
   COLLAPSE_STORAGE_KEY
 ] as const;
 
@@ -253,6 +262,34 @@ function formatShortDateTime(timestamp: number): string {
   }).format(new Date(timestamp));
 }
 
+function getMonthKey(timestamp = Date.now()): string {
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-");
+  return `${year}年${Number(month)}月`;
+}
+
+function isMonthlyExpedition(expedition: Expedition): boolean {
+  return expedition.purposeTags.includes("マンスリー") || expedition.id.startsWith("E");
+}
+
+function diagnoseNotification(row: NotificationLogRecord): string {
+  if (row.status === "pending") return "まだ送信待ち。終了時刻を過ぎたあと、外部cron実行で送信される。";
+  if (row.status === "sent") return row.error_message ? "一部成功。Discordまたはスマホ通知の片方で問題があった可能性。" : "送信完了。Discordまたは登録済み端末へ通知済み。";
+  if (row.status === "cancelled") return "新しい遠征開始やクリア操作でキャンセル済み。二重通知防止の正常動作。";
+  if (row.status === "error") {
+    const message = row.error_message || "";
+    if (message.includes("webhook_missing")) return "Discord Webhook URLが未設定か空。通知設定を確認。";
+    if (message.includes("Discord")) return "Discord側で送信失敗。Webhook URLの削除・権限・チャンネル設定を確認。";
+    if (message.includes("push")) return "スマホ/PWA通知で失敗。端末通知登録を再登録してみて。";
+    return "送信失敗。error_messageの内容とVercel/cronログを確認。";
+  }
+  return "状態不明。最新のcron実行履歴とSupabaseの行を確認。";
+}
+
 function getGuideDescription(mode: GuideMode): string {
   if (mode === "バケツ") return "高速修復材を狙える遠征を中心に表示。短時間周回にも向く。";
   if (mode === "寝る前") return "長めの遠征を優先。睡眠中や長時間放置で触りにくい時向け。";
@@ -306,6 +343,12 @@ function App() {
   const [customPresets, setCustomPresets] = useState<ExpeditionPreset[]>(() =>
     loadFromStorage(CUSTOM_PRESETS_STORAGE_KEY, [])
   );
+  const [monthlyCompletions, setMonthlyCompletions] = useState<MonthlyCompletionMap>(() =>
+    loadFromStorage(MONTHLY_STORAGE_KEY, {})
+  );
+  const [setupNotificationTestDone, setSetupNotificationTestDone] = useState<boolean>(() =>
+    loadFromStorage(SETUP_TEST_STORAGE_KEY, false)
+  );
   const [history, setHistory] = useState<ExpeditionHistory[]>(() =>
     loadFromStorage(HISTORY_STORAGE_KEY, [])
   );
@@ -347,6 +390,9 @@ function App() {
   const [pushMessage, setPushMessage] = useState<string>("");
   const [pushBusy, setPushBusy] = useState<boolean>(false);
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
+  const [notificationHistory, setNotificationHistory] = useState<NotificationLogRecord[]>([]);
+  const [notificationHistoryBusy, setNotificationHistoryBusy] = useState<boolean>(false);
+  const [notificationHistoryMessage, setNotificationHistoryMessage] = useState<string>("");
   const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? "";
   const lastAutoLoadedUserRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -449,6 +495,10 @@ function App() {
     (total, expedition) => addResources(total, getResourceRate(expedition)),
     { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
   );
+  const currentMonthKey = getMonthKey(now);
+  const monthlyExpeditions = useMemo(() => expeditions.filter(isMonthlyExpedition), [expeditions]);
+  const currentMonthlyDoneIds = monthlyCompletions[currentMonthKey] ?? [];
+  const monthlyDoneCount = monthlyExpeditions.filter((expedition) => currentMonthlyDoneIds.includes(expedition.id)).length;
   const todayHistory = history.filter((item) => isSameDay(item.completedAt, now));
   const todayTotal = todayHistory.reduce<ResourceRewards>(
     (total, item) => addResources(total, item.rewards),
@@ -460,7 +510,7 @@ function App() {
   const loggedIn = Boolean(userId);
   const webhookRegistered = Boolean(settings.discordWebhookUrl.trim());
   const deviceRegistered = Boolean(deviceStatus?.currentDevice);
-  const testNotificationDone = Boolean(deviceStatus?.currentDevice?.last_tested_at);
+  const testNotificationDone = Boolean(setupNotificationTestDone || deviceStatus?.currentDevice?.last_tested_at || log.some((item) => item.includes("通知テスト")));
   const expeditionStarted = fleets.some((fleet) => fleet.startAt !== null) || log.some((item) => item.includes("開始:") || item.includes("通知予約"));
 
   useEffect(() => {
@@ -514,6 +564,14 @@ function App() {
   }, [customPresets]);
 
   useEffect(() => {
+    saveToStorage(MONTHLY_STORAGE_KEY, monthlyCompletions);
+  }, [monthlyCompletions]);
+
+  useEffect(() => {
+    saveToStorage(SETUP_TEST_STORAGE_KEY, setupNotificationTestDone);
+  }, [setupNotificationTestDone]);
+
+  useEffect(() => {
     saveToStorage(HISTORY_STORAGE_KEY, history);
   }, [history]);
 
@@ -535,6 +593,11 @@ function App() {
 
     return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (authState.user?.id) refreshNotificationHistory().catch(() => undefined);
+    else setNotificationHistory([]);
+  }, [authState.user?.id]);
 
   useEffect(() => {
     const userId = authState.user?.id;
@@ -825,6 +888,28 @@ function App() {
     setCustomPresets((current) => current.filter((preset) => preset.id !== presetId));
     if (target) addLog(`カスタムプリセット削除: ${target.name}`);
   }
+  function isMonthlyDone(expeditionId: string): boolean {
+    return (monthlyCompletions[currentMonthKey] ?? []).includes(expeditionId);
+  }
+
+  function setMonthlyDone(expeditionId: string, done: boolean) {
+    setMonthlyCompletions((current) => {
+      const monthItems = new Set(current[currentMonthKey] ?? []);
+      if (done) monthItems.add(expeditionId);
+      else monthItems.delete(expeditionId);
+      return { ...current, [currentMonthKey]: Array.from(monthItems).sort((a, b) => a.localeCompare(b, "ja", { numeric: true })) };
+    });
+    const expedition = findExpedition(expeditionId);
+    addLog(`マンスリー遠征${done ? "実施済み" : "未実施へ戻す"}: ${expedition.id} ${expedition.name}`);
+  }
+
+  function resetMonthlyCompletions() {
+    const ok = window.confirm(`${getMonthLabel(currentMonthKey)}のマンスリー遠征チェックをリセットする？`);
+    if (!ok) return;
+    setMonthlyCompletions((current) => ({ ...current, [currentMonthKey]: [] }));
+    addLog(`${getMonthLabel(currentMonthKey)}のマンスリー遠征チェックをリセット`);
+  }
+
 
   function recordFleetResult(fleet: FleetTimer, result: HistoryResult) {
     if (fleet.recordedAt) return;
@@ -842,6 +927,13 @@ function App() {
     };
 
     setHistory((current) => [record, ...current].slice(0, 200));
+    if (isMonthlyExpedition(expedition)) {
+      setMonthlyCompletions((current) => {
+        const monthItems = new Set(current[currentMonthKey] ?? []);
+        monthItems.add(expedition.id);
+        return { ...current, [currentMonthKey]: Array.from(monthItems).sort((a, b) => a.localeCompare(b, "ja", { numeric: true })) };
+      });
+    }
     updateFleet(fleet.fleetNo, { recordedAt: Date.now() });
     addLog(`帰投記録: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
   }
@@ -858,11 +950,11 @@ function App() {
   }
 
   function openAllPanels() {
-    setCollapsedPanels({ account: false, pwa: false, notifications: false, presets: false, strategy: false, details: false, log: false });
+    setCollapsedPanels({ account: false, pwa: false, notifications: false, presets: false, monthly: false, strategy: false, details: false, diagnostics: false, log: false });
   }
 
   function compactAssistPanels() {
-    setCollapsedPanels({ account: false, pwa: true, notifications: true, presets: true, strategy: true, details: false, log: true });
+    setCollapsedPanels({ account: false, pwa: true, notifications: true, presets: true, monthly: true, strategy: true, details: false, diagnostics: false, log: true });
   }
 
   async function installPwa() {
@@ -890,7 +982,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "2.5.0",
+      version: "2.7.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -940,9 +1032,11 @@ function App() {
       pinnedExpeditionIds,
       customPresets,
       history,
+      monthlyCompletions,
+      setupNotificationTestDone,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.5.0"
+      appVersion: "2.7.0"
     };
   }
 
@@ -983,6 +1077,8 @@ function App() {
     setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
     setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
     setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
+    setMonthlyCompletions((snapshot?.monthlyCompletions as MonthlyCompletionMap | undefined) ?? monthlyCompletions);
+    setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
     setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
     setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
     addLog("クラウド読込完了");
@@ -1073,6 +1169,35 @@ function App() {
   }
 
 
+  async function refreshNotificationHistory() {
+    if (!authState.user) {
+      setNotificationHistory([]);
+      setNotificationHistoryMessage("通知履歴はログイン後に確認できるよ");
+      return;
+    }
+    setNotificationHistoryBusy(true);
+    try {
+      const rows = await loadNotificationHistory(authState.user.id, 30);
+      setNotificationHistory(rows);
+      setNotificationHistoryMessage(rows.length ? `通知履歴を${rows.length}件読み込んだよ` : "通知履歴はまだないよ");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "通知履歴の読み込みに失敗";
+      setNotificationHistoryMessage(message);
+      addLog(message);
+    } finally {
+      setNotificationHistoryBusy(false);
+    }
+  }
+
+  async function runSetupNotificationTest() {
+    const pushOk = await testLocalNotification();
+    const discordOk = await testDiscord();
+    if (pushOk || discordOk) {
+      setSetupNotificationTestDone(true);
+    }
+  }
+
+
   async function enableWebPush() {
     if (!authState.user) {
       setPushMessage("スマホ通知は提督ログイン後に有効化してね");
@@ -1122,10 +1247,10 @@ function App() {
     }
   }
 
-  async function testLocalNotification() {
+  async function testLocalNotification(): Promise<boolean> {
     if (!isPushSupported()) {
       setPushMessage("このブラウザは通知テストに未対応です");
-      return;
+      return false;
     }
     try {
       const permission = await Notification.requestPermission();
@@ -1139,15 +1264,18 @@ function App() {
         data: { url: window.location.href }
       });
       setPushMessage("端末通知テストを表示したよ");
+      setSetupNotificationTestDone(true);
       addLog("端末通知テストを表示");
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "端末通知テストに失敗";
       setPushMessage(message);
       addLog(message);
+      return false;
     }
   }
 
-  async function testDiscord() {
+  async function testDiscord(): Promise<boolean> {
     const dummyFleet: FleetTimer = {
       fleetNo: 2,
       expeditionId: expeditions[0].id,
@@ -1162,10 +1290,13 @@ function App() {
     try {
       if (!settings.discordWebhookUrl.trim()) throw new Error("Discord Webhook URLが未設定です");
       await sendDiscordNotification(settings.discordWebhookUrl, dummyFleet, expeditions[0], "direct");
+      setSetupNotificationTestDone(true);
       addLog("Discordテスト通知に成功");
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Discordテスト通知に失敗";
       addLog(message);
+      return false;
     }
   }
 
@@ -1173,11 +1304,11 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.5</p>
+          <p className="eyebrow">KanColle Expedition Support v2.7</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
-            v2.5では通知端末管理と初回設定ガイドを追加。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            v2.7ではマンスリー遠征管理と通知履歴・失敗診断を追加。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
@@ -1241,6 +1372,7 @@ function App() {
         onJumpAccount={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}
         onJumpNotification={() => document.getElementById("notification-section")?.scrollIntoView({ behavior: "smooth" })}
         onJumpTimer={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}
+        onTestNotification={runSetupNotificationTest}
       />
 
       <details
@@ -1388,6 +1520,59 @@ function App() {
       </details>
 
       <details
+        className="monthly-card fold-card"
+        open={!collapsedPanels.monthly}
+        onToggle={(event) => handlePanelToggle("monthly", event.currentTarget.open)}
+      >
+        <summary className="fold-summary">
+          <span><small>Monthly</small><strong>マンスリー遠征管理</strong></span>
+          <em>{collapsedPanels.monthly ? "開く" : "閉じる"}</em>
+        </summary>
+        <div className="fold-content monthly-content">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Monthly Expedition</p>
+              <h2>{getMonthLabel(currentMonthKey)}のマンスリー遠征</h2>
+              <p>今月実施済みにしたマンスリー遠征は、艦隊カードの選択候補から選べないようにして誤出撃を防ぐよ。完了後に「成功/大成功で記録」しても自動で実施済みになる。</p>
+            </div>
+            <div className="monthly-score">
+              <span>進捗</span>
+              <strong>{monthlyDoneCount} / {monthlyExpeditions.length}</strong>
+              <button type="button" className="ghost small" onClick={resetMonthlyCompletions} disabled={monthlyDoneCount === 0}>今月分をリセット</button>
+            </div>
+          </div>
+
+          {monthlyExpeditions.length === 0 ? (
+            <p className="empty-text">マンスリー遠征タグ付きの遠征データがまだありません。</p>
+          ) : (
+            <div className="monthly-grid">
+              {monthlyExpeditions.map((expedition) => {
+                const done = isMonthlyDone(expedition.id);
+                return (
+                  <article className={`monthly-item ${done ? "done" : ""}`} key={`monthly-${expedition.id}`}>
+                    <div>
+                      <div className="monthly-item-head">
+                        <strong>{expedition.id}: {expedition.name}</strong>
+                        <span>{done ? "今月実施済み" : "未実施"}</span>
+                      </div>
+                      <p>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.join("・")}</p>
+                      <small>{expedition.memo}</small>
+                    </div>
+                    <div className="monthly-actions">
+                      <button type="button" className={done ? "secondary" : ""} onClick={() => setMonthlyDone(expedition.id, !done)}>
+                        {done ? "未実施へ戻す" : "実施済みにする"}
+                      </button>
+                      <button type="button" className="ghost" onClick={() => setSelectedDetailId(expedition.id)}>詳細を見る</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </details>
+
+      <details
         className="guide-card fold-card"
         open={!collapsedPanels.strategy}
         onToggle={(event) => handlePanelToggle("strategy", event.currentTarget.open)}
@@ -1421,9 +1606,9 @@ function App() {
                   </div>
                   <div className="guide-actions">
                     <button type="button" onClick={() => setSelectedDetailId(expedition.id)}>詳細</button>
-                    <button type="button" onClick={() => setFleetExpedition(2, expedition.id)}>第2へ</button>
-                    <button type="button" onClick={() => setFleetExpedition(3, expedition.id)}>第3へ</button>
-                    <button type="button" onClick={() => setFleetExpedition(4, expedition.id)}>第4へ</button>
+                    <button type="button" onClick={() => setFleetExpedition(2, expedition.id)} disabled={isMonthlyDone(expedition.id)}>第2へ</button>
+                    <button type="button" onClick={() => setFleetExpedition(3, expedition.id)} disabled={isMonthlyDone(expedition.id)}>第3へ</button>
+                    <button type="button" onClick={() => setFleetExpedition(4, expedition.id)} disabled={isMonthlyDone(expedition.id)}>第4へ</button>
                   </div>
                 </article>
               );
@@ -1499,11 +1684,14 @@ function App() {
                   onChange={(event) => setFleetExpedition(fleet.fleetNo, event.target.value)}
                 >
                   <optgroup label={`全遠征 ${totalExpeditionCount}件`}>
-                    {expeditions.map((item) => (
-                      <option value={item.id} key={item.id}>
-                        {isPinned(item.id) ? "★ " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
-                      </option>
-                    ))}
+                    {expeditions.map((item) => {
+                      const monthlyDone = isMonthlyDone(item.id);
+                      return (
+                        <option value={item.id} key={item.id} disabled={monthlyDone && item.id !== fleet.expeditionId}>
+                          {isPinned(item.id) ? "★ " : ""}{monthlyDone ? "済 " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
+                        </option>
+                      );
+                    })}
                   </optgroup>
                 </select>
                 <p className="helper-text">全{totalExpeditionCount}件を収録。★はお気に入り、右上ボタンで追加・解除できる。</p>
@@ -1513,10 +1701,12 @@ function App() {
                       <button
                         type="button"
                         key={`fleet-${fleet.fleetNo}-pin-${item.id}`}
-                        className={fleet.expeditionId === item.id ? "active" : ""}
+                        className={`${fleet.expeditionId === item.id ? "active" : ""} ${isMonthlyDone(item.id) ? "done-disabled" : ""}`}
                         onClick={() => setFleetExpedition(fleet.fleetNo, item.id)}
+                        disabled={isMonthlyDone(item.id) && item.id !== fleet.expeditionId}
+                        title={isMonthlyDone(item.id) ? "今月実施済みのマンスリー遠征" : undefined}
                       >
-                        ★ {item.id}
+                        ★ {isMonthlyDone(item.id) ? "済" : ""}{item.id}
                       </button>
                     ))}
                   </div>
@@ -1739,9 +1929,9 @@ function App() {
             {filteredExpeditions.map((expedition) => {
               const rate = getResourceRate(expedition);
               return (
-                <div className={`expedition-item ${selectedDetailId === expedition.id ? "selected" : ""}`} key={expedition.id}>
+                <div className={`expedition-item ${selectedDetailId === expedition.id ? "selected" : ""} ${isMonthlyDone(expedition.id) ? "monthly-done" : ""}`} key={expedition.id}>
                   <button className="expedition-main" onClick={() => setSelectedDetailId(expedition.id)}>
-                    <span>{expedition.id}: {expedition.name}</span>
+                    <span>{isMonthlyDone(expedition.id) ? "済 " : ""}{expedition.id}: {expedition.name}</span>
                     <small>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.join("・")}</small>
                     <small>時給目安：{formatResources(rate)} / h</small>
                   </button>
@@ -1758,6 +1948,51 @@ function App() {
           </div>
         </aside>
         </section>
+      </details>
+
+      <details
+        className="diagnostics-card fold-card"
+        open={!collapsedPanels.diagnostics}
+        onToggle={(event) => handlePanelToggle("diagnostics", event.currentTarget.open)}
+      >
+        <summary className="fold-summary">
+          <span><small>Notification History</small><strong>通知履歴・失敗診断</strong></span>
+          <em>{collapsedPanels.diagnostics ? "開く" : "閉じる"}</em>
+        </summary>
+        <div className="fold-content diagnostics-content">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Diagnostics</p>
+              <h2>通知履歴・失敗診断</h2>
+              <p>Supabaseに保存された通知予約の状態を確認できるよ。通知が来ない時は、pending / sent / error / cancelled と診断メモを見る。</p>
+            </div>
+            <button type="button" className="secondary" onClick={refreshNotificationHistory} disabled={!authState.user || notificationHistoryBusy}>
+              {notificationHistoryBusy ? "読込中..." : "履歴を更新"}
+            </button>
+          </div>
+          <p className="helper-text">{notificationHistoryMessage || "遠征開始後に通知予約が作られると、ここに履歴が表示される。"}</p>
+          <div className="notification-history-list">
+            {notificationHistory.length === 0 ? (
+              <p className="empty-text">通知履歴はまだないよ。</p>
+            ) : (
+              notificationHistory.map((row) => (
+                <article className={`notification-history-item status-${row.status}`} key={row.id}>
+                  <div className="notification-history-main">
+                    <span className={`status ${row.status === "sent" ? "done" : row.status === "pending" ? "running" : row.status === "error" ? "error" : "idle"}`}>{row.status}</span>
+                    <strong>第{row.fleet_no}艦隊 {row.expedition_name}</strong>
+                    <small>終了予定：{row.end_at ? new Date(row.end_at).toLocaleString("ja-JP") : "未設定"}</small>
+                    <small>送信日時：{row.sent_at ? new Date(row.sent_at).toLocaleString("ja-JP") : "未送信"}</small>
+                  </div>
+                  <div className="notification-diagnosis">
+                    <b>診断</b>
+                    <p>{diagnoseNotification(row)}</p>
+                    {row.error_message ? <code>{row.error_message}</code> : null}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
       </details>
 
       <nav className="mobile-tabbar" aria-label="スマホ用ナビゲーション">

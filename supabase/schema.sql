@@ -143,3 +143,15 @@ drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptio
 create policy "push_subscriptions_delete_own"
   on public.push_subscriptions for delete
   using (auth.uid() = user_id);
+
+-- v2.5: 通知端末管理用の追加カラム。再実行OK。
+alter table public.push_subscriptions
+  add column if not exists device_label text,
+  add column if not exists device_kind text default 'unknown',
+  add column if not exists browser_name text default 'unknown',
+  add column if not exists os_name text default 'unknown',
+  add column if not exists last_seen_at timestamptz,
+  add column if not exists last_tested_at timestamptz;
+
+create index if not exists push_subscriptions_endpoint_idx
+  on public.push_subscriptions(endpoint);

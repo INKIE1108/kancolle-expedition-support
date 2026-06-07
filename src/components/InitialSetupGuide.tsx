@@ -7,6 +7,7 @@ type Props = {
   onJumpAccount?: () => void;
   onJumpNotification?: () => void;
   onJumpTimer?: () => void;
+  onTestNotification?: () => void | Promise<void>;
 };
 
 type GuideItem = {
@@ -14,7 +15,7 @@ type GuideItem = {
   description: string;
   done: boolean;
   actionLabel: string;
-  onAction?: () => void;
+  onAction?: () => void | Promise<void>;
 };
 
 export function InitialSetupGuide({
@@ -25,7 +26,8 @@ export function InitialSetupGuide({
   expeditionStarted,
   onJumpAccount,
   onJumpNotification,
-  onJumpTimer
+  onJumpTimer,
+  onTestNotification
 }: Props) {
   const items: GuideItem[] = [
     {
@@ -54,7 +56,7 @@ export function InitialSetupGuide({
       description: "Discord通知とスマホ/PWA通知が実際に届くか確認する。",
       done: testNotificationDone,
       actionLabel: "テストする",
-      onAction: onJumpNotification
+      onAction: onTestNotification ?? onJumpNotification
     },
     {
       label: "遠征開始",

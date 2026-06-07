@@ -1682,3 +1682,242 @@ button.small,
 
 
 
+
+/* v2.7: compact device panel, monthly expedition manager, notification diagnostics */
+.device-panel {
+  width: 100%;
+  margin-top: 14px;
+  grid-column: 1 / -1;
+}
+
+.device-panel h3 {
+  margin: 0 0 12px;
+}
+
+.device-summary-grid {
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+}
+
+.device-summary-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.device-summary-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  line-height: 1.35;
+  font-size: clamp(0.9rem, 1.4vw, 1rem);
+}
+
+.device-action-row {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
+.device-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.device-row {
+  min-width: 0;
+}
+
+.device-row > div:first-child,
+.device-row-meta {
+  min-width: 0;
+}
+
+.device-row strong,
+.device-row-meta span {
+  overflow-wrap: anywhere;
+}
+
+.monthly-card,
+.diagnostics-card {
+  margin-top: 18px;
+  border-color: rgba(125, 211, 252, 0.2);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.monthly-content,
+.diagnostics-content {
+  display: grid;
+  gap: 16px;
+}
+
+.monthly-score {
+  min-width: 170px;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.35);
+}
+
+.monthly-score span,
+.monthly-item small,
+.notification-history-item small {
+  color: #9db4c9;
+}
+
+.monthly-score strong {
+  color: #7dd3fc;
+  font-size: 1.4rem;
+}
+
+.monthly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.monthly-item {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(8, 20, 38, 0.72);
+  border: 1px solid rgba(127, 211, 255, 0.14);
+}
+
+.monthly-item.done {
+  border-color: rgba(34, 197, 94, 0.34);
+  background: linear-gradient(135deg, rgba(8, 20, 38, 0.72), rgba(6, 78, 59, 0.24));
+}
+
+.monthly-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.monthly-item-head span {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  color: #bae6fd;
+  background: rgba(14, 165, 233, 0.12);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.monthly-item.done .monthly-item-head span {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.monthly-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fleet-pinned-shortcuts button.done-disabled,
+.expedition-item.monthly-done {
+  opacity: 0.62;
+}
+
+.expedition-item.monthly-done {
+  border-color: rgba(34, 197, 94, 0.22);
+}
+
+.notification-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-history-item {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(280px, 1.25fr);
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(8, 20, 38, 0.72);
+  border: 1px solid rgba(127, 211, 255, 0.12);
+}
+
+.notification-history-item.status-error {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.notification-history-main,
+.notification-diagnosis {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.notification-diagnosis p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.notification-diagnosis code {
+  display: block;
+  max-height: 96px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.55);
+  color: #fecaca;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.status.error {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fca5a5;
+}
+
+@media (min-width: 981px) {
+  .settings-content {
+    align-items: start;
+  }
+
+  .settings-grid.simplified {
+    align-self: start;
+  }
+
+  .device-panel {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .device-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .device-action-row,
+  .monthly-actions,
+  .notification-history-item {
+    grid-template-columns: 1fr;
+  }
+
+  .monthly-score {
+    justify-items: start;
+    width: 100%;
+  }
+
+  .mobile-tab-timers .monthly-card,
+  .mobile-tab-timers .diagnostics-card,
+  .mobile-tab-search .monthly-card,
+  .mobile-tab-search .diagnostics-card {
+    display: none !important;
+  }
+
+  .mobile-tab-assist .monthly-card {
+    display: block !important;
+  }
+
+  .mobile-tab-account .monthly-card {
+    display: none !important;
+  }
+
+  .mobile-tab-account .diagnostics-card {
+    display: block !important;
+  }
+}
