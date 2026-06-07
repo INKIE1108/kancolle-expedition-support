@@ -20,6 +20,9 @@ import {
   type CloudSnapshot
 } from "./utils/cloud";
 import { sendDiscordNotification } from "./utils/notify";
+import type { DeviceStatus } from "./utils/deviceNotifications";
+import { NotificationDevicePanel } from "./components/NotificationDevicePanel";
+import { InitialSetupGuide } from "./components/InitialSetupGuide";
 
 const FLEET_STORAGE_KEY = "kancolle-expedition-fleets-v1";
 const SETTINGS_STORAGE_KEY = "kancolle-expedition-settings-v1";
@@ -343,6 +346,7 @@ function App() {
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
   const [pushMessage, setPushMessage] = useState<string>("");
   const [pushBusy, setPushBusy] = useState<boolean>(false);
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
   const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? "";
   const lastAutoLoadedUserRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -452,6 +456,12 @@ function App() {
   );
   const todayGreatCount = todayHistory.filter((item) => item.result === "great").length;
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
+  const userId = authState.user?.id ?? null;
+  const loggedIn = Boolean(userId);
+  const webhookRegistered = Boolean(settings.discordWebhookUrl.trim());
+  const deviceRegistered = Boolean(deviceStatus?.currentDevice);
+  const testNotificationDone = Boolean(deviceStatus?.currentDevice?.last_tested_at);
+  const expeditionStarted = fleets.some((fleet) => fleet.startAt !== null) || log.some((item) => item.includes("開始:") || item.includes("通知予約"));
 
   useEffect(() => {
     let cancelled = false;
@@ -880,7 +890,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "2.3.0",
+      version: "2.5.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -932,7 +942,7 @@ function App() {
       history,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.3.0"
+      appVersion: "2.5.0"
     };
   }
 
@@ -1163,11 +1173,11 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.3</p>
+          <p className="eyebrow">KanColle Expedition Support v2.5</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
-            現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            v2.5では通知端末管理と初回設定ガイドを追加。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
@@ -1187,6 +1197,7 @@ function App() {
       </header>
 
       <details
+        id="account-cloud-section"
         className="account-card fold-card"
         open={!collapsedPanels.account}
         onToggle={(event) => handlePanelToggle("account", event.currentTarget.open)}
@@ -1221,6 +1232,17 @@ function App() {
         </div>
       </details>
 
+      <InitialSetupGuide
+        loggedIn={loggedIn}
+        webhookRegistered={webhookRegistered}
+        deviceRegistered={deviceRegistered}
+        testNotificationDone={testNotificationDone}
+        expeditionStarted={expeditionStarted}
+        onJumpAccount={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}
+        onJumpNotification={() => document.getElementById("notification-section")?.scrollIntoView({ behavior: "smooth" })}
+        onJumpTimer={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}
+      />
+
       <details
         className="pwa-card fold-card"
         open={!collapsedPanels.pwa}
@@ -1250,6 +1272,7 @@ function App() {
       </details>
 
       <details
+        id="notification-section"
         className="settings-card fold-card"
         open={!collapsedPanels.notifications}
         onToggle={(event) => handlePanelToggle("notifications", event.currentTarget.open)}
@@ -1286,6 +1309,13 @@ function App() {
         </div>
         <p className="helper-text">遠征開始時に、終了予定時刻・Discord通知先・スマホ通知先をクラウドへ保存する。実際の送信はcron-dispatchが定期実行された時に行うよ。</p>
         <p className="helper-text">{pushMessage || (vapidPublicKey ? "スマホ通知は、ホーム画面に追加したPWAや対応ブラウザで通知許可すると使えるよ。" : "スマホ通知を使うにはVAPIDキーの設定が必要です。")}</p>
+        <NotificationDevicePanel
+          supabase={supabase}
+          userId={userId}
+          vapidPublicKey={vapidPublicKey}
+          onSendTestNotification={testLocalNotification}
+          onStatusChange={setDeviceStatus}
+        />
         </div>
       </details>
 
@@ -1431,7 +1461,7 @@ function App() {
         </div>
       </details>
 
-      <section className="fleet-grid">
+      <section id="fleet-timer-section" className="fleet-grid">
         {fleets.map((fleet) => {
           const expedition = findExpedition(fleet.expeditionId);
           const running = fleet.endAt !== null && now < fleet.endAt;
