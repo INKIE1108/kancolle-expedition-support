@@ -1,4 +1,4 @@
-# Supabase セットアップ v2.1
+# Supabase セットアップ v2.2
 
 ## 1. SQLを実行
 

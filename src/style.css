@@ -1466,3 +1466,14 @@ button.small,
     display: block !important;
   }
 }
+
+/* v2.2: server-clock sync helper text */
+.hero-clock small {
+  display: block;
+  margin-top: 6px;
+  color: #7dd3fc;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+  opacity: 0.9;
+}

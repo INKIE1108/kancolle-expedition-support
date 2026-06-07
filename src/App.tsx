@@ -294,6 +294,8 @@ function App() {
   const [guideMode, setGuideMode] = useState<GuideMode>("燃料");
   const [customPresetName, setCustomPresetName] = useState<string>("");
   const [customPresetDescription, setCustomPresetDescription] = useState<string>("");
+  const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState<number>(0);
+  const [timeSyncMessage, setTimeSyncMessage] = useState<string>("端末時刻で動作中");
   const [now, setNow] = useState<number>(Date.now());
   const [log, setLog] = useState<string[]>([]);
   const [collapsedPanels, setCollapsedPanels] = useState<CollapseState>(() =>
@@ -329,6 +331,10 @@ function App() {
 
   function findExpedition(expeditionId: string): Expedition {
     return expeditions.find((item) => item.id === expeditionId) ?? fallbackExpeditions[0];
+  }
+
+  function getSyncedNow(): number {
+    return Date.now() + serverTimeOffsetMs;
   }
 
   function getPresetRatesFor(preset: ExpeditionPreset): ResourceRewards {
@@ -558,9 +564,44 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+
+    async function syncServerTime() {
+      try {
+        const requestStartedAt = Date.now();
+        const response = await fetch(`${import.meta.env.BASE_URL}api/server-time`, { cache: "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const parsed = (await response.json()) as { serverTimeMs?: number };
+        if (typeof parsed.serverTimeMs !== "number") throw new Error("serverTimeMs missing");
+
+        const requestFinishedAt = Date.now();
+        const estimatedNetworkDelay = (requestFinishedAt - requestStartedAt) / 2;
+        const estimatedServerNow = parsed.serverTimeMs + estimatedNetworkDelay;
+        const offset = estimatedServerNow - requestFinishedAt;
+
+        if (!cancelled) {
+          setServerTimeOffsetMs(offset);
+          const rounded = Math.round(offset / 1000);
+          setTimeSyncMessage(Math.abs(rounded) <= 1 ? "サーバー時刻と同期中" : `サーバー時刻と同期中（端末差 ${rounded > 0 ? "+" : ""}${rounded}秒）`);
+        }
+      } catch {
+        if (!cancelled) setTimeSyncMessage("サーバー時刻同期に失敗。端末時刻で継続中");
+      }
+    }
+
+    syncServerTime();
+    const syncTimer = window.setInterval(syncServerTime, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(syncTimer);
+    };
   }, []);
+
+  useEffect(() => {
+    setNow(Date.now() + serverTimeOffsetMs);
+    const timer = window.setInterval(() => setNow(Date.now() + serverTimeOffsetMs), 1000);
+    return () => window.clearInterval(timer);
+  }, [serverTimeOffsetMs]);
 
   useEffect(() => {
     const completedFleets = fleets.filter(
@@ -637,7 +678,7 @@ function App() {
 
   function startFleet(fleet: FleetTimer) {
     const expedition = findExpedition(fleet.expeditionId);
-    const startAt = Date.now();
+    const startAt = getSyncedNow();
     const endAt = startAt + expedition.durationMinutes * 60 * 1000;
     updateFleet(fleet.fleetNo, { startAt, endAt, notifiedAt: null, recordedAt: null });
     addLog(`開始: 第${fleet.fleetNo}艦隊 ${expedition.name}`);
@@ -843,7 +884,7 @@ function App() {
       history,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.1.0"
+      appVersion: "2.2.0"
     };
   }
 
@@ -999,10 +1040,10 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.1</p>
+          <p className="eyebrow">KanColle Expedition Support v2.2</p>
           <h1>艦これ遠征サポート</h1>
           <p>
-            遠征タイマー、終了予定時刻、Discord通知予約、成功条件確認、攻略支援、帰投記録、PWA、ログイン同期をまとめた手動操作前提ツール。
+            艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
             現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
@@ -1011,6 +1052,7 @@ function App() {
         <div className="hero-clock">
           <span>現在時刻</span>
           <strong>{formatClock(now)}</strong>
+          <small>{timeSyncMessage}</small>
         </div>
         <div className="hero-actions">
           <button type="button" className="secondary small" onClick={compactAssistPanels}>補助機能を折りたたむ</button>
@@ -1033,7 +1075,7 @@ function App() {
         <div className="fold-content account-grid">
           <div>
             <h2>提督アカウント</h2>
-            <p>Supabaseを設定すると、お気に入り・プリセット・履歴などを提督ごとにクラウド保存できる。未設定なら今まで通りこのブラウザ内だけで使えるよ。</p>
+            <p>メールアドレスとパスワードでログインすると、お気に入り、カスタムプリセット、遠征履歴、実行中タイマーを提督アカウントごとに保存できるよ。PCで保存して、スマホで同じアカウントから読み込める。</p>
             <p className="helper-text">状態：{isSupabaseConfigured ? (authState.user ? `ログイン中：${authState.user.email}` : "Supabase設定済み / 未ログイン") : "Supabase未設定"}</p>
           </div>
           <div className="account-form">
@@ -1052,7 +1094,7 @@ function App() {
               </>
             )}
           </div>
-          <div className="cloud-message">{cloudSyncMessage || "v1.5相当：ログインと提督別データ保存の土台。RLS付きSupabaseテーブルを作ると使える。"}</div>
+          <div className="cloud-message">{cloudSyncMessage || "初めて使う場合は新規登録 → ログイン。ログイン後は「クラウドへ保存」「クラウドから読込」で端末間同期できるよ。"}</div>
         </div>
       </details>
 
@@ -1080,7 +1122,7 @@ function App() {
               <input type="file" accept="application/json" onChange={importBackup} />
             </label>
           </div>
-          <p className="helper-text">Web公開してURLから使う想定。Vercel / Cloudflare Pagesでは build: npm run build、output: dist。完全に閉じた後のスマホ通知は、現状はDiscord通知が一番安定。設定バックアップはお気に入り、プリセット、履歴、折りたたみ状態を保存する。</p>
+          <p className="helper-text">URLからそのまま使えるWebアプリ。ホーム画面に追加するとアプリっぽく起動できるよ。手元に控えを残したい時は「設定を書き出し」、別端末や再設定時は「設定を読み込み」を使ってね。</p>
         </div>
       </details>
 
@@ -1097,7 +1139,7 @@ function App() {
         <div>
           <h2>通知設定</h2>
           <p>
-            v2.1では通知をシンプル化。提督ごとのDiscord Webhook URLを保存し、遠征開始時にサーバー側通知予約を作る方式に一本化したよ。
+            Discord Webhook URLを1回登録しておくと、各艦隊の「通知予約」をONにして遠征開始した時に、終了予定時刻と通知先をクラウドへ保存するよ。
           </p>
         </div>
         <div className="settings-grid simplified">
@@ -1113,7 +1155,7 @@ function App() {
             Discordテスト
           </button>
         </div>
-        <p className="helper-text">Webhook URLはログイン中ならクラウド保存対象。各艦隊の「通知予約」をONにして遠征開始すると、終了予定時刻と通知先をSupabaseへ保存する。</p>
+        <p className="helper-text">Webhook URLはログイン中ならクラウド保存対象。別端末でも同じ提督アカウントで読み込める。通知はDiscordのサーバー側通知予約に一本化しているので、ブラウザを閉じてもcron-dispatch実行時に送信できるよ。</p>
         </div>
       </details>
 
