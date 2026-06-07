@@ -3,7 +3,7 @@ name: Dispatch Kancolle Notifications
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+  - cron: "2-59/5 * * * *"
 
 jobs:
   dispatch:
