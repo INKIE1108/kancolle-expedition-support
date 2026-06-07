@@ -1,52 +1,44 @@
-# Supabaseログイン・サーバー側通知セットアップ
+# Supabase セットアップ v2.1
 
-## 1. Supabaseプロジェクト作成
+## 1. SQLを実行
 
-1. SupabaseでNew projectを作る
-2. Project Settings > API を開く
-3. Project URL と anon public key をコピー
-4. service_role key もコピー（これは絶対に公開しない）
+Supabase Dashboard > SQL Editor で `supabase/schema.sql` を実行します。
 
-## 2. SQLを実行
+v2.0から更新する場合も、同じSQLを再実行してOKです。`webhook_url` カラムと `active_timers` テーブルが追加されます。
 
-Supabase Dashboard > SQL Editor で `supabase/schema.sql` の内容を実行する。
+## 2. Vercel環境変数
 
-作成されるテーブル:
-
-- `user_settings`: 提督ごとのお気に入り、プリセット、履歴などのクラウド保存
-- `scheduled_notifications`: サーバー側通知予約
-
-どちらもRLSを有効化して、ログインした本人の行だけ読み書きできるようにしている。
-
-## 3. Vercel環境変数
-
-Vercel Project > Settings > Environment Variables で以下をProductionに追加する。
+Vercel Project > Environment Variables に以下を登録します。
 
 ```txt
-VITE_SUPABASE_URL=Supabase Project URL
-VITE_SUPABASE_ANON_KEY=Supabase anon public key
-SUPABASE_SERVICE_ROLE_KEY=Supabase service_role key
-DISCORD_WEBHOOK_URL=Discord Webhook URL
-CRON_SECRET=好きな長いランダム文字列
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+CRON_SECRET=ランダム文字列
 ```
 
-保存後、必ずRedeployする。
+`VITE_` 付きの値はブラウザ側で使われます。`SUPABASE_SERVICE_ROLE_KEY` には絶対に `VITE_` を付けないでください。
 
-## 4. サーバー側通知の起動方法
+## 3. Redeploy
 
-遠征開始時にアプリ側が `scheduled_notifications` に通知予約を入れる。
-通知送信は `/api/cron-dispatch` を定期的に呼ぶことで実行される。
+環境変数を追加・変更したらVercelでRedeployしてください。
 
-例:
+## 4. アプリで確認
 
-```txt
-https://kancolle-expedition-support.vercel.app/api/cron-dispatch
+1. 提督アカウントでログイン
+2. Discord Webhook URLを入力
+3. `クラウドへ保存`
+4. 艦隊カードの `通知予約` をON
+5. 遠征開始
+6. Supabaseの `active_timers` と `scheduled_notifications` に行が入ることを確認
+
+## 5. 通知の実行
+
+`/api/cron-dispatch` を外部Cronから定期的に呼びます。
+
+```bash
+curl -X POST https://<your-app>.vercel.app/api/cron-dispatch \
+  -H "Authorization: Bearer <CRON_SECRET>"
 ```
 
-`CRON_SECRET` を設定している場合は、外部Cronサービス側でHTTP Headerに以下を付ける。
-
-```txt
-Authorization: Bearer <CRON_SECRET>
-```
-
-Vercel HobbyのCronは頻繁な実行に制限があるため、数分おき通知を安定させるなら外部CronサービスやCloudflare Workers Cronの利用を推奨。
+期限切れの `pending` 通知があると、各通知行に保存された `webhook_url` へDiscord通知します。

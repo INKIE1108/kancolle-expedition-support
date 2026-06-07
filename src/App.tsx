@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { expeditions as fallbackExpeditions } from "./data/expeditions";
 import type { AppSettings, Expedition, FleetTimer, ResourceRewards } from "./types";
@@ -6,20 +6,19 @@ import { formatClock, formatDateTime, formatRemaining, minutesToLabel } from "./
 import { loadFromStorage, saveToStorage } from "./utils/storage";
 import {
   buildRewardSummary,
+  cancelCloudNotification,
   getCurrentAuthState,
   isSupabaseConfigured,
+  loadActiveTimers,
   loadCloudSnapshot,
+  saveActiveTimers,
   saveCloudSnapshot,
   scheduleCloudNotification,
   supabase,
   type AuthState,
   type CloudSnapshot
 } from "./utils/cloud";
-import {
-  requestPcNotificationPermission,
-  sendDiscordNotification,
-  sendPcNotification
-} from "./utils/notify";
+import { sendDiscordNotification } from "./utils/notify";
 
 const FLEET_STORAGE_KEY = "kancolle-expedition-fleets-v1";
 const SETTINGS_STORAGE_KEY = "kancolle-expedition-settings-v1";
@@ -153,14 +152,14 @@ const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
   endAt: null,
   notifiedAt: null,
   recordedAt: null,
-  pcNotify: true,
-  discordNotify: false
+  pcNotify: false,
+  discordNotify: true
 }));
 
 const initialSettings: AppSettings = {
   discordWebhookUrl: "",
   discordNotifyMode: "direct",
-  serverNotificationMode: "off"
+  serverNotificationMode: "supabase"
 };
 
 const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授業・バイト" | "短時間">, keyof ResourceRewards> = {
@@ -319,6 +318,8 @@ function App() {
   const [authPassword, setAuthPassword] = useState<string>("");
   const [cloudSyncBusy, setCloudSyncBusy] = useState<boolean>(false);
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
+  const lastAutoLoadedUserRef = useRef<string | null>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
 
   const allPresets = useMemo(() => [...defaultPresets, ...customPresets], [customPresets]);
   const expeditionTags = useMemo(
@@ -494,6 +495,37 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const userId = authState.user?.id;
+    if (!userId || lastAutoLoadedUserRef.current === userId) return;
+    lastAutoLoadedUserRef.current = userId;
+
+    applyCloudSnapshot(userId, false).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "クラウド自動読込に失敗";
+      setCloudSyncMessage(message);
+    });
+  }, [authState.user?.id]);
+
+  useEffect(() => {
+    const userId = authState.user?.id;
+    if (!userId) return;
+
+    if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      const snapshot = createCloudSnapshot();
+      saveCloudSnapshot(userId, snapshot)
+        .then(() => saveActiveTimers(userId, fleets))
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : "クラウド自動保存に失敗";
+          addLog(message);
+        });
+    }, 900);
+
+    return () => {
+      if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [authState.user?.id, fleets, settings, pinnedExpeditionIds, customPresets, history, collapsedPanels]);
+
+  useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     const handleInstallPrompt = (event: Event) => {
@@ -539,19 +571,7 @@ function App() {
 
     completedFleets.forEach((fleet) => {
       const expedition = findExpedition(fleet.expeditionId);
-
-      if (fleet.pcNotify) {
-        sendPcNotification(fleet, expedition);
-      }
-
-      if (fleet.discordNotify) {
-        sendDiscordNotification(settings.discordWebhookUrl, fleet, expedition, settings.discordNotifyMode)
-          .then(() => addLog(`Discord通知: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
-          .catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : "Discord通知に失敗しました";
-            addLog(message);
-          });
-      }
+      addLog(`遠征完了: 第${fleet.fleetNo}艦隊 ${expedition.name}`);
     });
 
     setFleets((current) =>
@@ -562,7 +582,7 @@ function App() {
         return fleet;
       })
     );
-  }, [now, fleets, settings.discordWebhookUrl]);
+  }, [now, fleets]);
 
   function addLog(message: string) {
     const stamped = `${new Intl.DateTimeFormat("ja-JP", {
@@ -622,9 +642,13 @@ function App() {
     updateFleet(fleet.fleetNo, { startAt, endAt, notifiedAt: null, recordedAt: null });
     addLog(`開始: 第${fleet.fleetNo}艦隊 ${expedition.name}`);
 
-    if (fleet.discordNotify && settings.serverNotificationMode === "supabase") {
+    if (fleet.discordNotify) {
       if (!authState.user) {
-        addLog("サーバー側通知はログイン後に予約できるよ");
+        addLog("通知予約は提督ログイン後に使えるよ");
+        return;
+      }
+      if (!settings.discordWebhookUrl.trim()) {
+        addLog("Discord Webhook URLを設定してから通知予約してね");
         return;
       }
       scheduleCloudNotification({
@@ -633,7 +657,8 @@ function App() {
         expeditionId: expedition.id,
         expeditionName: expedition.name,
         endAt,
-        content: buildDiscordContent(fleet, expedition, endAt)
+        content: buildDiscordContent(fleet, expedition, endAt),
+        webhookUrl: settings.discordWebhookUrl
       })
         .then(() => addLog(`サーバー側通知を予約: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
         .catch((error: unknown) => {
@@ -649,6 +674,9 @@ function App() {
 
   function clearFleet(fleetNo: FleetTimer["fleetNo"]) {
     updateFleet(fleetNo, { startAt: null, endAt: null, notifiedAt: null, recordedAt: null });
+    if (authState.user) {
+      cancelCloudNotification(authState.user.id, fleetNo).catch(() => undefined);
+    }
     addLog(`クリア: 第${fleetNo}艦隊`);
   }
 
@@ -763,7 +791,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "2.0.0",
+      version: "2.1.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -809,14 +837,57 @@ function App() {
   function createCloudSnapshot(): CloudSnapshot {
     return {
       fleets,
-      settings,
+      settings: { ...settings, discordNotifyMode: "direct", serverNotificationMode: "supabase" },
       pinnedExpeditionIds,
       customPresets,
       history,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.0.0"
+      appVersion: "2.1.0"
     };
+  }
+
+  function mergeActiveTimerRows(baseFleets: FleetTimer[], rows: Awaited<ReturnType<typeof loadActiveTimers>>): FleetTimer[] {
+    if (rows.length === 0) return baseFleets;
+    return baseFleets.map((fleet) => {
+      const row = rows.find((item) => item.fleet_no === fleet.fleetNo);
+      if (!row) return fleet;
+      const startAt = row.start_at ? new Date(row.start_at).getTime() : null;
+      const endAt = row.end_at ? new Date(row.end_at).getTime() : null;
+      return {
+        ...fleet,
+        expeditionId: row.expedition_id || fleet.expeditionId,
+        startAt,
+        endAt,
+        notifiedAt: null,
+        recordedAt: null,
+        pcNotify: Boolean(row.pc_notify),
+        discordNotify: row.discord_notify ?? fleet.discordNotify
+      };
+    });
+  }
+
+  async function applyCloudSnapshot(userId: string, ask = true) {
+    const ok = !ask || window.confirm("クラウド保存データで現在のローカル設定を上書きしますか？");
+    if (!ok) return false;
+
+    const snapshot = await loadCloudSnapshot(userId);
+    const activeRows = await loadActiveTimers(userId).catch(() => []);
+    if (!snapshot && activeRows.length === 0) {
+      setCloudSyncMessage("クラウド保存データはまだないよ");
+      return false;
+    }
+
+    const nextFleets = mergeActiveTimerRows((snapshot?.fleets as FleetTimer[] | undefined) ?? initialFleets, activeRows);
+    setFleets(nextFleets);
+    setSettings({ ...initialSettings, ...((snapshot?.settings as AppSettings | undefined) ?? {}), discordNotifyMode: "direct", serverNotificationMode: "supabase" });
+    setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
+    setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
+    setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
+    setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
+    setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
+    addLog("クラウド読込完了");
+    return true;
   }
 
   async function signUp() {
@@ -892,23 +963,9 @@ function App() {
       setCloudSyncMessage("クラウド読込はログイン後に使えるよ");
       return;
     }
-    const ok = window.confirm("クラウド保存データで現在のローカル設定を上書きしますか？");
-    if (!ok) return;
     setCloudSyncBusy(true);
     try {
-      const snapshot = await loadCloudSnapshot(authState.user.id);
-      if (!snapshot) {
-        setCloudSyncMessage("クラウド保存データはまだないよ");
-        return;
-      }
-      setFleets(snapshot.fleets ?? initialFleets);
-      setSettings((snapshot.settings as AppSettings) ?? initialSettings);
-      setPinnedExpeditionIds(snapshot.pinnedExpeditionIds ?? []);
-      setCustomPresets((snapshot.customPresets as ExpeditionPreset[]) ?? []);
-      setHistory((snapshot.history as ExpeditionHistory[]) ?? []);
-      setCollapsedPanels((snapshot.collapsedPanels as CollapseState) ?? defaultCollapsedPanels);
-      setCloudSyncMessage(`クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）`);
-      addLog("クラウド読込完了");
+      await applyCloudSnapshot(authState.user.id, true);
     } catch (error) {
       setCloudSyncMessage(error instanceof Error ? error.message : "クラウド読込に失敗");
     } finally {
@@ -929,7 +986,8 @@ function App() {
     };
 
     try {
-      await sendDiscordNotification(settings.discordWebhookUrl, dummyFleet, expeditions[0], settings.discordNotifyMode);
+      if (!settings.discordWebhookUrl.trim()) throw new Error("Discord Webhook URLが未設定です");
+      await sendDiscordNotification(settings.discordWebhookUrl, dummyFleet, expeditions[0], "direct");
       addLog("Discordテスト通知に成功");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Discordテスト通知に失敗";
@@ -941,10 +999,10 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.0</p>
+          <p className="eyebrow">KanColle Expedition Support v2.1</p>
           <h1>艦これ遠征サポート</h1>
           <p>
-            遠征タイマー、終了予定時刻、PC通知、Discord通知、成功条件確認、攻略支援、帰投記録、PWA、ログイン同期、サーバー側通知の土台をまとめた手動操作前提ツール。
+            遠征タイマー、終了予定時刻、Discord通知予約、成功条件確認、攻略支援、帰投記録、PWA、ログイン同期をまとめた手動操作前提ツール。
             現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
@@ -1039,47 +1097,23 @@ function App() {
         <div>
           <h2>通知設定</h2>
           <p>
-            PC通知はブラウザの許可が必要。Discord通知は、個人URLモードまたはVercel環境変数を使う安全モードを選べる。
+            v2.1では通知をシンプル化。提督ごとのDiscord Webhook URLを保存し、遠征開始時にサーバー側通知予約を作る方式に一本化したよ。
           </p>
         </div>
-        <div className="settings-grid">
-          <button className="secondary" onClick={requestPcNotificationPermission}>
-            PC通知を許可
-          </button>
-          <select
-            value={settings.discordNotifyMode ?? "direct"}
-            onChange={(event) =>
-              setSettings((current) => ({ ...current, discordNotifyMode: event.target.value as AppSettings["discordNotifyMode"] }))
-            }
-            title="Discord通知方式"
-          >
-            <option value="direct">個人URLモード</option>
-            <option value="server">安全モード</option>
-          </select>
+        <div className="settings-grid simplified">
           <input
             value={settings.discordWebhookUrl}
             onChange={(event) =>
-              setSettings((current) => ({ ...current, discordWebhookUrl: event.target.value }))
+              setSettings((current) => ({ ...current, discordWebhookUrl: event.target.value, discordNotifyMode: "direct", serverNotificationMode: "supabase" }))
             }
-            placeholder={settings.discordNotifyMode === "server" ? "安全モードでは入力不要" : "Discord Webhook URL"}
+            placeholder="Discord Webhook URL（提督ごとにクラウド保存）"
             type="password"
-            disabled={settings.discordNotifyMode === "server"}
           />
-          <select
-            value={settings.serverNotificationMode ?? "off"}
-            onChange={(event) =>
-              setSettings((current) => ({ ...current, serverNotificationMode: event.target.value as AppSettings["serverNotificationMode"] }))
-            }
-            title="サーバー側通知"
-          >
-            <option value="off">端末内タイマー通知</option>
-            <option value="supabase">サーバー側通知予約</option>
-          </select>
-          <button className="secondary" onClick={testDiscord} disabled={settings.discordNotifyMode !== "server" && !settings.discordWebhookUrl.trim()}>
+          <button className="secondary" onClick={testDiscord} disabled={!settings.discordWebhookUrl.trim()}>
             Discordテスト
           </button>
         </div>
-        <p className="helper-text">安全モードはVercelの環境変数 DISCORD_WEBHOOK_URL にWebhook URLを保存して、ブラウザにはURLを置かない方式。サーバー側通知予約はSupabaseログイン後、遠征開始時に通知予定をDBへ保存する。</p>
+        <p className="helper-text">Webhook URLはログイン中ならクラウド保存対象。各艦隊の「通知予約」をONにして遠征開始すると、終了予定時刻と通知先をSupabaseへ保存する。</p>
         </div>
       </details>
 
@@ -1331,18 +1365,10 @@ function App() {
                 <label>
                   <input
                     type="checkbox"
-                    checked={fleet.pcNotify}
-                    onChange={(event) => updateFleet(fleet.fleetNo, { pcNotify: event.target.checked })}
-                  />
-                  PC通知
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
                     checked={fleet.discordNotify}
                     onChange={(event) => updateFleet(fleet.fleetNo, { discordNotify: event.target.checked })}
                   />
-                  Discord通知
+                  通知予約
                 </label>
               </div>
 

@@ -41,7 +41,10 @@ export type FleetTimer = {
 };
 
 export type AppSettings = {
+  /** ユーザー個別のDiscord Webhook URL。v2.1ではクラウド保存対象。 */
   discordWebhookUrl: string;
+  /** 旧バージョン互換用。v2.1のUIでは個人URLモード固定。 */
   discordNotifyMode?: "direct" | "server";
+  /** 旧バージョン互換用。v2.1のUIではサーバー側通知予約固定。 */
   serverNotificationMode?: "off" | "supabase";
 };

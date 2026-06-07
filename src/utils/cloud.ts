@@ -33,6 +33,17 @@ export type ScheduledNotificationInput = {
   expeditionName: string;
   endAt: number;
   content: string;
+  webhookUrl: string;
+};
+
+export type ActiveTimerRecord = {
+  fleet_no: number;
+  expedition_id: string;
+  start_at: string | null;
+  end_at: string | null;
+  status: "idle" | "running" | "completed";
+  pc_notify?: boolean;
+  discord_notify?: boolean;
 };
 
 export type AuthState = {
@@ -72,6 +83,16 @@ export async function loadCloudSnapshot(userId: string): Promise<CloudSnapshot |
 
 export async function scheduleCloudNotification(input: ScheduledNotificationInput): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
+  if (!input.webhookUrl.trim()) throw new Error("Discord Webhook URLが未設定です");
+
+  // 同じ艦隊の未送信予約が残っていると二重通知になりやすいので、開始時に古いpendingをキャンセル。
+  await supabase
+    .from("scheduled_notifications")
+    .update({ status: "cancelled", error_message: "replaced by newer timer" })
+    .eq("user_id", input.userId)
+    .eq("fleet_no", input.fleetNo)
+    .eq("status", "pending");
+
   const { error } = await supabase.from("scheduled_notifications").insert({
     user_id: input.userId,
     fleet_no: input.fleetNo,
@@ -79,9 +100,50 @@ export async function scheduleCloudNotification(input: ScheduledNotificationInpu
     expedition_name: input.expeditionName,
     end_at: new Date(input.endAt).toISOString(),
     content: input.content,
+    webhook_url: input.webhookUrl.trim(),
     status: "pending"
   });
   if (error) throw error;
+}
+
+export async function cancelCloudNotification(userId: string, fleetNo: number): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { error } = await supabase
+    .from("scheduled_notifications")
+    .update({ status: "cancelled", error_message: "cancelled by user" })
+    .eq("user_id", userId)
+    .eq("fleet_no", fleetNo)
+    .eq("status", "pending");
+  if (error) throw error;
+}
+
+export async function saveActiveTimers(userId: string, fleets: FleetTimer[]): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const rows = fleets.map((fleet) => ({
+    user_id: userId,
+    fleet_no: fleet.fleetNo,
+    expedition_id: fleet.expeditionId,
+    start_at: fleet.startAt ? new Date(fleet.startAt).toISOString() : null,
+    end_at: fleet.endAt ? new Date(fleet.endAt).toISOString() : null,
+    status: fleet.endAt ? (Date.now() >= fleet.endAt ? "completed" : "running") : "idle",
+    pc_notify: fleet.pcNotify,
+    discord_notify: fleet.discordNotify,
+    updated_at: new Date().toISOString()
+  }));
+
+  const { error } = await supabase.from("active_timers").upsert(rows, { onConflict: "user_id,fleet_no" });
+  if (error) throw error;
+}
+
+export async function loadActiveTimers(userId: string): Promise<ActiveTimerRecord[]> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { data, error } = await supabase
+    .from("active_timers")
+    .select("fleet_no, expedition_id, start_at, end_at, status, pc_notify, discord_notify")
+    .eq("user_id", userId)
+    .order("fleet_no", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as ActiveTimerRecord[];
 }
 
 export function buildRewardSummary(resources: ResourceRewards): string {

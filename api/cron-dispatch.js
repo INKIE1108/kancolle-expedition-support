@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const FALLBACK_DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -17,9 +17,6 @@ export default async function handler(req, res) {
     }
   }
 
-  if (!DISCORD_WEBHOOK_URL) {
-    return res.status(500).json({ ok: false, error: "DISCORD_WEBHOOK_URL is not configured" });
-  }
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return res.status(500).json({ ok: false, error: "Supabase service environment variables are not configured" });
   }
@@ -31,18 +28,21 @@ export default async function handler(req, res) {
   const nowIso = new Date().toISOString();
   const { data, error } = await supabase
     .from("scheduled_notifications")
-    .select("id, content")
+    .select("id, content, webhook_url")
     .eq("status", "pending")
     .lte("end_at", nowIso)
     .order("end_at", { ascending: true })
-    .limit(10);
+    .limit(20);
 
   if (error) return res.status(500).json({ ok: false, error: error.message });
 
   const results = [];
   for (const item of data || []) {
+    const webhookUrl = item.webhook_url || FALLBACK_DISCORD_WEBHOOK_URL;
     try {
-      const discordResponse = await fetch(DISCORD_WEBHOOK_URL, {
+      if (!webhookUrl) throw new Error("Webhook URL is missing for this notification");
+
+      const discordResponse = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: item.content })

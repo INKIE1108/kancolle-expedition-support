@@ -126,7 +126,7 @@ select:focus {
 }
 
 .hero-clock {
-  min-width: 190px;
+  min-width: 230px;
   border-radius: 22px;
   padding: 20px;
   background: rgba(2, 6, 23, 0.45);
@@ -146,6 +146,12 @@ select:focus {
   margin-top: 4px;
   font-size: clamp(1.7rem, 5vw, 2.8rem);
   letter-spacing: 0.03em;
+}
+
+.hero-clock strong {
+  font-size: clamp(2rem, 3.2vw, 2.55rem);
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
 .settings-card {
@@ -1022,7 +1028,7 @@ button.small,
 }
 
 .fold-card {
-  display: block !important;
+  display: block;
   margin-top: 18px;
   padding: 0 !important;
   overflow: hidden;
@@ -1381,5 +1387,82 @@ button.small,
   .mobile-tab-account .settings-card,
   .mobile-tab-account .log-card {
     display: block;
+  }
+}
+
+
+/* v2.1: simplified notification / mobile tab fixes */
+.settings-grid.simplified {
+  grid-template-columns: minmax(260px, 1fr) 180px;
+}
+
+.compact-fleets .fleet-card .fleet-pinned-shortcuts {
+  display: flex;
+}
+
+@media (max-width: 760px) {
+  .hero-clock {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .hero-clock strong {
+    font-size: clamp(2.15rem, 11vw, 3.2rem);
+  }
+
+  .settings-grid.simplified {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tab-timers .account-card,
+  .mobile-tab-timers .pwa-card,
+  .mobile-tab-timers .settings-card,
+  .mobile-tab-timers .preset-card,
+  .mobile-tab-timers .guide-card,
+  .mobile-tab-timers .detail-search-fold,
+  .mobile-tab-timers .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-assist .account-card,
+  .mobile-tab-assist .pwa-card,
+  .mobile-tab-assist .settings-card,
+  .mobile-tab-assist .fleet-grid,
+  .mobile-tab-assist .detail-search-fold,
+  .mobile-tab-assist .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-assist .preset-card,
+  .mobile-tab-assist .guide-card {
+    display: block !important;
+  }
+
+  .mobile-tab-search .account-card,
+  .mobile-tab-search .pwa-card,
+  .mobile-tab-search .settings-card,
+  .mobile-tab-search .preset-card,
+  .mobile-tab-search .guide-card,
+  .mobile-tab-search .fleet-grid,
+  .mobile-tab-search .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-search .detail-search-fold {
+    display: block !important;
+  }
+
+  .mobile-tab-account .fleet-grid,
+  .mobile-tab-account .preset-card,
+  .mobile-tab-account .guide-card,
+  .mobile-tab-account .detail-search-fold {
+    display: none !important;
+  }
+
+  .mobile-tab-account .account-card,
+  .mobile-tab-account .pwa-card,
+  .mobile-tab-account .settings-card,
+  .mobile-tab-account .log-card {
+    display: block !important;
   }
 }

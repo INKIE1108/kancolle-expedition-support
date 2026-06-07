@@ -1,21 +1,17 @@
-# 艦これ遠征サポート v2.0
+# 艦これ遠征サポート v2.1
 
-艦これの遠征タイマー、終了予定時刻、PC通知、Discord通知、成功条件確認、攻略支援、帰投記録、PWA、Web公開、外部JSON、提督ログイン、クラウド同期、サーバー側通知予約をまとめた手動操作前提ツールです。
+艦これの遠征タイマー、終了予定時刻、Discord通知予約、成功条件確認、攻略支援、帰投記録、PWA、提督ログイン同期をまとめた手動操作前提ツールです。
 
-## v2.0の主な追加
+## v2.1 の主な変更
 
-- v1.4: スマホUI最適化
-  - スマホ下部タブ: タイマー / 攻略 / 一覧 / 設定
-  - 艦隊カード簡易表示切替
-  - スマホでは必要な画面だけ表示しやすい構成
-- v1.5: Supabaseログインと提督別データ保存
-  - メール・パスワードログイン
-  - お気に入り、プリセット、履歴、設定をクラウド保存/読込
-- v2.0: サーバー側通知の土台
-  - 遠征開始時にSupabaseへ通知予約
-  - `/api/cron-dispatch` で期限切れ通知をDiscordへ送信
+- スマホ下部タブ（タイマー / 攻略 / 一覧 / 設定）の表示切替を修正
+- 実行中タイマーをクラウド同期できる `active_timers` テーブルに対応
+- Discord通知はシンプル化し、提督ごとの個人Webhook URL + サーバー側通知予約に一本化
+- 通知設定UIから安全モード/個人URLモード/端末内通知の選択を削除
+- 現在時刻の表示が枠からはみ出しにくいよう調整
+- 簡易カードでもお気に入りショートカット（★02など）を表示
 
-## 開発
+## 起動
 
 ```bash
 npm install
@@ -28,15 +24,24 @@ npm run dev
 npm run build
 ```
 
-## デプロイ
+## Vercel 環境変数
 
-Vercel推奨。
+最低限必要です。
 
-- Build Command: `npm run build`
-- Output Directory: `dist`
+```txt
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+CRON_SECRET=ランダム文字列
+```
 
-## 環境変数
+`DISCORD_WEBHOOK_URL` はv2.1では通常不要です。旧安全モード互換やフォールバック用として残しても動きます。
 
-`.env.example` を参照してください。Supabase連携を使わない場合、従来通りLocalStorageのみで動きます。
+## Supabase SQL
 
-詳しいSupabase設定は `SUPABASE_SETUP.md` を参照してください。
+`supabase/schema.sql` をSupabase SQL Editorで実行してください。v2.1では以下を使います。
+
+- `user_settings`: 提督ごとの設定・お気に入り・プリセット・Webhook URLなど
+- `active_timers`: 実行中タイマーの同期
+- `scheduled_notifications`: サーバー側Discord通知予約
+
