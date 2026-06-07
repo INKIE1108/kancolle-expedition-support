@@ -1,9 +1,9 @@
 name: Dispatch Kancolle Notifications
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "*/5 * * * *"
-  workflow_dispatch:
 
 jobs:
   dispatch:
@@ -11,14 +11,9 @@ jobs:
     steps:
       - name: Call cron-dispatch
         env:
-          APP_URL: ${{ vars.KANCOLLE_APP_URL }}
+          APP_URL: ${{ vars.KANCOLLE_APP_URL || 'https://kancolle-expedition-support.vercel.app' }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          URL="${APP_URL:-https://kancolle-expedition-support.vercel.app}"
-          if [ -z "$CRON_SECRET" ]; then
-            echo "CRON_SECRET repository secret is missing."
-            exit 1
-          fi
-          curl -fsS -X POST "$URL/api/cron-dispatch" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json"
+          echo "Run URL=${APP_URL}"
+          curl --fail -X POST "${APP_URL}/api/cron-dispatch" \
+            -H "Authorization: Bearer ${CRON_SECRET}"
