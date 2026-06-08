@@ -144,14 +144,11 @@ create policy "push_subscriptions_delete_own"
   on public.push_subscriptions for delete
   using (auth.uid() = user_id);
 
--- v2.5: 通知端末管理用の追加カラム。再実行OK。
-alter table public.push_subscriptions
-  add column if not exists device_label text,
-  add column if not exists device_kind text default 'unknown',
-  add column if not exists browser_name text default 'unknown',
-  add column if not exists os_name text default 'unknown',
-  add column if not exists last_seen_at timestamptz,
-  add column if not exists last_tested_at timestamptz;
-
-create index if not exists push_subscriptions_endpoint_idx
-  on public.push_subscriptions(endpoint);
+-- v2.8: active_timers のリアルタイム同期用。既に追加済みなら何もしません。
+do $$
+begin
+  alter publication supabase_realtime add table public.active_timers;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;

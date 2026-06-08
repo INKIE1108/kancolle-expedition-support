@@ -1921,3 +1921,94 @@ button.small,
     display: block !important;
   }
 }
+
+/* v2.9: 初回設定ガイド収納・通知端末パネルの見やすさ調整 */
+.account-message-stack {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.account-message-stack > span {
+  flex: 1 1 280px;
+}
+
+.setup-guide-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.setup-guide-card.complete {
+  border-color: rgba(70, 255, 150, 0.28);
+  background: rgba(0, 80, 60, 0.14);
+}
+
+.device-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(380px, 1.4fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.device-panel > .mini-heading,
+.device-panel > h3,
+.device-panel > .device-summary-grid,
+.device-panel > .device-action-row,
+.device-panel > .status-message,
+.device-panel > .muted-text {
+  grid-column: 1;
+}
+
+.device-panel > .device-list {
+  grid-column: 2;
+  grid-row: 1 / span 7;
+  min-width: 0;
+}
+
+.device-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.device-summary-card,
+.device-row,
+.device-row-meta {
+  min-width: 0;
+}
+
+.device-summary-card strong,
+.device-row-meta span {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  line-height: 1.35;
+}
+
+.device-action-row {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 980px) {
+  .device-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .device-panel > .mini-heading,
+  .device-panel > h3,
+  .device-panel > .device-summary-grid,
+  .device-panel > .device-action-row,
+  .device-panel > .device-list,
+  .device-panel > .status-message,
+  .device-panel > .muted-text {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .setup-guide-controls {
+    justify-content: space-between;
+  }
+}

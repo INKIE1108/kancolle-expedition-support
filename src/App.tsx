@@ -7,11 +7,13 @@ import { loadFromStorage, saveToStorage } from "./utils/storage";
 import {
   buildRewardSummary,
   cancelCloudNotification,
+  clearActiveTimer,
   getCurrentAuthState,
   isSupabaseConfigured,
   loadActiveTimers,
   loadCloudSnapshot,
   loadNotificationHistory,
+  saveActiveTimer,
   saveActiveTimers,
   saveCloudSnapshot,
   savePushSubscription,
@@ -35,6 +37,7 @@ const HISTORY_STORAGE_KEY = "kancolle-expedition-history-v1";
 const COLLAPSE_STORAGE_KEY = "kancolle-expedition-collapse-v1";
 const MONTHLY_STORAGE_KEY = "kancolle-expedition-monthly-v1";
 const SETUP_TEST_STORAGE_KEY = "kancolle-expedition-setup-test-v1";
+const SETUP_GUIDE_DISMISSED_STORAGE_KEY = "kancolle-expedition-setup-guide-dismissed-v1";
 
 type SortMode =
   | "ID順"
@@ -155,7 +158,9 @@ const backupStorageKeys = [
   CUSTOM_PRESETS_STORAGE_KEY,
   HISTORY_STORAGE_KEY,
   MONTHLY_STORAGE_KEY,
-  COLLAPSE_STORAGE_KEY
+  COLLAPSE_STORAGE_KEY,
+  SETUP_TEST_STORAGE_KEY,
+  SETUP_GUIDE_DISMISSED_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -349,6 +354,9 @@ function App() {
   const [setupNotificationTestDone, setSetupNotificationTestDone] = useState<boolean>(() =>
     loadFromStorage(SETUP_TEST_STORAGE_KEY, false)
   );
+  const [setupGuideDismissed, setSetupGuideDismissed] = useState<boolean>(() =>
+    loadFromStorage(SETUP_GUIDE_DISMISSED_STORAGE_KEY, false)
+  );
   const [history, setHistory] = useState<ExpeditionHistory[]>(() =>
     loadFromStorage(HISTORY_STORAGE_KEY, [])
   );
@@ -512,6 +520,8 @@ function App() {
   const deviceRegistered = Boolean(deviceStatus?.currentDevice);
   const testNotificationDone = Boolean(setupNotificationTestDone || deviceStatus?.currentDevice?.last_tested_at || log.some((item) => item.includes("通知テスト")));
   const expeditionStarted = fleets.some((fleet) => fleet.startAt !== null) || log.some((item) => item.includes("開始:") || item.includes("通知予約"));
+  const setupGuideDone = loggedIn && webhookRegistered && deviceRegistered && testNotificationDone && expeditionStarted;
+  const showSetupGuide = !setupGuideDismissed || !setupGuideDone;
 
   useEffect(() => {
     let cancelled = false;
@@ -572,6 +582,19 @@ function App() {
   }, [setupNotificationTestDone]);
 
   useEffect(() => {
+    saveToStorage(SETUP_GUIDE_DISMISSED_STORAGE_KEY, setupGuideDismissed);
+  }, [setupGuideDismissed]);
+
+  useEffect(() => {
+    if (!setupGuideDone || setupGuideDismissed) return;
+    const timer = window.setTimeout(() => {
+      setSetupGuideDismissed(true);
+      addLog("初回設定ガイドを完了したので自動で収納");
+    }, 1600);
+    return () => window.clearTimeout(timer);
+  }, [setupGuideDone, setupGuideDismissed]);
+
+  useEffect(() => {
     saveToStorage(HISTORY_STORAGE_KEY, history);
   }, [history]);
 
@@ -612,6 +635,32 @@ function App() {
 
   useEffect(() => {
     const userId = authState.user?.id;
+    const client = supabase;
+    if (!userId || !client) return;
+
+    const channel = client
+      .channel(`active-timers-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "active_timers", filter: `user_id=eq.${userId}` },
+        () => {
+          loadActiveTimers(userId)
+            .then((rows) => {
+              setFleets((current) => mergeActiveTimerRows(current, rows));
+              addLog("実行中タイマーをクラウド同期");
+            })
+            .catch(() => undefined);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [authState.user?.id]);
+
+  useEffect(() => {
+    const userId = authState.user?.id;
     if (!userId) return;
 
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
@@ -628,7 +677,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  }, [authState.user?.id, fleets, settings, pinnedExpeditionIds, customPresets, history, collapsedPanels]);
+  }, [authState.user?.id, fleets, settings, pinnedExpeditionIds, customPresets, history, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -801,7 +850,14 @@ function App() {
     const expedition = findExpedition(fleet.expeditionId);
     const startAt = getSyncedNow();
     const endAt = startAt + expedition.durationMinutes * 60 * 1000;
-    updateFleet(fleet.fleetNo, { startAt, endAt, notifiedAt: null, recordedAt: null });
+    const nextFleet = { ...fleet, startAt, endAt, notifiedAt: null, recordedAt: null };
+    updateFleet(fleet.fleetNo, nextFleet);
+    if (authState.user) {
+      saveActiveTimer(authState.user.id, nextFleet).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "実行中タイマーのクラウド保存に失敗";
+        addLog(message);
+      });
+    }
     addLog(`開始: 第${fleet.fleetNo}艦隊 ${expedition.name}`);
 
     if (fleet.discordNotify) {
@@ -838,6 +894,7 @@ function App() {
     updateFleet(fleetNo, { startAt: null, endAt: null, notifiedAt: null, recordedAt: null });
     if (authState.user) {
       cancelCloudNotification(authState.user.id, fleetNo).catch(() => undefined);
+      clearActiveTimer(authState.user.id, fleetNo).catch(() => undefined);
     }
     addLog(`クリア: 第${fleetNo}艦隊`);
   }
@@ -982,7 +1039,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "2.7.0",
+      version: "2.9.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1034,31 +1091,51 @@ function App() {
       history,
       monthlyCompletions,
       setupNotificationTestDone,
+      setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.7.0"
+      appVersion: "2.9.0"
     };
   }
 
+  function isRemoteTimerActive(row: Awaited<ReturnType<typeof loadActiveTimers>>[number]): boolean {
+    const endAt = row.end_at ? new Date(row.end_at).getTime() : NaN;
+    if (!Number.isFinite(endAt)) return false;
+    return row.status === "running" || row.status === "completed" || endAt > getSyncedNow();
+  }
+
   function mergeActiveTimerRows(baseFleets: FleetTimer[], rows: Awaited<ReturnType<typeof loadActiveTimers>>): FleetTimer[] {
-    if (rows.length === 0) return baseFleets;
+    const usableRows = rows.filter(isRemoteTimerActive);
+    if (usableRows.length === 0) return baseFleets;
+
     return baseFleets.map((fleet) => {
-      const row = rows.find((item) => item.fleet_no === fleet.fleetNo);
+      const row = usableRows.find((item) => item.fleet_no === fleet.fleetNo);
       if (!row) return fleet;
-      const startAt = row.start_at ? new Date(row.start_at).getTime() : null;
-      const endAt = row.end_at ? new Date(row.end_at).getTime() : null;
+
+      const remoteStartAt = row.start_at ? new Date(row.start_at).getTime() : null;
+      const remoteEndAt = row.end_at ? new Date(row.end_at).getTime() : null;
+      if (!remoteEndAt || Number.isNaN(remoteEndAt)) return fleet;
+
+      const localIsRunning = fleet.endAt !== null && fleet.endAt > getSyncedNow();
+      const remoteIsRunning = remoteEndAt > getSyncedNow();
+
+      // v2.8: クラウドに有効な実行中タイマーがある場合はクラウドを正にする。
+      // 逆に、古い/無効な0秒データではローカルの実行中タイマーを壊さない。
+      if (localIsRunning && !remoteIsRunning && fleet.endAt && fleet.endAt > remoteEndAt) return fleet;
+
       return {
         ...fleet,
         expeditionId: row.expedition_id || fleet.expeditionId,
-        startAt,
-        endAt,
-        notifiedAt: null,
-        recordedAt: null,
+        startAt: remoteStartAt,
+        endAt: remoteEndAt,
+        notifiedAt: remoteEndAt <= getSyncedNow() ? fleet.notifiedAt ?? getSyncedNow() : null,
+        recordedAt: remoteEndAt <= getSyncedNow() ? fleet.recordedAt ?? null : null,
         pcNotify: Boolean(row.pc_notify),
         discordNotify: row.discord_notify ?? fleet.discordNotify
       };
     });
   }
+
 
   async function applyCloudSnapshot(userId: string, ask = true) {
     const ok = !ask || window.confirm("クラウド保存データで現在のローカル設定を上書きしますか？");
@@ -1079,6 +1156,7 @@ function App() {
     setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
     setMonthlyCompletions((snapshot?.monthlyCompletions as MonthlyCompletionMap | undefined) ?? monthlyCompletions);
     setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
+    setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
     setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
     setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
     addLog("クラウド読込完了");
@@ -1144,6 +1222,7 @@ function App() {
     setCloudSyncBusy(true);
     try {
       await saveCloudSnapshot(authState.user.id, createCloudSnapshot());
+      await saveActiveTimers(authState.user.id, fleets);
       setCloudSyncMessage("クラウドへ保存したよ");
       addLog("クラウド保存完了");
     } catch (error) {
@@ -1304,11 +1383,11 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.7</p>
+          <p className="eyebrow">KanColle Expedition Support v2.9</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
-            v2.7ではマンスリー遠征管理と通知履歴・失敗診断を追加。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            v2.9では実行中タイマー同期を安定化し、初回設定ガイドを完了後に自動収納できるようにしたよ。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
@@ -1359,21 +1438,32 @@ function App() {
               </>
             )}
           </div>
-          <div className="cloud-message">{cloudSyncMessage || "初めて使う場合は新規登録 → ログイン。ログイン後は「クラウドへ保存」「クラウドから読込」で端末間同期できるよ。"}</div>
+          <div className="cloud-message account-message-stack">
+            <span>{cloudSyncMessage || "初めて使う場合は新規登録 → ログイン。ログイン後は「クラウドへ保存」「クラウドから読込」で端末間同期できるよ。"}</span>
+            {setupGuideDismissed ? (
+              <button type="button" className="ghost small" onClick={() => setSetupGuideDismissed(false)}>
+                初回設定ガイドを再表示
+              </button>
+            ) : null}
+          </div>
         </div>
       </details>
 
-      <InitialSetupGuide
-        loggedIn={loggedIn}
-        webhookRegistered={webhookRegistered}
-        deviceRegistered={deviceRegistered}
-        testNotificationDone={testNotificationDone}
-        expeditionStarted={expeditionStarted}
-        onJumpAccount={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}
-        onJumpNotification={() => document.getElementById("notification-section")?.scrollIntoView({ behavior: "smooth" })}
-        onJumpTimer={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}
-        onTestNotification={runSetupNotificationTest}
-      />
+      {showSetupGuide ? (
+        <InitialSetupGuide
+          loggedIn={loggedIn}
+          webhookRegistered={webhookRegistered}
+          deviceRegistered={deviceRegistered}
+          testNotificationDone={testNotificationDone}
+          expeditionStarted={expeditionStarted}
+          autoDismissReady={setupGuideDone}
+          onDismiss={() => setSetupGuideDismissed(true)}
+          onJumpAccount={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}
+          onJumpNotification={() => document.getElementById("notification-section")?.scrollIntoView({ behavior: "smooth" })}
+          onJumpTimer={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}
+          onTestNotification={runSetupNotificationTest}
+        />
+      ) : null}
 
       <details
         className="pwa-card fold-card"

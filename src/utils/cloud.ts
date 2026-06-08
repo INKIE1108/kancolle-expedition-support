@@ -23,6 +23,7 @@ export type CloudSnapshot = {
   history: unknown[];
   monthlyCompletions?: Record<string, string[]>;
   setupNotificationTestDone?: boolean;
+  setupGuideDismissed?: boolean;
   collapsedPanels: Record<string, boolean>;
   savedAt: string;
   appVersion: string;
@@ -50,9 +51,10 @@ export type ActiveTimerRecord = {
   expedition_id: string;
   start_at: string | null;
   end_at: string | null;
-  status: "idle" | "running" | "completed";
+  status: "idle" | "running" | "completed" | "cleared" | string;
   pc_notify?: boolean;
   discord_notify?: boolean;
+  updated_at?: string | null;
 };
 
 export type NotificationLogRecord = {
@@ -138,21 +140,51 @@ export async function cancelCloudNotification(userId: string, fleetNo: number): 
   if (error) throw error;
 }
 
-export async function saveActiveTimers(userId: string, fleets: FleetTimer[]): Promise<void> {
-  if (!supabase) throw new Error("Supabaseが未設定です");
-  const rows = fleets.map((fleet) => ({
+function toActiveTimerRow(userId: string, fleet: FleetTimer, now = Date.now()) {
+  if (!fleet.startAt || !fleet.endAt) return null;
+
+  return {
     user_id: userId,
     fleet_no: fleet.fleetNo,
     expedition_id: fleet.expeditionId,
-    start_at: fleet.startAt ? new Date(fleet.startAt).toISOString() : null,
-    end_at: fleet.endAt ? new Date(fleet.endAt).toISOString() : null,
-    status: fleet.endAt ? (Date.now() >= fleet.endAt ? "completed" : "running") : "idle",
+    start_at: new Date(fleet.startAt).toISOString(),
+    end_at: new Date(fleet.endAt).toISOString(),
+    status: now >= fleet.endAt ? "completed" : "running",
     pc_notify: fleet.pcNotify,
     discord_notify: fleet.discordNotify,
     updated_at: new Date().toISOString()
-  }));
+  };
+}
+
+export async function saveActiveTimer(userId: string, fleet: FleetTimer): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const row = toActiveTimerRow(userId, fleet);
+  if (!row) return;
+  const { error } = await supabase.from("active_timers").upsert(row, { onConflict: "user_id,fleet_no" });
+  if (error) throw error;
+}
+
+export async function saveActiveTimers(userId: string, fleets: FleetTimer[]): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const rows = fleets
+    .map((fleet) => toActiveTimerRow(userId, fleet))
+    .filter((row): row is NonNullable<ReturnType<typeof toActiveTimerRow>> => Boolean(row));
+
+  // v2.8: 未実行/0秒の艦隊はクラウドへupsertしない。
+  // 別端末の空状態で、実行中タイマーを上書きして0秒にする事故を防ぐ。
+  if (rows.length === 0) return;
 
   const { error } = await supabase.from("active_timers").upsert(rows, { onConflict: "user_id,fleet_no" });
+  if (error) throw error;
+}
+
+export async function clearActiveTimer(userId: string, fleetNo: number): Promise<void> {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { error } = await supabase
+    .from("active_timers")
+    .delete()
+    .eq("user_id", userId)
+    .eq("fleet_no", fleetNo);
   if (error) throw error;
 }
 
@@ -160,7 +192,7 @@ export async function loadActiveTimers(userId: string): Promise<ActiveTimerRecor
   if (!supabase) throw new Error("Supabaseが未設定です");
   const { data, error } = await supabase
     .from("active_timers")
-    .select("fleet_no, expedition_id, start_at, end_at, status, pc_notify, discord_notify")
+    .select("fleet_no, expedition_id, start_at, end_at, status, pc_notify, discord_notify, updated_at")
     .eq("user_id", userId)
     .order("fleet_no", { ascending: true });
   if (error) throw error;

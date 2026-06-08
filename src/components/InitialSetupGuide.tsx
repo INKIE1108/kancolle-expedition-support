@@ -4,6 +4,8 @@ type Props = {
   deviceRegistered: boolean;
   testNotificationDone: boolean;
   expeditionStarted: boolean;
+  autoDismissReady?: boolean;
+  onDismiss?: () => void;
   onJumpAccount?: () => void;
   onJumpNotification?: () => void;
   onJumpTimer?: () => void;
@@ -24,6 +26,8 @@ export function InitialSetupGuide({
   deviceRegistered,
   testNotificationDone,
   expeditionStarted,
+  autoDismissReady = false,
+  onDismiss,
   onJumpAccount,
   onJumpNotification,
   onJumpTimer,
@@ -71,7 +75,7 @@ export function InitialSetupGuide({
   const allDone = doneCount === items.length;
 
   return (
-    <section className="setup-guide-card">
+    <section className={`setup-guide-card ${allDone ? "complete" : ""}`}>
       <div className="mini-heading">FIRST SETUP</div>
       <div className="setup-guide-header">
         <div>
@@ -80,8 +84,15 @@ export function InitialSetupGuide({
             初めて使う人は、上から順番に進めるだけで遠征通知を使えるようになるよ。
           </p>
         </div>
-        <div className="setup-progress">
-          {doneCount} / {items.length}
+        <div className="setup-guide-controls">
+          <div className="setup-progress">
+            {doneCount} / {items.length}
+          </div>
+          {onDismiss ? (
+            <button type="button" className="ghost small" onClick={onDismiss}>
+              {allDone ? "収納" : "閉じる"}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -91,7 +102,7 @@ export function InitialSetupGuide({
 
       {allDone ? (
         <div className="setup-complete-message">
-          初回設定は完了！あとは遠征を選んで通知予約ONで開始すればOK。
+          初回設定は完了！{autoDismissReady ? "まもなく自動で収納するよ。" : "あとは遠征を選んで通知予約ONで開始すればOK。"}
         </div>
       ) : null}
 
@@ -107,7 +118,7 @@ export function InitialSetupGuide({
               <p>{item.description}</p>
             </div>
 
-            <button type="button" onClick={item.onAction} disabled={item.done && allDone}>
+            <button type="button" onClick={item.onAction} disabled={item.done}>
               {item.done ? "完了" : item.actionLabel}
             </button>
           </div>
