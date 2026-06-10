@@ -2101,3 +2101,129 @@ button.small,
     grid-template-columns: 1fr;
   }
 }
+
+/* v3.2: fleet-specific reward modifiers, daily resource graph, manual timer setup */
+.fleet-reward-mini,
+.manual-timer-row {
+  display: grid;
+  gap: 0.75rem;
+  align-items: end;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  background: rgba(15, 23, 42, 0.46);
+  border-radius: 16px;
+  padding: 0.8rem;
+  margin-top: 0.75rem;
+}
+
+.fleet-reward-mini {
+  grid-template-columns: minmax(92px, 0.8fr) minmax(112px, 1fr) minmax(160px, 1.6fr);
+}
+
+.fleet-reward-mini label,
+.manual-timer-row label {
+  display: grid;
+  gap: 0.35rem;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.fleet-reward-mini input[type="number"],
+.manual-timer-row input[type="number"] {
+  width: 100%;
+  min-height: 42px;
+}
+
+.fleet-reward-mini .mini-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+}
+
+.fleet-reward-mini small {
+  align-self: center;
+  color: #7dd3fc;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.manual-timer-row {
+  grid-template-columns: minmax(150px, 1fr) auto;
+  margin: 0.85rem 0;
+}
+
+.manual-timer-row button {
+  min-height: 44px;
+}
+
+.daily-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.45rem;
+  align-items: end;
+  min-height: 160px;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  background: rgba(2, 6, 23, 0.28);
+  border-radius: 18px;
+  padding: 0.8rem 0.7rem 0.65rem;
+  margin: 0.85rem 0;
+}
+
+.daily-chart-item {
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  min-width: 0;
+  gap: 0.32rem;
+  text-align: center;
+  color: #cbd5e1;
+}
+
+.daily-chart-bar-wrap {
+  position: relative;
+  height: 92px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.88);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.daily-chart-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(180deg, #38bdf8, #2563eb);
+  min-height: 8px;
+}
+
+.daily-chart-item small {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.daily-chart-item strong {
+  color: #7dd3fc;
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 860px) {
+  .fleet-reward-mini,
+  .manual-timer-row {
+    grid-template-columns: 1fr;
+  }
+
+  .daily-chart {
+    min-height: 145px;
+    gap: 0.3rem;
+    padding-inline: 0.45rem;
+  }
+
+  .daily-chart-bar-wrap {
+    height: 76px;
+  }
+}

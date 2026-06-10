@@ -1,4 +1,4 @@
--- 艦これ遠征サポート v3.1 用 Supabase SQL
+-- 艦これ遠征サポート v3.2 用 Supabase SQL
 -- Supabase Dashboard > SQL Editor で実行してください。
 -- 既存v2.0環境に対して再実行しても基本的に安全なようにしてあります。
 
