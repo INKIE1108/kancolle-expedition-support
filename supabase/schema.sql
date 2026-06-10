@@ -1,4 +1,4 @@
--- 艦これ遠征サポート v2.1 用 Supabase SQL
+-- 艦これ遠征サポート v3.1 用 Supabase SQL
 -- Supabase Dashboard > SQL Editor で実行してください。
 -- 既存v2.0環境に対して再実行しても基本的に安全なようにしてあります。
 
@@ -152,3 +152,8 @@ exception
   when duplicate_object then null;
   when undefined_object then null;
 end $$;
+
+
+-- v3.1: 実行中タイマー同期ガード用。running/clearedの判定を軽くする補助index。
+create index if not exists active_timers_status_updated_idx
+  on public.active_timers (user_id, status, updated_at desc);

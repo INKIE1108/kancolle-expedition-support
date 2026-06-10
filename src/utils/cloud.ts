@@ -18,6 +18,7 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
 export type CloudSnapshot = {
   fleets: FleetTimer[];
   settings: Record<string, unknown>;
+  rewardSettings?: Record<string, unknown>;
   pinnedExpeditionIds: string[];
   customPresets: unknown[];
   history: unknown[];
@@ -143,18 +144,23 @@ export async function cancelCloudNotification(userId: string, fleetNo: number): 
 function toActiveTimerRow(userId: string, fleet: FleetTimer, now = Date.now()) {
   if (!fleet.startAt || !fleet.endAt) return null;
 
+  // v3.1: active_timersは「未来に終わるrunning」だけを保存する。
+  // 0秒/完了済み/未実行状態を保存すると、別端末のタイマーを0秒に引っ張るため保存しない。
+  if (fleet.endAt <= now + 1000) return null;
+
   return {
     user_id: userId,
     fleet_no: fleet.fleetNo,
     expedition_id: fleet.expeditionId,
     start_at: new Date(fleet.startAt).toISOString(),
     end_at: new Date(fleet.endAt).toISOString(),
-    status: now >= fleet.endAt ? "completed" : "running",
+    status: "running",
     pc_notify: fleet.pcNotify,
     discord_notify: fleet.discordNotify,
     updated_at: new Date().toISOString()
   };
 }
+
 
 export async function saveActiveTimer(userId: string, fleet: FleetTimer): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
@@ -178,15 +184,28 @@ export async function saveActiveTimers(userId: string, fleets: FleetTimer[]): Pr
   if (error) throw error;
 }
 
-export async function clearActiveTimer(userId: string, fleetNo: number): Promise<void> {
+export async function clearActiveTimer(userId: string, fleetNo: number, expeditionId = ""): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
-  const { error } = await supabase
-    .from("active_timers")
-    .delete()
-    .eq("user_id", userId)
-    .eq("fleet_no", fleetNo);
+
+  // v3.1: deleteではなくclearedの墓標を残す。
+  // 他端末はこの明示クリアだけを受け取ってタイマーを消す。
+  const { error } = await supabase.from("active_timers").upsert(
+    {
+      user_id: userId,
+      fleet_no: fleetNo,
+      expedition_id: expeditionId,
+      start_at: null,
+      end_at: null,
+      status: "cleared",
+      pc_notify: false,
+      discord_notify: true,
+      updated_at: new Date().toISOString()
+    },
+    { onConflict: "user_id,fleet_no" }
+  );
   if (error) throw error;
 }
+
 
 export async function loadActiveTimers(userId: string): Promise<ActiveTimerRecord[]> {
   if (!supabase) throw new Error("Supabaseが未設定です");

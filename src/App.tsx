@@ -38,6 +38,7 @@ const COLLAPSE_STORAGE_KEY = "kancolle-expedition-collapse-v1";
 const MONTHLY_STORAGE_KEY = "kancolle-expedition-monthly-v1";
 const SETUP_TEST_STORAGE_KEY = "kancolle-expedition-setup-test-v1";
 const SETUP_GUIDE_DISMISSED_STORAGE_KEY = "kancolle-expedition-setup-guide-dismissed-v1";
+const REWARD_MODIFIER_STORAGE_KEY = "kancolle-expedition-reward-modifier-v1";
 
 type SortMode =
   | "ID順"
@@ -72,6 +73,12 @@ type ExpeditionHistory = {
 
 type MonthlyCompletionMap = Record<string, string[]>;
 
+type RewardModifierSettings = {
+  greatSuccessDefault: boolean;
+  daihatsuCount: number;
+  kinuKaiNiBonus: boolean;
+};
+
 type GuideMode =
   | "燃料"
   | "弾薬"
@@ -82,7 +89,7 @@ type GuideMode =
   | "授業・バイト"
   | "短時間";
 
-type CollapsibleKey = "account" | "pwa" | "notifications" | "presets" | "monthly" | "strategy" | "details" | "diagnostics" | "log";
+type CollapsibleKey = "account" | "pwa" | "notifications" | "rewards" | "presets" | "monthly" | "strategy" | "details" | "diagnostics" | "log";
 
 type CollapseState = Record<CollapsibleKey, boolean>;
 
@@ -142,6 +149,7 @@ const defaultCollapsedPanels: CollapseState = {
   account: false,
   pwa: false,
   notifications: true,
+  rewards: false,
   presets: false,
   monthly: false,
   strategy: false,
@@ -160,7 +168,8 @@ const backupStorageKeys = [
   MONTHLY_STORAGE_KEY,
   COLLAPSE_STORAGE_KEY,
   SETUP_TEST_STORAGE_KEY,
-  SETUP_GUIDE_DISMISSED_STORAGE_KEY
+  SETUP_GUIDE_DISMISSED_STORAGE_KEY,
+  REWARD_MODIFIER_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -178,6 +187,12 @@ const initialSettings: AppSettings = {
   discordWebhookUrl: "",
   discordNotifyMode: "direct",
   serverNotificationMode: "supabase"
+};
+
+const initialRewardModifierSettings: RewardModifierSettings = {
+  greatSuccessDefault: true,
+  daihatsuCount: 0,
+  kinuKaiNiBonus: false
 };
 
 const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授業・バイト" | "短時間">, keyof ResourceRewards> = {
@@ -212,6 +227,44 @@ function multiplyResources(resources: ResourceRewards, multiplier: number): Reso
     steel: Math.floor(resources.steel * multiplier),
     bauxite: Math.floor(resources.bauxite * multiplier)
   };
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  if (Number.isNaN(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function getDaihatsuBonusRate(settings: RewardModifierSettings): number {
+  const daihatsuBonus = clampNumber(settings.daihatsuCount, 0, 4) * 0.05;
+  const kinuBonus = settings.kinuKaiNiBonus ? 0.05 : 0;
+  return Math.min(0.2, daihatsuBonus + kinuBonus);
+}
+
+function calculateAdjustedRewards(
+  expedition: Expedition,
+  settings: RewardModifierSettings,
+  forceGreatSuccess?: boolean
+): ResourceRewards {
+  const greatSuccess = forceGreatSuccess ?? settings.greatSuccessDefault;
+  const greatMultiplier = greatSuccess ? 1.5 : 1;
+  const daihatsuMultiplier = 1 + getDaihatsuBonusRate(settings);
+  return multiplyResources(expedition.rewards, greatMultiplier * daihatsuMultiplier);
+}
+
+function getAdjustedResourceRate(expedition: Expedition, settings: RewardModifierSettings): ResourceRewards {
+  const adjusted = calculateAdjustedRewards(expedition, settings);
+  const hourFactor = 60 / expedition.durationMinutes;
+  return {
+    fuel: Math.round(adjusted.fuel * hourFactor),
+    ammo: Math.round(adjusted.ammo * hourFactor),
+    steel: Math.round(adjusted.steel * hourFactor),
+    bauxite: Math.round(adjusted.bauxite * hourFactor)
+  };
+}
+
+function getRewardModifierLabel(settings: RewardModifierSettings): string {
+  const daihatsuPercent = Math.round(getDaihatsuBonusRate(settings) * 100);
+  return `${settings.greatSuccessDefault ? "大成功" : "通常成功"} / 大発補正+${daihatsuPercent}%`;
 }
 
 function addResources(a: ResourceRewards, b: ResourceRewards): ResourceRewards {
@@ -303,12 +356,12 @@ function getGuideDescription(mode: GuideMode): string {
   return `${mode}の時給目安が高い遠征を優先表示。資材不足の時の候補探し向け。`;
 }
 
-function buildDiscordContent(fleet: FleetTimer, expedition: Expedition, endAt: number): string {
+function buildDiscordContent(fleet: FleetTimer, expedition: Expedition, endAt: number, rewardSummary?: string): string {
   return [
     `⏰ **第${fleet.fleetNo}艦隊 遠征完了**`,
     `遠征：${expedition.name}`,
     `終了予定：${formatDateTime(endAt)}`,
-    `報酬目安：${buildRewardSummary(expedition.rewards)}`,
+    `報酬目安：${rewardSummary ?? buildRewardSummary(expedition.rewards)}`,
     `補給・再出発は手動で確認してね。`
   ].join("\n");
 }
@@ -341,6 +394,9 @@ function App() {
   );
   const [settings, setSettings] = useState<AppSettings>(() =>
     loadFromStorage(SETTINGS_STORAGE_KEY, initialSettings)
+  );
+  const [rewardSettings, setRewardSettings] = useState<RewardModifierSettings>(() =>
+    loadFromStorage(REWARD_MODIFIER_STORAGE_KEY, initialRewardModifierSettings)
   );
   const [pinnedExpeditionIds, setPinnedExpeditionIds] = useState<string[]>(() =>
     loadFromStorage(PINNED_STORAGE_KEY, ["02", "05", "06", "09", "11", "21", "37", "38"])
@@ -423,7 +479,7 @@ function App() {
 
   function getPresetRatesFor(preset: ExpeditionPreset): ResourceRewards {
     return Object.values(preset.fleetExpeditionIds).reduce<ResourceRewards>(
-      (total, expeditionId) => addResources(total, getResourceRate(findExpedition(expeditionId))),
+      (total, expeditionId) => addResources(total, getAdjustedResourceRate(findExpedition(expeditionId), rewardSettings)),
       { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
     );
   }
@@ -452,13 +508,13 @@ function App() {
     return [...result].sort((a, b) => {
       if (sortMode === "短時間順") return a.durationMinutes - b.durationMinutes;
       if (sortMode === "長時間順") return b.durationMinutes - a.durationMinutes;
-      if (sortMode === "燃料時給順") return getResourceRate(b).fuel - getResourceRate(a).fuel;
-      if (sortMode === "弾薬時給順") return getResourceRate(b).ammo - getResourceRate(a).ammo;
-      if (sortMode === "鋼材時給順") return getResourceRate(b).steel - getResourceRate(a).steel;
-      if (sortMode === "ボーキ時給順") return getResourceRate(b).bauxite - getResourceRate(a).bauxite;
+      if (sortMode === "燃料時給順") return getAdjustedResourceRate(b, rewardSettings).fuel - getAdjustedResourceRate(a, rewardSettings).fuel;
+      if (sortMode === "弾薬時給順") return getAdjustedResourceRate(b, rewardSettings).ammo - getAdjustedResourceRate(a, rewardSettings).ammo;
+      if (sortMode === "鋼材時給順") return getAdjustedResourceRate(b, rewardSettings).steel - getAdjustedResourceRate(a, rewardSettings).steel;
+      if (sortMode === "ボーキ時給順") return getAdjustedResourceRate(b, rewardSettings).bauxite - getAdjustedResourceRate(a, rewardSettings).bauxite;
       return a.id.localeCompare(b.id, "ja", { numeric: true });
     });
-  }, [keyword, tagFilter, pinnedExpeditionIds, sortMode]);
+  }, [keyword, tagFilter, pinnedExpeditionIds, sortMode, rewardSettings]);
 
   const guideExpeditions = useMemo(() => {
     if (guideMode === "バケツ") {
@@ -471,36 +527,36 @@ function App() {
     if (guideMode === "寝る前") {
       return expeditions
         .filter((expedition) => expedition.durationMinutes >= 240)
-        .sort((a, b) => getTotalResources(getResourceRate(b)) - getTotalResources(getResourceRate(a)))
+        .sort((a, b) => getTotalResources(getAdjustedResourceRate(b, rewardSettings)) - getTotalResources(getAdjustedResourceRate(a, rewardSettings)))
         .slice(0, 6);
     }
 
     if (guideMode === "授業・バイト") {
       return expeditions
         .filter((expedition) => expedition.durationMinutes >= 120 && expedition.durationMinutes <= 360)
-        .sort((a, b) => getTotalResources(getResourceRate(b)) - getTotalResources(getResourceRate(a)))
+        .sort((a, b) => getTotalResources(getAdjustedResourceRate(b, rewardSettings)) - getTotalResources(getAdjustedResourceRate(a, rewardSettings)))
         .slice(0, 6);
     }
 
     if (guideMode === "短時間") {
       return expeditions
         .filter((expedition) => expedition.durationMinutes <= 60)
-        .sort((a, b) => getTotalResources(getResourceRate(b)) - getTotalResources(getResourceRate(a)))
+        .sort((a, b) => getTotalResources(getAdjustedResourceRate(b, rewardSettings)) - getTotalResources(getAdjustedResourceRate(a, rewardSettings)))
         .slice(0, 6);
     }
 
     const key = resourceKeyMap[guideMode];
     return expeditions
-      .filter((expedition) => getResourceRate(expedition)[key] > 0)
-      .sort((a, b) => getResourceRate(b)[key] - getResourceRate(a)[key])
+      .filter((expedition) => getAdjustedResourceRate(expedition, rewardSettings)[key] > 0)
+      .sort((a, b) => getAdjustedResourceRate(b, rewardSettings)[key] - getAdjustedResourceRate(a, rewardSettings)[key])
       .slice(0, 6);
-  }, [guideMode]);
+  }, [guideMode, rewardSettings, expeditions]);
 
   const selectedDetail = findExpedition(selectedDetailId);
   const totalExpeditionCount = expeditions.length;
   const activeExpeditions = fleets.map((fleet) => findExpedition(fleet.expeditionId));
   const activeHourlyTotal = activeExpeditions.reduce<ResourceRewards>(
-    (total, expedition) => addResources(total, getResourceRate(expedition)),
+    (total, expedition) => addResources(total, getAdjustedResourceRate(expedition, rewardSettings)),
     { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
   );
   const currentMonthKey = getMonthKey(now);
@@ -514,6 +570,8 @@ function App() {
   );
   const todayGreatCount = todayHistory.filter((item) => item.result === "great").length;
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
+  const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
+  const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
   const userId = authState.user?.id ?? null;
   const loggedIn = Boolean(userId);
   const webhookRegistered = Boolean(settings.discordWebhookUrl.trim());
@@ -560,6 +618,10 @@ function App() {
   useEffect(() => {
     saveToStorage(SETTINGS_STORAGE_KEY, settings);
   }, [settings]);
+
+  useEffect(() => {
+    saveToStorage(REWARD_MODIFIER_STORAGE_KEY, rewardSettings);
+  }, [rewardSettings]);
 
   useEffect(() => {
     saveToStorage(PINNED_STORAGE_KEY, pinnedExpeditionIds);
@@ -677,7 +739,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  }, [authState.user?.id, fleets, settings, pinnedExpeditionIds, customPresets, history, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
+  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -836,6 +898,9 @@ function App() {
   }
 
   function setFleetExpedition(fleetNo: FleetTimer["fleetNo"], expeditionId: string) {
+    if (authState.user) {
+      clearActiveTimer(authState.user.id, fleetNo, expeditionId).catch(() => undefined);
+    }
     updateFleet(fleetNo, {
       expeditionId,
       startAt: null,
@@ -875,7 +940,7 @@ function App() {
         expeditionId: expedition.id,
         expeditionName: expedition.name,
         endAt,
-        content: buildDiscordContent(fleet, expedition, endAt),
+        content: buildDiscordContent(fleet, expedition, endAt, `${formatResources(calculateAdjustedRewards(expedition, rewardSettings))}（${getRewardModifierLabel(rewardSettings)}）`),
         webhookUrl: settings.discordWebhookUrl
       })
         .then(() => addLog(`サーバー側通知を予約: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
@@ -894,7 +959,7 @@ function App() {
     updateFleet(fleetNo, { startAt: null, endAt: null, notifiedAt: null, recordedAt: null });
     if (authState.user) {
       cancelCloudNotification(authState.user.id, fleetNo).catch(() => undefined);
-      clearActiveTimer(authState.user.id, fleetNo).catch(() => undefined);
+      clearActiveTimer(authState.user.id, fleetNo, fleets.find((fleet) => fleet.fleetNo === fleetNo)?.expeditionId ?? "").catch(() => undefined);
     }
     addLog(`クリア: 第${fleetNo}艦隊`);
   }
@@ -971,7 +1036,7 @@ function App() {
   function recordFleetResult(fleet: FleetTimer, result: HistoryResult) {
     if (fleet.recordedAt) return;
     const expedition = findExpedition(fleet.expeditionId);
-    const rewards = result === "great" ? multiplyResources(expedition.rewards, 1.5) : expedition.rewards;
+    const rewards = calculateAdjustedRewards(expedition, rewardSettings, result === "great");
     const record: ExpeditionHistory = {
       id: `${Date.now()}-${fleet.fleetNo}-${expedition.id}-${result}`,
       completedAt: Date.now(),
@@ -992,6 +1057,9 @@ function App() {
       });
     }
     updateFleet(fleet.fleetNo, { recordedAt: Date.now() });
+    if (authState.user) {
+      clearActiveTimer(authState.user.id, fleet.fleetNo, expedition.id).catch(() => undefined);
+    }
     addLog(`帰投記録: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
   }
 
@@ -1007,11 +1075,11 @@ function App() {
   }
 
   function openAllPanels() {
-    setCollapsedPanels({ account: false, pwa: false, notifications: false, presets: false, monthly: false, strategy: false, details: false, diagnostics: false, log: false });
+    setCollapsedPanels({ account: false, pwa: false, notifications: false, rewards: false, presets: false, monthly: false, strategy: false, details: false, diagnostics: false, log: false });
   }
 
   function compactAssistPanels() {
-    setCollapsedPanels({ account: false, pwa: true, notifications: true, presets: true, monthly: true, strategy: true, details: false, diagnostics: false, log: true });
+    setCollapsedPanels({ account: false, pwa: true, notifications: true, rewards: true, presets: true, monthly: true, strategy: true, details: false, diagnostics: false, log: true });
   }
 
   async function installPwa() {
@@ -1039,7 +1107,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "2.9.0",
+      version: "3.1.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1082,10 +1150,21 @@ function App() {
     }
   }
 
+  function sanitizeFleetsForSnapshot(items: FleetTimer[]): FleetTimer[] {
+    return items.map((fleet) => ({
+      ...fleet,
+      startAt: null,
+      endAt: null,
+      notifiedAt: null,
+      recordedAt: null
+    }));
+  }
+
   function createCloudSnapshot(): CloudSnapshot {
     return {
-      fleets,
+      fleets: sanitizeFleetsForSnapshot(fleets),
       settings: { ...settings, discordNotifyMode: "direct", serverNotificationMode: "supabase" },
+      rewardSettings,
       pinnedExpeditionIds,
       customPresets,
       history,
@@ -1094,42 +1173,58 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "2.9.0"
+      appVersion: "3.1.0"
     };
   }
 
   function isRemoteTimerActive(row: Awaited<ReturnType<typeof loadActiveTimers>>[number]): boolean {
     const endAt = row.end_at ? new Date(row.end_at).getTime() : NaN;
     if (!Number.isFinite(endAt)) return false;
-    return row.status === "running" || row.status === "completed" || endAt > getSyncedNow();
+    return row.status === "running" && endAt > getSyncedNow() + 1000;
   }
 
   function mergeActiveTimerRows(baseFleets: FleetTimer[], rows: Awaited<ReturnType<typeof loadActiveTimers>>): FleetTimer[] {
-    const usableRows = rows.filter(isRemoteTimerActive);
-    if (usableRows.length === 0) return baseFleets;
+    if (rows.length === 0) return baseFleets;
 
     return baseFleets.map((fleet) => {
-      const row = usableRows.find((item) => item.fleet_no === fleet.fleetNo);
+      const row = rows.find((item) => item.fleet_no === fleet.fleetNo);
       if (!row) return fleet;
+
+      const rowUpdatedAt = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+      const localStartAt = fleet.startAt ?? 0;
+
+      if (row.status === "cleared") {
+        // v3.1: クリアは明示操作だけ同期する。
+        // ただし、その後にこの端末で新しく開始したタイマーは消さない。
+        if (fleet.endAt && fleet.endAt > getSyncedNow() && localStartAt > rowUpdatedAt) return fleet;
+        return {
+          ...fleet,
+          expeditionId: row.expedition_id || fleet.expeditionId,
+          startAt: null,
+          endAt: null,
+          notifiedAt: null,
+          recordedAt: null
+        };
+      }
+
+      if (!isRemoteTimerActive(row)) return fleet;
 
       const remoteStartAt = row.start_at ? new Date(row.start_at).getTime() : null;
       const remoteEndAt = row.end_at ? new Date(row.end_at).getTime() : null;
       if (!remoteEndAt || Number.isNaN(remoteEndAt)) return fleet;
 
       const localIsRunning = fleet.endAt !== null && fleet.endAt > getSyncedNow();
-      const remoteIsRunning = remoteEndAt > getSyncedNow();
 
-      // v2.8: クラウドに有効な実行中タイマーがある場合はクラウドを正にする。
-      // 逆に、古い/無効な0秒データではローカルの実行中タイマーを壊さない。
-      if (localIsRunning && !remoteIsRunning && fleet.endAt && fleet.endAt > remoteEndAt) return fleet;
+      // v3.1: 別端末の古い0秒/古い開始データで、新しいローカル実行中タイマーを壊さない。
+      if (localIsRunning && localStartAt > rowUpdatedAt && fleet.endAt && fleet.endAt > remoteEndAt) return fleet;
 
       return {
         ...fleet,
         expeditionId: row.expedition_id || fleet.expeditionId,
         startAt: remoteStartAt,
         endAt: remoteEndAt,
-        notifiedAt: remoteEndAt <= getSyncedNow() ? fleet.notifiedAt ?? getSyncedNow() : null,
-        recordedAt: remoteEndAt <= getSyncedNow() ? fleet.recordedAt ?? null : null,
+        notifiedAt: null,
+        recordedAt: null,
         pcNotify: Boolean(row.pc_notify),
         discordNotify: row.discord_notify ?? fleet.discordNotify
       };
@@ -1151,6 +1246,7 @@ function App() {
     const nextFleets = mergeActiveTimerRows((snapshot?.fleets as FleetTimer[] | undefined) ?? initialFleets, activeRows);
     setFleets(nextFleets);
     setSettings({ ...initialSettings, ...((snapshot?.settings as AppSettings | undefined) ?? {}), discordNotifyMode: "direct", serverNotificationMode: "supabase" });
+    setRewardSettings({ ...initialRewardModifierSettings, ...((snapshot?.rewardSettings as RewardModifierSettings | undefined) ?? {}) });
     setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
     setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
     setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
@@ -1383,11 +1479,11 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v2.9</p>
+          <p className="eyebrow">KanColle Expedition Support v3.1</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
-            v2.9では実行中タイマー同期を安定化し、初回設定ガイドを完了後に自動収納できるようにしたよ。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            v3.1では、大成功・大発補正込みの報酬予測と、別端末の0秒状態に引っ張られにくいタイマー同期ガードを強化したよ。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
@@ -1542,6 +1638,90 @@ function App() {
       </details>
 
       <details
+        className="reward-card fold-card"
+        open={!collapsedPanels.rewards}
+        onToggle={(event) => handlePanelToggle("rewards", event.currentTarget.open)}
+      >
+        <summary className="fold-summary">
+          <span><small>Reward Bonus</small><strong>大成功・大発補正</strong></span>
+          <em>{collapsedPanels.rewards ? "開く" : "閉じる"}</em>
+        </summary>
+        <div className="fold-content reward-settings-content">
+          <div className="section-head compact">
+            <div>
+              <p className="eyebrow">Reward Forecast</p>
+              <h2>報酬補正設定</h2>
+              <p>遠征報酬・時給目安・通知文・帰投記録を、大成功と大発動艇系の補正込みで見積もるよ。</p>
+            </div>
+            <div className="reward-bonus-summary">
+              <span>現在の計算</span>
+              <strong>{getRewardModifierLabel(rewardSettings)}</strong>
+            </div>
+          </div>
+
+          <div className="reward-settings-grid">
+            <label className="toggle-card">
+              <input
+                type="checkbox"
+                checked={rewardSettings.greatSuccessDefault}
+                onChange={(event) => setRewardSettings((current) => ({ ...current, greatSuccessDefault: event.target.checked }))}
+              />
+              <span>大成功で見積もる</span>
+              <small>ONなら資材1.5倍として表示・記録する。</small>
+            </label>
+
+            <label className="number-card">
+              <span>大発動艇系の個数</span>
+              <input
+                type="number"
+                min={0}
+                max={4}
+                value={rewardSettings.daihatsuCount}
+                onChange={(event) =>
+                  setRewardSettings((current) => ({
+                    ...current,
+                    daihatsuCount: clampNumber(Number(event.target.value), 0, 4)
+                  }))
+                }
+              />
+              <small>簡易計算：1個+5%、最大4個で+20%。</small>
+            </label>
+
+            <label className="toggle-card">
+              <input
+                type="checkbox"
+                checked={rewardSettings.kinuKaiNiBonus}
+                onChange={(event) => setRewardSettings((current) => ({ ...current, kinuKaiNiBonus: event.target.checked }))}
+              />
+              <span>鬼怒改二ボーナスを含める</span>
+              <small>大発系の通常上限+20%に含めて簡易計算。</small>
+            </label>
+          </div>
+
+          <div className="reward-preview-grid">
+            <div>
+              <span>選択中の遠征</span>
+              <strong>{selectedDetail.id}: {selectedDetail.name}</strong>
+            </div>
+            <div>
+              <span>基礎報酬</span>
+              <strong>{formatResources(selectedDetail.rewards)}</strong>
+            </div>
+            <div>
+              <span>補正込み報酬</span>
+              <strong>{formatResources(selectedAdjustedRewards)}</strong>
+            </div>
+            <div>
+              <span>補正込み時給</span>
+              <strong>{formatResources(selectedAdjustedRate)} / h</strong>
+            </div>
+          </div>
+
+          <p className="helper-text">特大発・改修★などの詳細補正は今後の詳細モード候補。まずは普段使いしやすい大発系+20%上限の簡易計算にしているよ。</p>
+        </div>
+      </details>
+
+      <details
         className="preset-card fold-card"
         open={!collapsedPanels.presets}
         onToggle={(event) => handlePanelToggle("presets", event.currentTarget.open)}
@@ -1558,7 +1738,7 @@ function App() {
             <p>目的別に第2〜第4艦隊へまとめてセット。開始は押さないので、補給確認後に手動で出せる。</p>
           </div>
           <div className="hourly-total">
-            <span>現在選択中の合計時給目安</span>
+            <span>補正込みの合計時給目安</span>
             <strong>{formatResources(activeHourlyTotal)} / h</strong>
           </div>
         </div>
@@ -1686,7 +1866,7 @@ function App() {
         <div className="guide-layout">
           <div className="guide-recommendations">
             {guideExpeditions.map((expedition) => {
-              const rate = getResourceRate(expedition);
+              const rate = getAdjustedResourceRate(expedition, rewardSettings);
               return (
                 <article className="guide-item" key={`guide-${guideMode}-${expedition.id}`}>
                   <div>
@@ -1744,7 +1924,8 @@ function App() {
           const remainingMs = fleet.endAt ? fleet.endAt - now : 0;
           const almostDone = running && remainingMs <= 5 * 60 * 1000;
           const remaining = fleet.endAt ? formatRemaining(remainingMs) : "--:--:--";
-          const rate = getResourceRate(expedition);
+          const rate = getAdjustedResourceRate(expedition, rewardSettings);
+          const adjustedRewards = calculateAdjustedRewards(expedition, rewardSettings);
 
           return (
             <article className={`fleet-card ${completed ? "completed" : almostDone ? "almost-done" : ""}`} key={fleet.fleetNo}>
@@ -1814,11 +1995,11 @@ function App() {
                   <dd>{formatDateTime(fleet.endAt)}</dd>
                 </div>
                 <div>
-                  <dt>報酬</dt>
-                  <dd>{formatResources(expedition.rewards)}</dd>
+                  <dt>補正込み報酬</dt>
+                  <dd>{formatResources(adjustedRewards)}</dd>
                 </div>
                 <div>
-                  <dt>時給目安</dt>
+                  <dt>補正込み時給</dt>
                   <dd>{formatResources(rate)} / h</dd>
                 </div>
               </dl>
@@ -1901,10 +2082,10 @@ function App() {
           </div>
 
           <div className="resource-grid">
-            <div>燃料<strong>{selectedDetail.rewards.fuel}</strong><small>{getResourceRate(selectedDetail).fuel}/h</small></div>
-            <div>弾薬<strong>{selectedDetail.rewards.ammo}</strong><small>{getResourceRate(selectedDetail).ammo}/h</small></div>
-            <div>鋼材<strong>{selectedDetail.rewards.steel}</strong><small>{getResourceRate(selectedDetail).steel}/h</small></div>
-            <div>ボーキ<strong>{selectedDetail.rewards.bauxite}</strong><small>{getResourceRate(selectedDetail).bauxite}/h</small></div>
+            <div>燃料<strong>{selectedAdjustedRewards.fuel}</strong><small>{selectedAdjustedRate.fuel}/h</small></div>
+            <div>弾薬<strong>{selectedAdjustedRewards.ammo}</strong><small>{selectedAdjustedRate.ammo}/h</small></div>
+            <div>鋼材<strong>{selectedAdjustedRewards.steel}</strong><small>{selectedAdjustedRate.steel}/h</small></div>
+            <div>ボーキ<strong>{selectedAdjustedRewards.bauxite}</strong><small>{selectedAdjustedRate.bauxite}/h</small></div>
           </div>
 
           <div className="success-compare">
@@ -1913,9 +2094,14 @@ function App() {
               <strong>{formatResources(selectedDetail.rewards)}</strong>
             </div>
             <div>
-              <span>大成功目安</span>
+              <span>大成功のみ</span>
               <strong>{formatResources(selectedGreatRewards)}</strong>
-              <small>資材1.5倍換算の目安</small>
+              <small>大発補正なしの1.5倍目安</small>
+            </div>
+            <div>
+              <span>現在の補正込み</span>
+              <strong>{formatResources(selectedAdjustedRewards)}</strong>
+              <small>{getRewardModifierLabel(rewardSettings)}</small>
             </div>
           </div>
 
@@ -2017,7 +2203,7 @@ function App() {
           <p className="result-count">表示中：{filteredExpeditions.length}件 / 全{totalExpeditionCount}件</p>
           <div className="expedition-list">
             {filteredExpeditions.map((expedition) => {
-              const rate = getResourceRate(expedition);
+              const rate = getAdjustedResourceRate(expedition, rewardSettings);
               return (
                 <div className={`expedition-item ${selectedDetailId === expedition.id ? "selected" : ""} ${isMonthlyDone(expedition.id) ? "monthly-done" : ""}`} key={expedition.id}>
                   <button className="expedition-main" onClick={() => setSelectedDetailId(expedition.id)}>
