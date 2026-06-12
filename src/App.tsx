@@ -39,6 +39,7 @@ const MONTHLY_STORAGE_KEY = "kancolle-expedition-monthly-v1";
 const SETUP_TEST_STORAGE_KEY = "kancolle-expedition-setup-test-v1";
 const SETUP_GUIDE_DISMISSED_STORAGE_KEY = "kancolle-expedition-setup-guide-dismissed-v1";
 const REWARD_MODIFIER_STORAGE_KEY = "kancolle-expedition-reward-modifier-v1";
+const THEME_STORAGE_KEY = "kancolle-expedition-theme-v1";
 
 type SortMode =
   | "ID順"
@@ -113,6 +114,7 @@ type CollapsibleKey = "account" | "pwa" | "notifications" | "rewards" | "presets
 type CollapseState = Record<CollapsibleKey, boolean>;
 
 type MobileTab = "timers" | "assist" | "search" | "records" | "account";
+type ThemeMode = "dark" | "light";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -188,7 +190,8 @@ const backupStorageKeys = [
   COLLAPSE_STORAGE_KEY,
   SETUP_TEST_STORAGE_KEY,
   SETUP_GUIDE_DISMISSED_STORAGE_KEY,
-  REWARD_MODIFIER_STORAGE_KEY
+  REWARD_MODIFIER_STORAGE_KEY,
+  THEME_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -553,6 +556,7 @@ function App() {
   });
   const [updateReady, setUpdateReady] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("timers");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadFromStorage(THEME_STORAGE_KEY, "dark" as ThemeMode));
   const [compactFleetCards, setCompactFleetCards] = useState<boolean>(() =>
     loadFromStorage("kancolle-expedition-compact-fleet-v1", false)
   );
@@ -817,6 +821,11 @@ function App() {
   useEffect(() => {
     saveToStorage("kancolle-expedition-compact-fleet-v1", compactFleetCards);
   }, [compactFleetCards]);
+
+  useEffect(() => {
+    saveToStorage(THEME_STORAGE_KEY, themeMode);
+    document.documentElement.dataset.theme = themeMode;
+  }, [themeMode]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1283,7 +1292,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "3.3.0",
+      version: "3.5.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1349,7 +1358,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "3.2.0"
+      appVersion: "3.5.0"
     };
   }
 
@@ -1656,6 +1665,39 @@ function App() {
   const cloudStatusLabel = authState.user ? "クラウド同期OK" : "ローカル保存";
   const notificationStatusLabel = deviceStatus?.permission === "granted" ? "スマホ通知OK" : "通知設定確認";
 
+  function switchAppTab(tab: MobileTab, targetId?: string) {
+    setMobileTab(tab);
+    window.setTimeout(() => {
+      const target = targetId ? document.getElementById(targetId) : null;
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 0);
+  }
+
+  function jumpToRecords() {
+    setSelectedDailyKey(getDayKey(now));
+    switchAppTab("records", "records-section");
+  }
+
+  function jumpToExpeditionDetail(expeditionId: string) {
+    setSelectedDetailId(expeditionId);
+    setCollapsedPanels((current) => ({ ...current, details: false }));
+    switchAppTab("search", "detail-search-section");
+  }
+
+  function jumpToAssist(targetId: "preset-section" | "strategy-section" = "preset-section") {
+    setCollapsedPanels((current) => ({ ...current, presets: false, strategy: false }));
+    switchAppTab("assist", targetId);
+  }
+
+  function jumpToAccount(targetId: string = "account-cloud-section") {
+    setCollapsedPanels((current) => ({ ...current, account: false, pwa: false, notifications: false }));
+    switchAppTab("account", targetId);
+  }
+
   async function testDiscord(): Promise<boolean> {
     const dummyFleet: FleetTimer = {
       fleetNo: 2,
@@ -1682,14 +1724,13 @@ function App() {
   }
 
   return (
-    <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
+    <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.3</p>
+          <p className="eyebrow">KanColle Expedition Support v3.5</p>
           <h1>艦これ遠征サポート</h1>
           <p>
-            艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
-            v3.3では、日別グラフを資材別に切り替え・タップ詳細表示できるようにしたよ。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
@@ -1700,21 +1741,22 @@ function App() {
           <small>{timeSyncMessage}</small>
         </div>
         <div className="hero-actions">
-          <button type="button" className="secondary small" onClick={compactAssistPanels}>補助機能を折りたたむ</button>
-          <button type="button" className="ghost small" onClick={openAllPanels}>すべて開く</button>
+          <div className="theme-switch" role="group" aria-label="テーマ切替">
+            <button type="button" className={themeMode === "light" ? "active" : ""} onClick={() => setThemeMode("light")}>ライト</button>
+            <button type="button" className={themeMode === "dark" ? "active" : ""} onClick={() => setThemeMode("dark")}>ダーク</button>
+          </div>
           <button type="button" className="ghost small" onClick={() => setCompactFleetCards((value) => !value)}>
             {compactFleetCards ? "通常カード" : "簡易カード"}
           </button>
         </div>
       </header>
 
-      <nav className="desktop-sidebar" aria-label="画面移動">
-        <button type="button" onClick={() => document.getElementById("dashboard-section")?.scrollIntoView({ behavior: "smooth" })}>司令室</button>
-        <button type="button" onClick={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}>タイマー</button>
-        <button type="button" onClick={() => document.getElementById("detail-search-section")?.scrollIntoView({ behavior: "smooth" })}>遠征一覧</button>
-        <button type="button" onClick={() => document.getElementById("strategy-section")?.scrollIntoView({ behavior: "smooth" })}>攻略</button>
-        <button type="button" onClick={() => document.getElementById("records-section")?.scrollIntoView({ behavior: "smooth" })}>記録</button>
-        <button type="button" onClick={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}>設定</button>
+      <nav className="desktop-tabbar" aria-label="画面タブ">
+        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}>タイマー</button>
+        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}>遠征</button>
+        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}>攻略</button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}>記録</button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}>設定</button>
       </nav>
 
       <section id="dashboard-section" className="dashboard-strip" aria-label="遠征司令室">
@@ -1735,7 +1777,7 @@ function App() {
               <p className="eyebrow">Today</p>
               <h3>今日の獲得資材</h3>
             </div>
-            <button type="button" className="ghost small" onClick={() => document.getElementById("records-section")?.scrollIntoView({ behavior: "smooth" })}>詳細</button>
+            <button type="button" className="ghost small" onClick={jumpToRecords}>詳細</button>
           </div>
           <div className="daily-total-grid compact-resource-cards mini-dashboard-resources">
             <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
@@ -1752,7 +1794,7 @@ function App() {
               <p className="eyebrow">Quick Preset</p>
               <h3>ワンタップ編成</h3>
             </div>
-            <button type="button" className="ghost small" onClick={() => document.getElementById("preset-section")?.scrollIntoView({ behavior: "smooth" })}>全部</button>
+            <button type="button" className="ghost small" onClick={() => jumpToAssist("preset-section")}>全部</button>
           </div>
           <div className="quick-preset-list">
             {quickPresets.map((preset) => (
@@ -1821,9 +1863,9 @@ function App() {
           expeditionStarted={expeditionStarted}
           autoDismissReady={setupGuideDone}
           onDismiss={() => setSetupGuideDismissed(true)}
-          onJumpAccount={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}
-          onJumpNotification={() => document.getElementById("notification-section")?.scrollIntoView({ behavior: "smooth" })}
-          onJumpTimer={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}
+          onJumpAccount={() => jumpToAccount("account-cloud-section")}
+          onJumpNotification={() => jumpToAccount("notification-section")}
+          onJumpTimer={() => switchAppTab("timers", "fleet-timer-section")}
           onTestNotification={runSetupNotificationTest}
         />
       ) : null}
@@ -2102,7 +2144,7 @@ function App() {
                       <button type="button" className={done ? "secondary" : ""} onClick={() => setMonthlyDone(expedition.id, !done)}>
                         {done ? "未実施へ戻す" : "実施済みにする"}
                       </button>
-                      <button type="button" className="ghost" onClick={() => setSelectedDetailId(expedition.id)}>詳細を見る</button>
+                      <button type="button" className="ghost" onClick={() => jumpToExpeditionDetail(expedition.id)}>詳細を見る</button>
                     </div>
                   </article>
                 );
@@ -2146,7 +2188,7 @@ function App() {
                     <span>時給：{formatResources(rate)} / h</span>
                   </div>
                   <div className="guide-actions">
-                    <button type="button" onClick={() => setSelectedDetailId(expedition.id)}>詳細</button>
+                    <button type="button" onClick={() => jumpToExpeditionDetail(expedition.id)}>詳細</button>
                     <button type="button" onClick={() => setFleetExpedition(2, expedition.id)} disabled={isMonthlyDone(expedition.id)}>第2へ</button>
                     <button type="button" onClick={() => setFleetExpedition(3, expedition.id)} disabled={isMonthlyDone(expedition.id)}>第3へ</button>
                     <button type="button" onClick={() => setFleetExpedition(4, expedition.id)} disabled={isMonthlyDone(expedition.id)}>第4へ</button>
@@ -2486,7 +2528,7 @@ function App() {
                 </button>
               </div>
 
-              <button className="detail-link" onClick={() => setSelectedDetailId(expedition.id)}>
+              <button className="detail-link" onClick={() => jumpToExpeditionDetail(expedition.id)}>
                 成功条件・大成功条件を見る
               </button>
             </article>
@@ -2714,11 +2756,11 @@ function App() {
       </details>
 
       <nav className="mobile-tabbar" aria-label="スマホ用ナビゲーション">
-        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => setMobileTab("timers")}>タイマー</button>
-        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => setMobileTab("search")}>遠征</button>
-        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => setMobileTab("assist")}>攻略</button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => setMobileTab("records")}>記録</button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => setMobileTab("account")}>設定</button>
+        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}>タイマー</button>
+        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}>遠征</button>
+        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}>攻略</button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}>記録</button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}>設定</button>
       </nav>
 
       <details

@@ -2778,3 +2778,481 @@ button.small,
     display: block !important;
   }
 }
+
+/* v3.5: full tab layout + pastel light/dark theme */
+:root {
+  --bg-0: #07111f;
+  --bg-1: #0c1628;
+  --bg-glow-a: rgba(125, 211, 252, 0.2);
+  --bg-glow-b: rgba(196, 181, 253, 0.14);
+  --surface-0: rgba(15, 23, 42, 0.78);
+  --surface-1: rgba(20, 31, 52, 0.86);
+  --surface-2: rgba(9, 17, 31, 0.72);
+  --text-0: #f7fbff;
+  --text-1: #d7e4f4;
+  --text-2: #a8b7cb;
+  --muted: #8ea0b6;
+  --border: rgba(179, 205, 236, 0.18);
+  --border-strong: rgba(147, 197, 253, 0.34);
+  --accent: #8bd5ff;
+  --accent-2: #b9a8ff;
+  --accent-3: #a7f3d0;
+  --accent-soft: rgba(139, 213, 255, 0.18);
+  --accent-soft-2: rgba(185, 168, 255, 0.16);
+  --button-bg: linear-gradient(135deg, #7dd3fc, #a78bfa);
+  --button-text: #ffffff;
+  --secondary-bg: rgba(199, 210, 254, 0.15);
+  --secondary-text: #dbeafe;
+  --ghost-text: #bfdbfe;
+  --shadow-soft: 0 22px 65px rgba(2, 6, 23, 0.28);
+  --shadow-card: 0 18px 46px rgba(2, 6, 23, 0.2);
+  --ok: #86efac;
+  --warn: #fde68a;
+  --danger: #fca5a5;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg-0: #f8fbff;
+  --bg-1: #eef7ff;
+  --bg-glow-a: rgba(147, 197, 253, 0.34);
+  --bg-glow-b: rgba(221, 214, 254, 0.44);
+  --surface-0: rgba(255, 255, 255, 0.86);
+  --surface-1: rgba(255, 255, 255, 0.94);
+  --surface-2: rgba(241, 248, 255, 0.88);
+  --text-0: #213047;
+  --text-1: #334155;
+  --text-2: #64748b;
+  --muted: #718096;
+  --border: rgba(148, 163, 184, 0.22);
+  --border-strong: rgba(96, 165, 250, 0.32);
+  --accent: #60a5fa;
+  --accent-2: #a78bfa;
+  --accent-3: #34d399;
+  --accent-soft: rgba(96, 165, 250, 0.14);
+  --accent-soft-2: rgba(196, 181, 253, 0.22);
+  --button-bg: linear-gradient(135deg, #93c5fd, #c4b5fd);
+  --button-text: #1f2937;
+  --secondary-bg: rgba(224, 242, 254, 0.9);
+  --secondary-text: #334155;
+  --ghost-text: #3b82f6;
+  --shadow-soft: 0 22px 60px rgba(125, 147, 178, 0.22);
+  --shadow-card: 0 16px 40px rgba(125, 147, 178, 0.16);
+  --ok: #10b981;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  color: var(--text-0);
+  background:
+    radial-gradient(circle at top left, var(--bg-glow-a), transparent 34rem),
+    radial-gradient(circle at bottom right, var(--bg-glow-b), transparent 36rem),
+    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+}
+
+.app-shell {
+  color: var(--text-0);
+}
+
+.hero,
+.account-card,
+.pwa-card,
+.settings-card,
+.reward-card,
+.preset-card,
+.monthly-card,
+.guide-card,
+.records-card,
+.diagnostics-card,
+.fleet-card,
+.detail-card,
+.list-card,
+.log-card,
+.command-card,
+.fold-card,
+.daily-summary,
+.pinned-box,
+.custom-preset-card,
+.notification-history-item,
+.monthly-item,
+.guide-item,
+.preset-button-wrap,
+.next-actions,
+.manual-timer-row,
+.daily-breakdown-card {
+  color: var(--text-0);
+  border-color: var(--border) !important;
+  background: var(--surface-0) !important;
+  box-shadow: var(--shadow-card);
+}
+
+.hero,
+.command-card,
+.fleet-card,
+.fold-card,
+.detail-card,
+.list-card {
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.hero p,
+.settings-card p,
+.log-card p,
+.helper-text,
+.empty-text,
+.guide-description,
+.detail-list dd,
+.mini-info dd,
+.monthly-item small,
+.guide-item small,
+.preset-button small,
+.preset-button em,
+.result-count,
+.hero-clock span,
+.timer-box span {
+  color: var(--text-2) !important;
+}
+
+h1,
+h2,
+h3,
+.fleet-card h2,
+.detail-card h2,
+.list-card h2,
+.log-card h2,
+.settings-card h2,
+.command-card h2,
+.command-card h3,
+.fold-summary strong,
+.preset-button span,
+.guide-item strong,
+.monthly-item strong {
+  color: var(--text-0) !important;
+}
+
+.eyebrow,
+.quick-preset-list small,
+.detail-list dt,
+.mini-info dt,
+.resource-grid div,
+.daily-total-grid button,
+.daily-total-grid strong,
+.reward-preview-grid span,
+.success-compare span,
+.fleet-reward-mini small,
+.hourly-total span {
+  color: var(--accent) !important;
+}
+
+button {
+  background: var(--button-bg);
+  color: var(--button-text);
+  box-shadow: 0 10px 24px rgba(96, 165, 250, 0.18);
+}
+
+button.secondary {
+  background: var(--secondary-bg);
+  color: var(--secondary-text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--ghost-text);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
+input,
+select {
+  background: var(--surface-2);
+  color: var(--text-0);
+  border-color: var(--border);
+}
+
+input::placeholder {
+  color: var(--muted);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.hero-clock,
+.timer-box,
+.command-status-grid span,
+.command-chip-row span,
+.quick-preset-list button,
+.resource-grid div,
+.success-compare div,
+.reward-preview-grid div,
+.mini-info div,
+.fleet-reward-mini,
+.fleet-pinned-shortcuts button,
+.daily-total-grid button,
+.daily-chart-bar-wrap,
+.daily-chart-item,
+.pinned-edit-item,
+.expedition-item,
+.notification-history-main,
+.theme-switch,
+.desktop-tabbar,
+.mobile-tabbar {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text-0) !important;
+}
+
+.timer-box strong,
+.hero-clock strong,
+.command-status-grid strong,
+.daily-total-grid strong,
+.resource-grid strong,
+.hourly-total strong,
+.reward-preview-grid strong,
+.success-compare strong {
+  color: var(--text-0) !important;
+}
+
+.status.idle { background: rgba(148, 163, 184, 0.16) !important; color: var(--text-2) !important; }
+.status.running { background: var(--accent-soft) !important; color: var(--accent) !important; }
+.status.done { background: rgba(52, 211, 153, 0.16) !important; color: var(--ok) !important; }
+.status.error { background: rgba(252, 165, 165, 0.18) !important; color: var(--danger) !important; }
+
+.fleet-card.completed {
+  border-color: rgba(52, 211, 153, 0.4) !important;
+}
+
+.fleet-card.almost-done {
+  border-color: rgba(253, 230, 138, 0.5) !important;
+}
+
+.daily-chart-bar {
+  background: linear-gradient(180deg, var(--accent), var(--accent-2)) !important;
+}
+
+.daily-chart-item.selected,
+.daily-total-grid button.active,
+.fleet-pinned-shortcuts button.active,
+.expedition-item.selected,
+.pinned-edit-item.selected {
+  border-color: var(--border-strong) !important;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2)) !important;
+}
+
+.theme-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.theme-switch button {
+  min-height: 34px;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  box-shadow: none;
+  border: 0;
+}
+
+.theme-switch button.active {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+.desktop-tabbar {
+  position: sticky;
+  top: 12px;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.desktop-tabbar button {
+  min-height: 44px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  border: 0;
+  box-shadow: none;
+}
+
+.desktop-tabbar button.active {
+  background: var(--button-bg);
+  color: var(--button-text);
+  box-shadow: 0 12px 26px rgba(96, 165, 250, 0.2);
+}
+
+.desktop-tabbar button:not(.active):hover,
+.mobile-tabbar button:not(.active):hover {
+  background: var(--accent-soft);
+  color: var(--text-0);
+}
+
+/* Full tab switching for desktop and mobile */
+.app-shell.mobile-tab-timers .account-card,
+.app-shell.mobile-tab-timers .pwa-card,
+.app-shell.mobile-tab-timers .settings-card,
+.app-shell.mobile-tab-timers .reward-card,
+.app-shell.mobile-tab-timers .preset-card,
+.app-shell.mobile-tab-timers .guide-card,
+.app-shell.mobile-tab-timers .detail-search-fold,
+.app-shell.mobile-tab-timers .records-card,
+.app-shell.mobile-tab-timers .monthly-card,
+.app-shell.mobile-tab-timers .diagnostics-card,
+.app-shell.mobile-tab-timers .log-card,
+.app-shell.mobile-tab-timers .setup-guide-card {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-assist .dashboard-strip,
+.app-shell.mobile-tab-assist .fleet-grid,
+.app-shell.mobile-tab-assist .account-card,
+.app-shell.mobile-tab-assist .pwa-card,
+.app-shell.mobile-tab-assist .settings-card,
+.app-shell.mobile-tab-assist .reward-card,
+.app-shell.mobile-tab-assist .detail-search-fold,
+.app-shell.mobile-tab-assist .records-card,
+.app-shell.mobile-tab-assist .monthly-card,
+.app-shell.mobile-tab-assist .diagnostics-card,
+.app-shell.mobile-tab-assist .log-card,
+.app-shell.mobile-tab-assist .setup-guide-card {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-search .dashboard-strip,
+.app-shell.mobile-tab-search .fleet-grid,
+.app-shell.mobile-tab-search .account-card,
+.app-shell.mobile-tab-search .pwa-card,
+.app-shell.mobile-tab-search .settings-card,
+.app-shell.mobile-tab-search .reward-card,
+.app-shell.mobile-tab-search .preset-card,
+.app-shell.mobile-tab-search .guide-card,
+.app-shell.mobile-tab-search .records-card,
+.app-shell.mobile-tab-search .monthly-card,
+.app-shell.mobile-tab-search .diagnostics-card,
+.app-shell.mobile-tab-search .log-card,
+.app-shell.mobile-tab-search .setup-guide-card {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-records .dashboard-strip,
+.app-shell.mobile-tab-records .fleet-grid,
+.app-shell.mobile-tab-records .account-card,
+.app-shell.mobile-tab-records .pwa-card,
+.app-shell.mobile-tab-records .settings-card,
+.app-shell.mobile-tab-records .reward-card,
+.app-shell.mobile-tab-records .preset-card,
+.app-shell.mobile-tab-records .guide-card,
+.app-shell.mobile-tab-records .detail-search-fold,
+.app-shell.mobile-tab-records .diagnostics-card,
+.app-shell.mobile-tab-records .log-card,
+.app-shell.mobile-tab-records .setup-guide-card {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account .dashboard-strip,
+.app-shell.mobile-tab-account .fleet-grid,
+.app-shell.mobile-tab-account .preset-card,
+.app-shell.mobile-tab-account .guide-card,
+.app-shell.mobile-tab-account .detail-search-fold,
+.app-shell.mobile-tab-account .records-card,
+.app-shell.mobile-tab-account .monthly-card {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-search .detail-search-fold,
+.app-shell.mobile-tab-records .records-card,
+.app-shell.mobile-tab-records .monthly-card,
+.app-shell.mobile-tab-assist .preset-card,
+.app-shell.mobile-tab-assist .guide-card,
+.app-shell.mobile-tab-account .account-card,
+.app-shell.mobile-tab-account .pwa-card,
+.app-shell.mobile-tab-account .settings-card,
+.app-shell.mobile-tab-account .reward-card,
+.app-shell.mobile-tab-account .diagnostics-card,
+.app-shell.mobile-tab-account .log-card,
+.app-shell.mobile-tab-account .setup-guide-card {
+  display: block !important;
+}
+
+@media (min-width: 761px) {
+  .mobile-tabbar {
+    display: none !important;
+  }
+
+  .desktop-tabbar {
+    display: grid !important;
+  }
+
+  .app-shell {
+    gap: 14px;
+  }
+
+  .dashboard-strip,
+  .fleet-grid,
+  .detail-search-fold,
+  .preset-card,
+  .guide-card,
+  .records-card,
+  .monthly-card,
+  .account-card,
+  .pwa-card,
+  .settings-card,
+  .reward-card,
+  .diagnostics-card,
+  .log-card,
+  .setup-guide-card {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .desktop-tabbar {
+    display: none !important;
+  }
+
+  .theme-switch {
+    width: 100%;
+  }
+
+  .hero-actions {
+    width: 100%;
+  }
+
+  .mobile-tabbar {
+    border-color: var(--border) !important;
+    background: var(--surface-0) !important;
+    box-shadow: 0 -12px 34px rgba(2, 6, 23, 0.25);
+  }
+
+  .mobile-tabbar button {
+    background: transparent;
+    color: var(--text-2);
+    box-shadow: none;
+  }
+
+  .mobile-tabbar button.active {
+    background: var(--button-bg);
+    color: var(--button-text);
+  }
+}
