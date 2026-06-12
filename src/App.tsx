@@ -96,6 +96,8 @@ type DailyResourcePoint = {
   count: number;
 };
 
+type DailyChartMode = "合計" | "燃料" | "弾薬" | "鋼材" | "ボーキ";
+
 type GuideMode =
   | "燃料"
   | "弾薬"
@@ -224,6 +226,22 @@ const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授
   ボーキ: "bauxite"
 };
 
+const dailyChartModes: DailyChartMode[] = ["合計", "燃料", "弾薬", "鋼材", "ボーキ"];
+
+const dailyChartResourceKeyMap: Record<Exclude<DailyChartMode, "合計">, keyof ResourceRewards> = {
+  燃料: "fuel",
+  弾薬: "ammo",
+  鋼材: "steel",
+  ボーキ: "bauxite"
+};
+
+const resourceShortLabels: Record<keyof ResourceRewards, string> = {
+  fuel: "燃",
+  ammo: "弾",
+  steel: "鋼",
+  bauxite: "ボ"
+};
+
 function getFallbackExpedition(expeditionId: string): Expedition {
   return fallbackExpeditions.find((item) => item.id === expeditionId) ?? fallbackExpeditions[0];
 }
@@ -240,6 +258,21 @@ function getResourceRate(expedition: Expedition): ResourceRewards {
 
 function getTotalResources(resources: ResourceRewards): number {
   return resources.fuel + resources.ammo + resources.steel + resources.bauxite;
+}
+
+function getDailyChartValue(resources: ResourceRewards, mode: DailyChartMode): number {
+  if (mode === "合計") return getTotalResources(resources);
+  return resources[dailyChartResourceKeyMap[mode]];
+}
+
+function getDailyChartModeUnit(mode: DailyChartMode): string {
+  return mode === "合計" ? "合計" : `${mode}`;
+}
+
+function formatResourceBreakdown(resources: ResourceRewards): string {
+  return (["fuel", "ammo", "steel", "bauxite"] as (keyof ResourceRewards)[])
+    .map((key) => `${resourceShortLabels[key]}${resources[key]}`)
+    .join(" / ");
 }
 
 function multiplyResources(resources: ResourceRewards, multiplier: number): ResourceRewards {
@@ -496,6 +529,8 @@ function App() {
   const [keyword, setKeyword] = useState<string>("");
   const [sortMode, setSortMode] = useState<SortMode>(() => loadFromStorage(SORT_STORAGE_KEY, "ID順" as SortMode));
   const [guideMode, setGuideMode] = useState<GuideMode>("燃料");
+  const [dailyChartMode, setDailyChartMode] = useState<DailyChartMode>("合計");
+  const [selectedDailyKey, setSelectedDailyKey] = useState<string>(() => getDayKey());
   const [customPresetName, setCustomPresetName] = useState<string>("");
   const [customPresetDescription, setCustomPresetDescription] = useState<string>("");
   const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState<number>(0);
@@ -669,7 +704,14 @@ function App() {
       };
     });
   }, [history, now]);
-  const dailyResourceMax = dailyResourceSeries.reduce((max, item) => Math.max(max, getTotalResources(item.resources)), 1);
+  const dailyResourceMax = dailyResourceSeries.reduce((max, item) => Math.max(max, getDailyChartValue(item.resources, dailyChartMode)), 1);
+  const selectedDailyPoint = dailyResourceSeries.find((item) => item.key === selectedDailyKey) ?? dailyResourceSeries[dailyResourceSeries.length - 1];
+  const selectedDailyEntries = useMemo(() => {
+    if (!selectedDailyPoint) return [];
+    return history
+      .filter((item) => getDayKey(item.completedAt) === selectedDailyPoint.key)
+      .sort((a, b) => b.completedAt - a.completedAt);
+  }, [history, selectedDailyPoint]);
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
@@ -711,6 +753,13 @@ function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (dailyResourceSeries.length === 0) return;
+    if (!dailyResourceSeries.some((item) => item.key === selectedDailyKey)) {
+      setSelectedDailyKey(dailyResourceSeries[dailyResourceSeries.length - 1].key);
+    }
+  }, [dailyResourceSeries, selectedDailyKey]);
 
   useEffect(() => {
     saveToStorage(FLEET_STORAGE_KEY, fleets);
@@ -1234,7 +1283,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "3.2.0",
+      version: "3.3.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1622,11 +1671,11 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.2</p>
+          <p className="eyebrow">KanColle Expedition Support v3.3</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             艦これ本体は手動操作のまま、遠征の終了時刻・成功条件・通知予約・よく使う遠征セットをまとめて管理するサポートツール。
-            v3.2では、艦隊ごとの大発補正、補正込み遠征セット時給、日ごとの獲得資材グラフ、残り時間からの手動タイマーセットを追加したよ。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
+            v3.3では、日別グラフを資材別に切り替え・タップ詳細表示できるようにしたよ。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
             <br />
             遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
           </p>
@@ -2035,33 +2084,65 @@ function App() {
               </div>
               <button type="button" className="ghost small" onClick={clearHistory} disabled={history.length === 0}>履歴削除</button>
             </div>
-            <div className="daily-total-grid">
-              <div>燃料<strong>{todayTotal.fuel}</strong></div>
-              <div>弾薬<strong>{todayTotal.ammo}</strong></div>
-              <div>鋼材<strong>{todayTotal.steel}</strong></div>
-              <div>ボーキ<strong>{todayTotal.bauxite}</strong></div>
+            <div className="daily-total-grid compact-resource-cards">
+              <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
+              <button type="button" className={dailyChartMode === "弾薬" ? "active" : ""} onClick={() => setDailyChartMode("弾薬")}>弾薬<strong>{todayTotal.ammo}</strong></button>
+              <button type="button" className={dailyChartMode === "鋼材" ? "active" : ""} onClick={() => setDailyChartMode("鋼材")}>鋼材<strong>{todayTotal.steel}</strong></button>
+              <button type="button" className={dailyChartMode === "ボーキ" ? "active" : ""} onClick={() => setDailyChartMode("ボーキ")}>ボーキ<strong>{todayTotal.bauxite}</strong></button>
             </div>
-            <div className="daily-chart" aria-label="直近7日の獲得資材グラフ">
+            <div className="daily-chart-toolbar" aria-label="日別グラフ表示切替">
+              {dailyChartModes.map((mode) => (
+                <button
+                  type="button"
+                  key={mode}
+                  className={dailyChartMode === mode ? "active" : ""}
+                  onClick={() => setDailyChartMode(mode)}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+            <div className="daily-chart" aria-label={`直近7日の${getDailyChartModeUnit(dailyChartMode)}グラフ`}>
               {dailyResourceSeries.map((point) => {
-                const total = getTotalResources(point.resources);
-                const height = Math.max(8, Math.round((total / dailyResourceMax) * 100));
+                const value = getDailyChartValue(point.resources, dailyChartMode);
+                const height = value === 0 ? 6 : Math.max(10, Math.round((value / dailyResourceMax) * 100));
+                const isSelected = point.key === selectedDailyPoint?.key;
                 return (
-                  <div className="daily-chart-item" key={point.key}>
-                    <div className="daily-chart-bar-wrap" title={`${point.label}: ${formatResources(point.resources)}`}>
+                  <button
+                    type="button"
+                    className={`daily-chart-item ${isSelected ? "selected" : ""}`}
+                    key={point.key}
+                    onClick={() => setSelectedDailyKey(point.key)}
+                    title={`${point.label}: ${formatResourceBreakdown(point.resources)}`}
+                  >
+                    <span className="daily-chart-bar-wrap">
                       <span className="daily-chart-bar" style={{ height: `${height}%` }} />
-                    </div>
+                    </span>
                     <small>{point.label}</small>
-                    <strong>{total}</strong>
-                  </div>
+                    <strong>{value}</strong>
+                  </button>
                 );
               })}
             </div>
-            <p className="helper-text">記録数：{todayHistory.length}件 / 大成功：{todayGreatCount}件。完了後カードの記録ボタンで日ごとの獲得資材に集計される。</p>
+            {selectedDailyPoint && (
+              <div className="daily-breakdown-card">
+                <div>
+                  <small>選択日</small>
+                  <strong>{selectedDailyPoint.label}</strong>
+                </div>
+                <div>
+                  <small>{dailyChartMode}表示</small>
+                  <strong>{getDailyChartValue(selectedDailyPoint.resources, dailyChartMode)}</strong>
+                </div>
+                <p>{formatResourceBreakdown(selectedDailyPoint.resources)} / 記録{selectedDailyPoint.count}件</p>
+              </div>
+            )}
+            <p className="helper-text">記録数：{todayHistory.length}件 / 大成功：{todayGreatCount}件。バーをタップすると、その日の資材内訳を確認できる。</p>
             <div className="history-list compact-history">
-              {todayHistory.length === 0 ? (
-                <p className="empty-text">まだ今日の帰投記録はないよ。</p>
+              {selectedDailyEntries.length === 0 ? (
+                <p className="empty-text">選択日の帰投記録はまだないよ。</p>
               ) : (
-                todayHistory.slice(0, 5).map((item) => (
+                selectedDailyEntries.slice(0, 5).map((item) => (
                   <p key={item.id}>
                     <span>{formatShortDateTime(item.completedAt)}</span>
                     第{item.fleetNo} {item.expeditionName} / {item.result === "great" ? "大成功" : "成功"} / {formatResources(item.rewards)}

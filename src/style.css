@@ -2227,3 +2227,165 @@ button.small,
     height: 76px;
   }
 }
+
+/* v3.3: resource chart filters / tap breakdown / mobile clutter reduction */
+.compact-resource-cards button {
+  min-height: auto;
+  width: 100%;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(125, 211, 252, 0.08);
+  background: rgba(15, 23, 42, 0.7);
+  color: #7dd3fc;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: left;
+  box-shadow: none;
+}
+
+.compact-resource-cards button strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fafc;
+  font-size: 1.35rem;
+}
+
+.compact-resource-cards button.active {
+  border-color: rgba(56, 189, 248, 0.52);
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.46), rgba(30, 64, 175, 0.36));
+}
+
+.daily-chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.daily-chart-toolbar button {
+  width: auto;
+  min-height: 32px;
+  padding: 0.32rem 0.68rem;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  color: #bfdbfe;
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+.daily-chart-toolbar button.active {
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  border-color: transparent;
+  color: #fff;
+}
+
+.daily-chart-item {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  width: 100%;
+  min-height: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.daily-chart-item:hover .daily-chart-bar-wrap,
+.daily-chart-item.selected .daily-chart-bar-wrap {
+  border-color: rgba(125, 211, 252, 0.72);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.14);
+}
+
+.daily-chart-item.selected small,
+.daily-chart-item.selected strong {
+  color: #fef08a;
+}
+
+.daily-breakdown-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-items: center;
+  margin: 0.72rem 0;
+  padding: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  background: rgba(15, 23, 42, 0.66);
+}
+
+.daily-breakdown-card small {
+  display: block;
+  color: #94a3b8;
+  font-weight: 800;
+  font-size: 0.74rem;
+}
+
+.daily-breakdown-card strong {
+  display: block;
+  margin-top: 0.15rem;
+  color: #f8fafc;
+  font-size: 1.05rem;
+}
+
+.daily-breakdown-card p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #bfdbfe;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .guide-card {
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .guide-layout {
+    gap: 12px;
+  }
+
+  .guide-recommendations {
+    gap: 10px;
+  }
+
+  .daily-summary {
+    padding: 14px;
+  }
+
+  .daily-total-grid.compact-resource-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .compact-resource-cards button {
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+
+  .compact-resource-cards button strong {
+    font-size: 1.06rem;
+  }
+
+  .daily-chart-toolbar {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .daily-chart-toolbar button {
+    width: 100%;
+    padding-inline: 0.2rem;
+    font-size: 0.72rem;
+  }
+
+  .daily-breakdown-card {
+    grid-template-columns: 1fr 1fr;
+    padding: 0.75rem;
+  }
+
+  .compact-history p {
+    font-size: 0.8rem;
+  }
+}
