@@ -2389,3 +2389,392 @@ button.small,
     font-size: 0.8rem;
   }
 }
+
+/* v3.4: modern dashboard / tabbed information architecture */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.hero { order: 0; }
+.setup-guide-card { order: 1; }
+.dashboard-strip { order: 2; }
+.fleet-grid { order: 3; }
+.preset-card { order: 4; }
+.guide-card { order: 5; }
+.detail-search-fold { order: 6; }
+.records-card { order: 7; }
+.monthly-card { order: 8; }
+.account-card,
+.pwa-card,
+.settings-card,
+.reward-card,
+.diagnostics-card,
+.log-card { order: 9; }
+.mobile-tabbar { order: 99; }
+
+.desktop-sidebar {
+  position: fixed;
+  top: 96px;
+  left: max(18px, calc((100vw - 1180px) / 2 - 150px));
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  width: 132px;
+  padding: 10px;
+  border-radius: 22px;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  background: rgba(8, 18, 36, 0.76);
+  box-shadow: 0 20px 55px rgba(2, 6, 23, 0.35);
+  backdrop-filter: blur(16px);
+}
+
+.desktop-sidebar button {
+  min-height: 38px;
+  padding: 0.45rem 0.55rem;
+  border-radius: 14px;
+  background: transparent;
+  color: #bfdbfe;
+  border: 1px solid transparent;
+  box-shadow: none;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.desktop-sidebar button:hover {
+  border-color: rgba(56, 189, 248, 0.28);
+  background: rgba(14, 165, 233, 0.13);
+}
+
+.dashboard-strip {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.05fr) minmax(260px, 0.95fr) minmax(260px, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.command-card {
+  min-width: 0;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.74);
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.22);
+  backdrop-filter: blur(16px);
+}
+
+.command-card h2,
+.command-card h3 {
+  margin: 0;
+}
+
+.command-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.command-status-grid span,
+.command-chip-row span {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 15px;
+  color: #bfdbfe;
+  background: rgba(8, 20, 38, 0.72);
+  border: 1px solid rgba(125, 211, 252, 0.1);
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+
+.command-status-grid strong {
+  color: #f8fafc;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.mini-dashboard-resources {
+  margin-bottom: 8px;
+}
+
+.quick-preset-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quick-preset-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 0.7rem 0.8rem;
+  border-radius: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  background: rgba(8, 20, 38, 0.7);
+  box-shadow: none;
+  text-align: left;
+}
+
+.quick-preset-list span,
+.quick-preset-list small {
+  display: block;
+}
+
+.quick-preset-list small {
+  color: #7dd3fc;
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.command-chip-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.static-summary {
+  cursor: default;
+}
+
+.static-summary:hover {
+  background: transparent;
+}
+
+.records-card {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(6, 78, 59, 0.18));
+}
+
+.records-content .daily-summary {
+  background: rgba(6, 78, 59, 0.12);
+}
+
+.records-summary {
+  width: 100%;
+}
+
+/* 記録は専用カードへ集約。攻略タブは候補出しに集中させる */
+#strategy-section .daily-summary {
+  display: none;
+}
+
+#strategy-section .guide-layout {
+  grid-template-columns: 1fr;
+}
+
+#strategy-section .guide-recommendations {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fleet-grid {
+  scroll-margin-top: 18px;
+}
+
+.fleet-card {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(10, 20, 36, 0.92));
+}
+
+.fleet-card .field-head > span,
+.fleet-card .checkbox-row,
+.fleet-card .manual-timer-row,
+.fleet-card .button-row,
+.fleet-card .detail-link {
+  position: relative;
+}
+
+.fleet-card .timer-box {
+  margin-top: 14px;
+  background: rgba(2, 6, 23, 0.58);
+}
+
+.fleet-card .mini-info {
+  grid-template-columns: 1fr;
+}
+
+.fleet-card .mini-info div {
+  padding: 10px 12px;
+}
+
+@media (max-width: 1400px) {
+  .desktop-sidebar {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .dashboard-strip {
+    grid-template-columns: 1fr;
+  }
+
+  #strategy-section .guide-recommendations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: 100%;
+    padding: 10px 10px 92px;
+  }
+
+  .hero {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .hero > div:first-child p:not(.eyebrow) {
+    display: none;
+  }
+
+  .hero h1 {
+    font-size: 1.55rem;
+  }
+
+  .dashboard-strip {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .command-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .command-status-grid,
+  .command-chip-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .command-chip-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .command-status-grid span,
+  .command-chip-row span {
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+
+  .mobile-tabbar {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .mobile-tabbar button {
+    padding: 10px 4px;
+    font-size: 0.78rem;
+  }
+
+  .fleet-card .helper-text {
+    display: none;
+  }
+
+  .fleet-card .mini-info {
+    grid-template-columns: 1fr;
+  }
+
+  .fleet-card .manual-timer-row {
+    padding: 0.7rem;
+  }
+
+  #strategy-section .guide-recommendations {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tab-timers .account-card,
+  .mobile-tab-timers .pwa-card,
+  .mobile-tab-timers .settings-card,
+  .mobile-tab-timers .reward-card,
+  .mobile-tab-timers .preset-card,
+  .mobile-tab-timers .guide-card,
+  .mobile-tab-timers .detail-search-fold,
+  .mobile-tab-timers .records-card,
+  .mobile-tab-timers .monthly-card,
+  .mobile-tab-timers .diagnostics-card,
+  .mobile-tab-timers .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-assist .dashboard-strip,
+  .mobile-tab-assist .fleet-grid,
+  .mobile-tab-assist .account-card,
+  .mobile-tab-assist .pwa-card,
+  .mobile-tab-assist .settings-card,
+  .mobile-tab-assist .reward-card,
+  .mobile-tab-assist .detail-search-fold,
+  .mobile-tab-assist .records-card,
+  .mobile-tab-assist .monthly-card,
+  .mobile-tab-assist .diagnostics-card,
+  .mobile-tab-assist .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-assist .preset-card,
+  .mobile-tab-assist .guide-card {
+    display: block !important;
+  }
+
+  .mobile-tab-search .dashboard-strip,
+  .mobile-tab-search .fleet-grid,
+  .mobile-tab-search .account-card,
+  .mobile-tab-search .pwa-card,
+  .mobile-tab-search .settings-card,
+  .mobile-tab-search .reward-card,
+  .mobile-tab-search .preset-card,
+  .mobile-tab-search .guide-card,
+  .mobile-tab-search .records-card,
+  .mobile-tab-search .monthly-card,
+  .mobile-tab-search .diagnostics-card,
+  .mobile-tab-search .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-search .detail-search-fold {
+    display: block !important;
+  }
+
+  .mobile-tab-records .dashboard-strip,
+  .mobile-tab-records .fleet-grid,
+  .mobile-tab-records .account-card,
+  .mobile-tab-records .pwa-card,
+  .mobile-tab-records .settings-card,
+  .mobile-tab-records .reward-card,
+  .mobile-tab-records .preset-card,
+  .mobile-tab-records .guide-card,
+  .mobile-tab-records .detail-search-fold,
+  .mobile-tab-records .diagnostics-card,
+  .mobile-tab-records .log-card {
+    display: none !important;
+  }
+
+  .mobile-tab-records .records-card,
+  .mobile-tab-records .monthly-card {
+    display: block !important;
+  }
+
+  .mobile-tab-account .dashboard-strip,
+  .mobile-tab-account .fleet-grid,
+  .mobile-tab-account .preset-card,
+  .mobile-tab-account .guide-card,
+  .mobile-tab-account .detail-search-fold,
+  .mobile-tab-account .records-card,
+  .mobile-tab-account .monthly-card {
+    display: none !important;
+  }
+
+  .mobile-tab-account .account-card,
+  .mobile-tab-account .pwa-card,
+  .mobile-tab-account .settings-card,
+  .mobile-tab-account .reward-card,
+  .mobile-tab-account .diagnostics-card,
+  .mobile-tab-account .log-card {
+    display: block !important;
+  }
+}

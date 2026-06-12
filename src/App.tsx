@@ -112,7 +112,7 @@ type CollapsibleKey = "account" | "pwa" | "notifications" | "rewards" | "presets
 
 type CollapseState = Record<CollapsibleKey, boolean>;
 
-type MobileTab = "timers" | "assist" | "search" | "account";
+type MobileTab = "timers" | "assist" | "search" | "records" | "account";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -1642,6 +1642,20 @@ function App() {
     }
   }
 
+  const runningFleetCount = fleets.filter((fleet) => fleet.endAt !== null && now < fleet.endAt).length;
+  const completedFleetCount = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt).length;
+  const almostDoneFleetCount = fleets.filter((fleet) => {
+    if (!fleet.endAt || now >= fleet.endAt) return false;
+    return fleet.endAt - now <= 5 * 60 * 1000;
+  }).length;
+  const nextFleet = fleets
+    .filter((fleet) => fleet.endAt !== null && now < fleet.endAt)
+    .sort((a, b) => (a.endAt ?? 0) - (b.endAt ?? 0))[0];
+  const nextFleetExpedition = nextFleet ? findExpedition(nextFleet.expeditionId) : null;
+  const quickPresets = allPresets.slice(0, 3);
+  const cloudStatusLabel = authState.user ? "クラウド同期OK" : "ローカル保存";
+  const notificationStatusLabel = deviceStatus?.permission === "granted" ? "スマホ通知OK" : "通知設定確認";
+
   async function testDiscord(): Promise<boolean> {
     const dummyFleet: FleetTimer = {
       fleetNo: 2,
@@ -1693,6 +1707,67 @@ function App() {
           </button>
         </div>
       </header>
+
+      <nav className="desktop-sidebar" aria-label="画面移動">
+        <button type="button" onClick={() => document.getElementById("dashboard-section")?.scrollIntoView({ behavior: "smooth" })}>司令室</button>
+        <button type="button" onClick={() => document.getElementById("fleet-timer-section")?.scrollIntoView({ behavior: "smooth" })}>タイマー</button>
+        <button type="button" onClick={() => document.getElementById("detail-search-section")?.scrollIntoView({ behavior: "smooth" })}>遠征一覧</button>
+        <button type="button" onClick={() => document.getElementById("strategy-section")?.scrollIntoView({ behavior: "smooth" })}>攻略</button>
+        <button type="button" onClick={() => document.getElementById("records-section")?.scrollIntoView({ behavior: "smooth" })}>記録</button>
+        <button type="button" onClick={() => document.getElementById("account-cloud-section")?.scrollIntoView({ behavior: "smooth" })}>設定</button>
+      </nav>
+
+      <section id="dashboard-section" className="dashboard-strip" aria-label="遠征司令室">
+        <article className="command-card status-command-card">
+          <p className="eyebrow">Command Deck</p>
+          <h2>遠征司令室</h2>
+          <div className="command-status-grid">
+            <span><strong>{runningFleetCount}</strong>遠征中</span>
+            <span><strong>{completedFleetCount}</strong>完了待ち</span>
+            <span><strong>{almostDoneFleetCount}</strong>残り5分</span>
+          </div>
+          <p className="helper-text">{nextFleet && nextFleetExpedition ? `次の帰投：第${nextFleet.fleetNo}艦隊 ${nextFleetExpedition.name} / ${formatDateTime(nextFleet.endAt)}` : "現在、帰投待ちの艦隊はないよ。"}</p>
+        </article>
+
+        <article className="command-card resource-command-card">
+          <div className="section-head compact">
+            <div>
+              <p className="eyebrow">Today</p>
+              <h3>今日の獲得資材</h3>
+            </div>
+            <button type="button" className="ghost small" onClick={() => document.getElementById("records-section")?.scrollIntoView({ behavior: "smooth" })}>詳細</button>
+          </div>
+          <div className="daily-total-grid compact-resource-cards mini-dashboard-resources">
+            <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
+            <button type="button" className={dailyChartMode === "弾薬" ? "active" : ""} onClick={() => setDailyChartMode("弾薬")}>弾薬<strong>{todayTotal.ammo}</strong></button>
+            <button type="button" className={dailyChartMode === "鋼材" ? "active" : ""} onClick={() => setDailyChartMode("鋼材")}>鋼材<strong>{todayTotal.steel}</strong></button>
+            <button type="button" className={dailyChartMode === "ボーキ" ? "active" : ""} onClick={() => setDailyChartMode("ボーキ")}>ボーキ<strong>{todayTotal.bauxite}</strong></button>
+          </div>
+          <p className="helper-text">{todayHistory.length}件記録 / 大成功{todayGreatCount}件</p>
+        </article>
+
+        <article className="command-card quick-preset-command-card">
+          <div className="section-head compact">
+            <div>
+              <p className="eyebrow">Quick Preset</p>
+              <h3>ワンタップ編成</h3>
+            </div>
+            <button type="button" className="ghost small" onClick={() => document.getElementById("preset-section")?.scrollIntoView({ behavior: "smooth" })}>全部</button>
+          </div>
+          <div className="quick-preset-list">
+            {quickPresets.map((preset) => (
+              <button type="button" key={`dashboard-${preset.id}`} onClick={() => applyPreset(preset)}>
+                <span>{preset.name}</span>
+                <small>{formatResources(getPresetRatesFor(preset))} / h</small>
+              </button>
+            ))}
+          </div>
+          <div className="command-chip-row">
+            <span>{cloudStatusLabel}</span>
+            <span>{notificationStatusLabel}</span>
+          </div>
+        </article>
+      </section>
 
       <details
         id="account-cloud-section"
@@ -1830,6 +1905,7 @@ function App() {
       </details>
 
       <details
+        id="reward-section"
         className="reward-card fold-card"
         open={!collapsedPanels.rewards}
         onToggle={(event) => handlePanelToggle("rewards", event.currentTarget.open)}
@@ -1914,6 +1990,7 @@ function App() {
       </details>
 
       <details
+        id="preset-section"
         className="preset-card fold-card"
         open={!collapsedPanels.presets}
         onToggle={(event) => handlePanelToggle("presets", event.currentTarget.open)}
@@ -1982,6 +2059,7 @@ function App() {
       </details>
 
       <details
+        id="monthly-section"
         className="monthly-card fold-card"
         open={!collapsedPanels.monthly}
         onToggle={(event) => handlePanelToggle("monthly", event.currentTarget.open)}
@@ -2035,6 +2113,7 @@ function App() {
       </details>
 
       <details
+        id="strategy-section"
         className="guide-card fold-card"
         open={!collapsedPanels.strategy}
         onToggle={(event) => handlePanelToggle("strategy", event.currentTarget.open)}
@@ -2154,6 +2233,90 @@ function App() {
         </div>
         </div>
       </details>
+
+      <section id="records-section" className="records-card fold-card always-open-panel">
+        <div className="fold-summary static-summary">
+          <span><small>Records</small><strong>資材記録・グラフ</strong></span>
+          <em>記録</em>
+        </div>
+        <div className="fold-content records-content">
+          <aside className="daily-summary records-summary">
+            <div className="section-head compact">
+              <div>
+                <p className="eyebrow">Daily Resources</p>
+                <h3>今日の獲得資材</h3>
+              </div>
+              <button type="button" className="ghost small" onClick={clearHistory} disabled={history.length === 0}>履歴削除</button>
+            </div>
+            <div className="daily-total-grid compact-resource-cards">
+              <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
+              <button type="button" className={dailyChartMode === "弾薬" ? "active" : ""} onClick={() => setDailyChartMode("弾薬")}>弾薬<strong>{todayTotal.ammo}</strong></button>
+              <button type="button" className={dailyChartMode === "鋼材" ? "active" : ""} onClick={() => setDailyChartMode("鋼材")}>鋼材<strong>{todayTotal.steel}</strong></button>
+              <button type="button" className={dailyChartMode === "ボーキ" ? "active" : ""} onClick={() => setDailyChartMode("ボーキ")}>ボーキ<strong>{todayTotal.bauxite}</strong></button>
+            </div>
+            <div className="daily-chart-toolbar" aria-label="日別グラフ表示切替">
+              {dailyChartModes.map((mode) => (
+                <button
+                  type="button"
+                  key={`records-${mode}`}
+                  className={dailyChartMode === mode ? "active" : ""}
+                  onClick={() => setDailyChartMode(mode)}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+            <div className="daily-chart" aria-label={`直近7日の${getDailyChartModeUnit(dailyChartMode)}グラフ`}>
+              {dailyResourceSeries.map((point) => {
+                const value = getDailyChartValue(point.resources, dailyChartMode);
+                const height = value === 0 ? 6 : Math.max(10, Math.round((value / dailyResourceMax) * 100));
+                const isSelected = point.key === selectedDailyPoint?.key;
+                return (
+                  <button
+                    type="button"
+                    className={`daily-chart-item ${isSelected ? "selected" : ""}`}
+                    key={`records-${point.key}`}
+                    onClick={() => setSelectedDailyKey(point.key)}
+                    title={`${point.label}: ${formatResourceBreakdown(point.resources)}`}
+                  >
+                    <span className="daily-chart-bar-wrap">
+                      <span className="daily-chart-bar" style={{ height: `${height}%` }} />
+                    </span>
+                    <small>{point.label}</small>
+                    <strong>{value}</strong>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedDailyPoint && (
+              <div className="daily-breakdown-card">
+                <div>
+                  <small>選択日</small>
+                  <strong>{selectedDailyPoint.label}</strong>
+                </div>
+                <div>
+                  <small>{dailyChartMode}表示</small>
+                  <strong>{getDailyChartValue(selectedDailyPoint.resources, dailyChartMode)}</strong>
+                </div>
+                <p>{formatResourceBreakdown(selectedDailyPoint.resources)} / 記録{selectedDailyPoint.count}件</p>
+              </div>
+            )}
+            <p className="helper-text">バーをタップすると、その日の資材内訳を確認できる。記録数：{todayHistory.length}件 / 大成功：{todayGreatCount}件。</p>
+            <div className="history-list compact-history">
+              {selectedDailyEntries.length === 0 ? (
+                <p className="empty-text">選択日の帰投記録はまだないよ。</p>
+              ) : (
+                selectedDailyEntries.slice(0, 8).map((item) => (
+                  <p key={`records-${item.id}`}>
+                    <span>{formatShortDateTime(item.completedAt)}</span>
+                    第{item.fleetNo} {item.expeditionName} / {item.result === "great" ? "大成功" : "成功"} / {formatResources(item.rewards)}
+                  </p>
+                ))
+              )}
+            </div>
+          </aside>
+        </div>
+      </section>
 
       <section id="fleet-timer-section" className="fleet-grid">
         {fleets.map((fleet) => {
@@ -2332,6 +2495,7 @@ function App() {
       </section>
 
       <details
+        id="detail-search-section"
         className="detail-search-fold fold-card"
         open={!collapsedPanels.details}
         onToggle={(event) => handlePanelToggle("details", event.currentTarget.open)}
@@ -2551,8 +2715,9 @@ function App() {
 
       <nav className="mobile-tabbar" aria-label="スマホ用ナビゲーション">
         <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => setMobileTab("timers")}>タイマー</button>
+        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => setMobileTab("search")}>遠征</button>
         <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => setMobileTab("assist")}>攻略</button>
-        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => setMobileTab("search")}>一覧</button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => setMobileTab("records")}>記録</button>
         <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => setMobileTab("account")}>設定</button>
       </nav>
 
