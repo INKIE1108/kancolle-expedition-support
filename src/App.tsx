@@ -40,6 +40,7 @@ const SETUP_TEST_STORAGE_KEY = "kancolle-expedition-setup-test-v1";
 const SETUP_GUIDE_DISMISSED_STORAGE_KEY = "kancolle-expedition-setup-guide-dismissed-v1";
 const REWARD_MODIFIER_STORAGE_KEY = "kancolle-expedition-reward-modifier-v1";
 const THEME_STORAGE_KEY = "kancolle-expedition-theme-v1";
+const RESOURCE_STOCK_STORAGE_KEY = "kancolle-expedition-resource-stock-v1";
 
 type SortMode =
   | "ID順"
@@ -144,6 +145,13 @@ type DailyResourcePoint = {
 };
 
 type DailyChartMode = "合計" | "燃料" | "弾薬" | "鋼材" | "ボーキ";
+type StockChartRange = "1日" | "1週間" | "1か月" | "全期間";
+type ResourceStockInputs = Record<keyof ResourceRewards, string>;
+type ResourceStockSnapshot = {
+  id: string;
+  recordedAt: number;
+  resources: ResourceRewards;
+};
 
 type GuideMode =
   | "燃料"
@@ -237,7 +245,8 @@ const backupStorageKeys = [
   SETUP_TEST_STORAGE_KEY,
   SETUP_GUIDE_DISMISSED_STORAGE_KEY,
   REWARD_MODIFIER_STORAGE_KEY,
-  THEME_STORAGE_KEY
+  THEME_STORAGE_KEY,
+  RESOURCE_STOCK_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -277,6 +286,7 @@ const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授
 };
 
 const dailyChartModes: DailyChartMode[] = ["合計", "燃料", "弾薬", "鋼材", "ボーキ"];
+const stockChartRanges: StockChartRange[] = ["1日", "1週間", "1か月", "全期間"];
 
 const dailyChartResourceKeyMap: Record<Exclude<DailyChartMode, "合計">, keyof ResourceRewards> = {
   燃料: "fuel",
@@ -341,6 +351,65 @@ function getDailyChartValue(resources: ResourceRewards, mode: DailyChartMode): n
 
 function getDailyChartModeUnit(mode: DailyChartMode): string {
   return mode === "合計" ? "合計" : `${mode}`;
+}
+
+function getInitialResourceStockInputs(): ResourceStockInputs {
+  return { fuel: "", ammo: "", steel: "", bauxite: "" };
+}
+
+function resourceStockSnapshotToInputs(snapshot?: ResourceStockSnapshot | null): ResourceStockInputs {
+  if (!snapshot) return getInitialResourceStockInputs();
+  return {
+    fuel: String(snapshot.resources.fuel),
+    ammo: String(snapshot.resources.ammo),
+    steel: String(snapshot.resources.steel),
+    bauxite: String(snapshot.resources.bauxite)
+  };
+}
+
+function parseResourceStockInput(value: string): number {
+  const normalized = value.replace(/,/g, "").trim();
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return 0;
+  return clampNumber(Math.floor(parsed), 0, 999999);
+}
+
+function getResourceStockValue(resources: ResourceRewards, mode: DailyChartMode): number {
+  return getDailyChartValue(resources, mode);
+}
+
+function getStockRangeStart(range: StockChartRange, base = Date.now()): number {
+  if (range === "全期間") return 0;
+  const date = new Date(base);
+  if (range === "1日") date.setHours(date.getHours() - 24);
+  if (range === "1週間") date.setDate(date.getDate() - 7);
+  if (range === "1か月") date.setMonth(date.getMonth() - 1);
+  return date.getTime();
+}
+
+function formatStockSnapshotLabel(timestamp: number, range: StockChartRange): string {
+  const date = new Date(timestamp);
+  if (range === "1日") {
+    return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(date);
+  }
+  return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric" }).format(date);
+}
+
+function subtractResources(a: ResourceRewards, b: ResourceRewards): ResourceRewards {
+  return {
+    fuel: a.fuel - b.fuel,
+    ammo: a.ammo - b.ammo,
+    steel: a.steel - b.steel,
+    bauxite: a.bauxite - b.bauxite
+  };
+}
+
+function formatSignedNumber(value: number): string {
+  return `${value >= 0 ? "+" : ""}${value.toLocaleString("ja-JP")}`;
+}
+
+function formatSignedResources(resources: ResourceRewards): string {
+  return `燃${formatSignedNumber(resources.fuel)} / 弾${formatSignedNumber(resources.ammo)} / 鋼${formatSignedNumber(resources.steel)} / ボ${formatSignedNumber(resources.bauxite)}`;
 }
 
 function formatResourceBreakdown(resources: ResourceRewards): string {
@@ -705,6 +774,15 @@ function App() {
   const [guideMode, setGuideMode] = useState<GuideMode>("燃料");
   const [dailyChartMode, setDailyChartMode] = useState<DailyChartMode>("合計");
   const [selectedDailyKey, setSelectedDailyKey] = useState<string>(() => getDayKey());
+  const [stockChartMode, setStockChartMode] = useState<DailyChartMode>("合計");
+  const [stockChartRange, setStockChartRange] = useState<StockChartRange>("1週間");
+  const [resourceStockSnapshots, setResourceStockSnapshots] = useState<ResourceStockSnapshot[]>(() =>
+    loadFromStorage(RESOURCE_STOCK_STORAGE_KEY, [])
+  );
+  const [resourceStockInputs, setResourceStockInputs] = useState<ResourceStockInputs>(() => {
+    const snapshots = loadFromStorage<ResourceStockSnapshot[]>(RESOURCE_STOCK_STORAGE_KEY, []);
+    return resourceStockSnapshotToInputs([...snapshots].sort((a, b) => b.recordedAt - a.recordedAt)[0]);
+  });
   const [customPresetName, setCustomPresetName] = useState<string>("");
   const [customPresetDescription, setCustomPresetDescription] = useState<string>("");
   const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState<number>(0);
@@ -972,6 +1050,26 @@ function App() {
       .filter((item) => getDayKey(item.completedAt) === selectedDailyPoint.key)
       .sort((a, b) => b.completedAt - a.completedAt);
   }, [history, selectedDailyPoint]);
+
+  const stockChartSeries = useMemo(() => {
+    const start = getStockRangeStart(stockChartRange, now);
+    return [...resourceStockSnapshots]
+      .filter((snapshot) => snapshot.recordedAt >= start)
+      .sort((a, b) => a.recordedAt - b.recordedAt);
+  }, [resourceStockSnapshots, stockChartRange, now]);
+  const stockChartDisplaySeries = stockChartSeries.length > 0
+    ? stockChartSeries
+    : [...resourceStockSnapshots].sort((a, b) => a.recordedAt - b.recordedAt).slice(-1);
+  const latestStockSnapshot = [...resourceStockSnapshots].sort((a, b) => b.recordedAt - a.recordedAt)[0] ?? null;
+  const firstStockSnapshot = stockChartDisplaySeries[0] ?? null;
+  const lastStockSnapshot = stockChartDisplaySeries[stockChartDisplaySeries.length - 1] ?? null;
+  const stockChartValues = stockChartDisplaySeries.map((snapshot) => getResourceStockValue(snapshot.resources, stockChartMode));
+  const stockChartMin = stockChartValues.length ? Math.min(...stockChartValues) : 0;
+  const stockChartMax = stockChartValues.length ? Math.max(...stockChartValues) : 1;
+  const stockChartRangeValue = Math.max(1, stockChartMax - stockChartMin);
+  const stockDelta = firstStockSnapshot && lastStockSnapshot
+    ? subtractResources(lastStockSnapshot.resources, firstStockSnapshot.resources)
+    : { fuel: 0, ammo: 0, steel: 0, bauxite: 0 };
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
@@ -1073,6 +1171,10 @@ function App() {
   }, [history]);
 
   useEffect(() => {
+    saveToStorage(RESOURCE_STOCK_STORAGE_KEY, resourceStockSnapshots);
+  }, [resourceStockSnapshots]);
+
+  useEffect(() => {
     saveToStorage(COLLAPSE_STORAGE_KEY, collapsedPanels);
   }, [collapsedPanels]);
 
@@ -1156,7 +1258,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
+  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1513,6 +1615,38 @@ function App() {
     addLog("遠征履歴を削除");
   }
 
+  function updateResourceStockInput(key: keyof ResourceRewards, value: string) {
+    setResourceStockInputs((current) => ({ ...current, [key]: value }));
+  }
+
+  function recordResourceStockSnapshot() {
+    const resources: ResourceRewards = {
+      fuel: parseResourceStockInput(resourceStockInputs.fuel),
+      ammo: parseResourceStockInput(resourceStockInputs.ammo),
+      steel: parseResourceStockInput(resourceStockInputs.steel),
+      bauxite: parseResourceStockInput(resourceStockInputs.bauxite)
+    };
+    const snapshot: ResourceStockSnapshot = {
+      id: `${Date.now()}-stock`,
+      recordedAt: getSyncedNow(),
+      resources
+    };
+    setResourceStockSnapshots((current) => [snapshot, ...current].sort((a, b) => b.recordedAt - a.recordedAt).slice(0, 500));
+    addLog(`所持資源を記録: ${formatResources(resources)}`);
+  }
+
+  function fillResourceStockInputsFromLatest() {
+    setResourceStockInputs(resourceStockSnapshotToInputs(latestStockSnapshot));
+  }
+
+  function clearResourceStockSnapshots() {
+    const ok = window.confirm("所持資源の推移記録をすべて削除しますか？遠征の帰投履歴は残ります。");
+    if (!ok) return;
+    setResourceStockSnapshots([]);
+    setResourceStockInputs(getInitialResourceStockInputs());
+    addLog("所持資源の推移記録を削除");
+  }
+
   function handlePanelToggle(panel: CollapsibleKey, open: boolean) {
     setCollapsedPanels((current) => ({ ...current, [panel]: !open }));
   }
@@ -1550,7 +1684,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "3.6.0",
+      version: "3.7.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1611,12 +1745,13 @@ function App() {
       pinnedExpeditionIds,
       customPresets,
       history,
+      resourceStockSnapshots,
       monthlyCompletions,
       setupNotificationTestDone,
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "3.6.0"
+      appVersion: "3.7.0"
     };
   }
 
@@ -1725,6 +1860,7 @@ function App() {
     setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
     setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
     setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
+    setResourceStockSnapshots((snapshot?.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? resourceStockSnapshots);
     setMonthlyCompletions((snapshot?.monthlyCompletions as MonthlyCompletionMap | undefined) ?? monthlyCompletions);
     setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
     setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
@@ -2001,7 +2137,7 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.6</p>
+          <p className="eyebrow">KanColle Expedition Support v3.7</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
@@ -2648,6 +2784,68 @@ function App() {
                 ))
               )}
             </div>
+
+            <section className="resource-stock-panel" aria-label="所持資源推移">
+              <div className="section-head compact">
+                <div>
+                  <p className="eyebrow">Resource Stock</p>
+                  <h3>所持資源の推移</h3>
+                  <p className="helper-text">1日1〜2回、艦これ側の現在資源を入力。総量の増減や各資源の収支を折れ線で見られるよ。</p>
+                </div>
+                <button type="button" className="ghost small" onClick={clearResourceStockSnapshots} disabled={resourceStockSnapshots.length === 0}>推移削除</button>
+              </div>
+
+              <div className="resource-stock-input-grid">
+                <label>燃料<input type="number" min={0} max={999999} value={resourceStockInputs.fuel} onChange={(event) => updateResourceStockInput("fuel", event.target.value)} placeholder="現在値" /></label>
+                <label>弾薬<input type="number" min={0} max={999999} value={resourceStockInputs.ammo} onChange={(event) => updateResourceStockInput("ammo", event.target.value)} placeholder="現在値" /></label>
+                <label>鋼材<input type="number" min={0} max={999999} value={resourceStockInputs.steel} onChange={(event) => updateResourceStockInput("steel", event.target.value)} placeholder="現在値" /></label>
+                <label>ボーキ<input type="number" min={0} max={999999} value={resourceStockInputs.bauxite} onChange={(event) => updateResourceStockInput("bauxite", event.target.value)} placeholder="現在値" /></label>
+                <button type="button" onClick={recordResourceStockSnapshot}>現在資源を記録</button>
+                <button type="button" className="secondary" onClick={fillResourceStockInputsFromLatest} disabled={!latestStockSnapshot}>最新値を入力欄へ</button>
+              </div>
+
+              <div className="stock-chart-controls" aria-label="所持資源グラフ切替">
+                <div>
+                  {dailyChartModes.map((mode) => (
+                    <button type="button" key={`stock-mode-${mode}`} className={stockChartMode === mode ? "active" : ""} onClick={() => setStockChartMode(mode)}>{mode}</button>
+                  ))}
+                </div>
+                <div>
+                  {stockChartRanges.map((range) => (
+                    <button type="button" key={`stock-range-${range}`} className={stockChartRange === range ? "active" : ""} onClick={() => setStockChartRange(range)}>{range}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="stock-line-chart">
+                {stockChartDisplaySeries.length < 2 ? (
+                  <p className="empty-text">2件以上記録すると折れ線グラフが表示されるよ。まずは今の資源を記録してみて。</p>
+                ) : (
+                  <svg viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label={`${stockChartRange}の${stockChartMode}推移`}>
+                    <polyline
+                      points={stockChartDisplaySeries.map((snapshot, index) => {
+                        const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                        const value = getResourceStockValue(snapshot.resources, stockChartMode);
+                        const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
+                        return `${x.toFixed(2)},${y.toFixed(2)}`;
+                      }).join(" ")}
+                    />
+                    {stockChartDisplaySeries.map((snapshot, index) => {
+                      const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                      const value = getResourceStockValue(snapshot.resources, stockChartMode);
+                      const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
+                      return <circle key={snapshot.id} cx={x} cy={y} r="1.25"><title>{formatStockSnapshotLabel(snapshot.recordedAt, stockChartRange)}：{value.toLocaleString("ja-JP")}</title></circle>;
+                    })}
+                  </svg>
+                )}
+              </div>
+
+              <div className="stock-summary-grid">
+                <div><small>最新</small><strong>{latestStockSnapshot ? getTotalResources(latestStockSnapshot.resources).toLocaleString("ja-JP") : "未記録"}</strong><span>{latestStockSnapshot ? `${formatResources(latestStockSnapshot.resources)} / ${formatShortDateTime(latestStockSnapshot.recordedAt)}` : "現在値を記録すると表示される"}</span></div>
+                <div><small>{stockChartRange}の収支</small><strong>{formatSignedNumber(getResourceStockValue(stockDelta, stockChartMode))}</strong><span>{formatSignedResources(stockDelta)}</span></div>
+                <div><small>記録数</small><strong>{resourceStockSnapshots.length}件</strong><span>表示中：{stockChartDisplaySeries.length}件</span></div>
+              </div>
+            </section>
           </aside>
         </div>
       </section>

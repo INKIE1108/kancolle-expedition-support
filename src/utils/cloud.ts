@@ -22,6 +22,7 @@ export type CloudSnapshot = {
   pinnedExpeditionIds: string[];
   customPresets: unknown[];
   history: unknown[];
+  resourceStockSnapshots?: unknown[];
   monthlyCompletions?: Record<string, string[]>;
   setupNotificationTestDone?: boolean;
   setupGuideDismissed?: boolean;

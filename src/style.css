@@ -3493,3 +3493,334 @@ html[data-theme="dark"] button:not(.ghost):not(.secondary):not(.pin-button):not(
     grid-template-columns: 1fr;
   }
 }
+
+/* v3.7: light contrast fix + resource stock trend */
+html[data-theme="light"] {
+  --surface-3: rgba(232, 244, 255, 0.96);
+  --surface-4: rgba(255, 255, 255, 0.98);
+  --text-strong: #10203a;
+  --text-muted-strong: #40546f;
+  --button-disabled-bg: rgba(222, 234, 247, 0.96);
+  --button-disabled-text: #66758b;
+  --soft-blue-border: rgba(104, 166, 232, 0.36);
+}
+
+html[data-theme="dark"] {
+  --surface-3: rgba(17, 29, 49, 0.92);
+  --surface-4: rgba(11, 22, 39, 0.92);
+  --text-strong: #f8fbff;
+  --text-muted-strong: #cbd8ea;
+  --button-disabled-bg: rgba(51, 65, 85, 0.62);
+  --button-disabled-text: #aebbd0;
+  --soft-blue-border: rgba(125, 211, 252, 0.28);
+}
+
+button:disabled {
+  opacity: 1 !important;
+  background: var(--button-disabled-bg) !important;
+  color: var(--button-disabled-text) !important;
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] .fold-summary em,
+html[data-theme="light"] .ghost.small,
+html[data-theme="light"] button.ghost {
+  color: #1b6fb8 !important;
+  background: rgba(235, 248, 255, 0.92) !important;
+  border-color: rgba(96, 165, 250, 0.38) !important;
+}
+
+html[data-theme="light"] .fold-summary em {
+  font-weight: 950;
+}
+
+html[data-theme="light"] .status-dot,
+html[data-theme="light"] .mini-heading,
+html[data-theme="light"] .device-list-title,
+html[data-theme="light"] .hero-clock small,
+html[data-theme="light"] .eyebrow {
+  color: #2377bd !important;
+}
+
+html[data-theme="light"] .status-dot {
+  background: rgba(239, 248, 255, 0.98) !important;
+  border-color: rgba(125, 170, 220, 0.36) !important;
+}
+
+html[data-theme="light"] .daily-chart-toolbar button,
+html[data-theme="light"] .stock-chart-controls button {
+  color: var(--text-1) !important;
+  background: rgba(239, 248, 255, 0.98) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] .daily-chart-toolbar button.active,
+html[data-theme="light"] .stock-chart-controls button.active {
+  color: #10203a !important;
+  background: linear-gradient(135deg, rgba(153, 210, 255, 0.82), rgba(210, 196, 255, 0.82)) !important;
+  border-color: var(--border-strong) !important;
+}
+
+html[data-theme="light"] .hourly-total,
+html[data-theme="light"] .daily-breakdown-card,
+html[data-theme="light"] .reward-bonus-summary,
+html[data-theme="light"] .status-message,
+html[data-theme="light"] .cloud-message,
+html[data-theme="light"] .device-summary-card,
+html[data-theme="light"] .device-row,
+html[data-theme="light"] .compact-history p,
+html[data-theme="light"] .detail-list div {
+  background: rgba(238, 248, 255, 0.98) !important;
+  color: var(--text-strong) !important;
+  border-color: rgba(130, 170, 220, 0.34) !important;
+}
+
+html[data-theme="light"] .hourly-total span,
+html[data-theme="light"] .hourly-total strong,
+html[data-theme="light"] .reward-bonus-summary span,
+html[data-theme="light"] .reward-bonus-summary strong,
+html[data-theme="light"] .device-summary-card span,
+html[data-theme="light"] .device-summary-card strong,
+html[data-theme="light"] .status-message,
+html[data-theme="light"] .cloud-message,
+html[data-theme="light"] .daily-breakdown-card small,
+html[data-theme="light"] .daily-breakdown-card strong,
+html[data-theme="light"] .daily-breakdown-card p {
+  color: var(--text-strong) !important;
+}
+
+html[data-theme="light"] .pinned-edit-item,
+html[data-theme="light"] .expedition-item {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+html[data-theme="light"] .pinned-main,
+html[data-theme="light"] .expedition-main {
+  background: linear-gradient(135deg, rgba(239, 248, 255, 0.98), rgba(247, 251, 255, 0.98)) !important;
+  color: var(--text-strong) !important;
+  border-color: rgba(129, 168, 218, 0.34) !important;
+}
+
+html[data-theme="light"] .pinned-edit-item:not(.selected):hover .pinned-main,
+html[data-theme="light"] .expedition-item:not(.selected):hover .expedition-main {
+  background: linear-gradient(135deg, rgba(224, 244, 255, 0.98), rgba(242, 239, 255, 0.98)) !important;
+  border-color: rgba(96, 165, 250, 0.42) !important;
+}
+
+html[data-theme="light"] .pin-button:not(.active) {
+  background: rgba(235, 247, 255, 0.98) !important;
+  color: #2870ad !important;
+  border-color: rgba(111, 164, 217, 0.38) !important;
+}
+
+html[data-theme="light"] .daily-chart {
+  background: rgba(194, 207, 222, 0.36) !important;
+  border-color: rgba(125, 154, 184, 0.34) !important;
+}
+
+html[data-theme="light"] .daily-chart-item {
+  background: rgba(239, 248, 255, 0.98) !important;
+  color: var(--text-strong) !important;
+}
+
+html[data-theme="light"] .daily-chart-item small,
+html[data-theme="light"] .daily-chart-item strong {
+  color: #2870ad !important;
+}
+
+html[data-theme="light"] .daily-chart-item.selected small,
+html[data-theme="light"] .daily-chart-item.selected strong {
+  color: #10203a !important;
+}
+
+html[data-theme="light"] .pwa-card,
+html[data-theme="light"] .device-panel {
+  background: rgba(241, 250, 255, 0.98) !important;
+}
+
+html[data-theme="light"] .device-row-meta span,
+html[data-theme="light"] .device-row p,
+html[data-theme="light"] .muted-text {
+  color: var(--text-muted-strong) !important;
+}
+
+.resource-stock-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--surface-4), var(--surface-3));
+}
+
+.resource-stock-input-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) minmax(150px, auto) minmax(150px, auto);
+  gap: 10px;
+  align-items: end;
+}
+
+.resource-stock-input-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-1);
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.resource-stock-input-grid input {
+  min-height: 44px;
+}
+
+.stock-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stock-chart-controls > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.stock-chart-controls button {
+  min-height: 36px;
+  padding: 0.45rem 0.72rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.stock-chart-controls button.active {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border-color: var(--border-strong);
+}
+
+.stock-line-chart {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid var(--soft-blue-border);
+  background:
+    linear-gradient(180deg, rgba(125, 211, 252, 0.06) 0 1px, transparent 1px 25%),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.05) 0 1px, transparent 1px 20%),
+    var(--surface-2);
+  overflow: hidden;
+}
+
+.stock-line-chart svg {
+  width: 100%;
+  height: 210px;
+  overflow: visible;
+}
+
+.stock-line-chart polyline {
+  fill: none;
+  stroke: url(#stockGradient);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stock-line-chart svg polyline {
+  stroke: var(--accent);
+}
+
+.stock-line-chart circle {
+  fill: var(--accent-2);
+  stroke: var(--surface-0);
+  stroke-width: 0.7;
+}
+
+.stock-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stock-summary-grid > div {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.stock-summary-grid small {
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.stock-summary-grid strong {
+  color: var(--text-0);
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+}
+
+.stock-summary-grid span {
+  color: var(--text-2);
+  font-size: 0.86rem;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+html[data-theme="light"] .resource-stock-panel,
+html[data-theme="light"] .stock-summary-grid > div,
+html[data-theme="light"] .stock-line-chart {
+  background-color: rgba(244, 250, 255, 0.98) !important;
+  color: var(--text-strong) !important;
+  border-color: rgba(129, 168, 218, 0.34) !important;
+}
+
+html[data-theme="light"] .stock-summary-grid small,
+html[data-theme="light"] .stock-summary-grid strong,
+html[data-theme="light"] .stock-summary-grid span,
+html[data-theme="light"] .resource-stock-input-grid label {
+  color: var(--text-strong) !important;
+}
+
+@media (max-width: 980px) {
+  .resource-stock-input-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stock-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .resource-stock-panel {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .resource-stock-input-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .resource-stock-input-grid button {
+    grid-column: 1 / -1;
+  }
+
+  .stock-line-chart {
+    min-height: 180px;
+    padding: 10px;
+  }
+
+  .stock-line-chart svg {
+    height: 170px;
+  }
+}
