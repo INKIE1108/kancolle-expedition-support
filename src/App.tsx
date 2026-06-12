@@ -74,17 +74,63 @@ type ExpeditionHistory = {
 
 type MonthlyCompletionMap = Record<string, string[]>;
 
+type LandingCraftTypeId =
+  | "daihatsu"
+  | "toku-daihatsu"
+  | "armed-daihatsu"
+  | "type89"
+  | "soukoutei"
+  | "panzer2"
+  | "toku-honi"
+  | "ka-mi"
+  | "ka-tsu"
+  | "ka-tsu-kai"
+  | "toku-11th"
+  | "m4a1-dd"
+  | "toku-panzer3"
+  | "toku-chiha"
+  | "toku-chiha-kai";
+
+type LandingCraftSlot = {
+  id: string;
+  type: LandingCraftTypeId;
+  stars: number;
+};
+
+type LandingCraftDefinition = {
+  id: LandingCraftTypeId;
+  label: string;
+  shortLabel: string;
+  dlcMod: number;
+  isPlainDaihatsu?: boolean;
+  isTokuDaihatsu?: boolean;
+};
+
 type FleetRewardModifier = {
-  daihatsuCount: number;
+  /** v3.2互換：古い保存データの移行用。 */
+  daihatsuCount?: number;
   kinuKaiNiBonus: boolean;
+  landingCrafts?: LandingCraftSlot[];
+};
+
+type RewardBonusBreakdown = {
+  craftCount: number;
+  plainDaihatsuCount: number;
+  tokuDaihatsuCount: number;
+  cappedDlcBonus: number;
+  avgStar: number;
+  improvedDlcBonus: number;
+  tokuBonus: number;
+  totalBonus: number;
 };
 
 type RewardModifierSettings = {
   greatSuccessDefault: boolean;
-  /** v3.2: 既定値。既存データ移行・詳細画面の暫定計算に使う。 */
+  /** v3.2互換：既定値。古い保存データの移行・詳細画面の暫定計算に使う。 */
   daihatsuCount: number;
   kinuKaiNiBonus: boolean;
-  /** v3.2: 第2〜第4艦隊ごとの大発・鬼怒補正。 */
+  landingCrafts?: LandingCraftSlot[];
+  /** 第2〜第4艦隊ごとの大発系装備・鬼怒補正。 */
   perFleet?: Partial<Record<FleetTimer["fleetNo"], FleetRewardModifier>>;
 };
 
@@ -215,10 +261,11 @@ const initialRewardModifierSettings: RewardModifierSettings = {
   greatSuccessDefault: true,
   daihatsuCount: 0,
   kinuKaiNiBonus: false,
+  landingCrafts: [],
   perFleet: {
-    2: { daihatsuCount: 0, kinuKaiNiBonus: false },
-    3: { daihatsuCount: 0, kinuKaiNiBonus: false },
-    4: { daihatsuCount: 0, kinuKaiNiBonus: false }
+    2: { daihatsuCount: 0, kinuKaiNiBonus: false, landingCrafts: [] },
+    3: { daihatsuCount: 0, kinuKaiNiBonus: false, landingCrafts: [] },
+    4: { daihatsuCount: 0, kinuKaiNiBonus: false, landingCrafts: [] }
   }
 };
 
@@ -244,6 +291,30 @@ const resourceShortLabels: Record<keyof ResourceRewards, string> = {
   steel: "鋼",
   bauxite: "ボ"
 };
+
+const MAX_LANDING_CRAFT_SLOTS = 8;
+
+const landingCraftDefinitions: LandingCraftDefinition[] = [
+  { id: "daihatsu", label: "大発動艇", shortLabel: "大発", dlcMod: 0.05, isPlainDaihatsu: true },
+  { id: "toku-daihatsu", label: "特大発動艇", shortLabel: "特大発", dlcMod: 0.05, isTokuDaihatsu: true },
+  { id: "ka-tsu-kai", label: "特四式内火艇改", shortLabel: "特四改", dlcMod: 0.04 },
+  { id: "ka-tsu", label: "特四式内火艇", shortLabel: "特四", dlcMod: 0.04 },
+  { id: "armed-daihatsu", label: "武装大発", shortLabel: "武装大発", dlcMod: 0.03 },
+  { id: "type89", label: "大発動艇(八九式中戦車＆陸戦隊)", shortLabel: "陸戦隊", dlcMod: 0.02 },
+  { id: "soukoutei", label: "装甲艇(AB艇)", shortLabel: "AB艇", dlcMod: 0.02 },
+  { id: "panzer2", label: "大発動艇(II号戦車/北アフリカ仕様)", shortLabel: "II号戦車", dlcMod: 0.02 },
+  { id: "toku-honi", label: "特大発動艇＋一式砲戦車", shortLabel: "一式砲戦車", dlcMod: 0.02 },
+  { id: "ka-mi", label: "特二式内火艇", shortLabel: "内火艇", dlcMod: 0.01 },
+  { id: "toku-11th", label: "特大発動艇＋戦車第11連隊", shortLabel: "11連隊", dlcMod: 0 },
+  { id: "m4a1-dd", label: "M4A1 DD", shortLabel: "M4A1", dlcMod: 0 },
+  { id: "toku-panzer3", label: "特大発動艇＋III号戦車(北アフリカ仕様)", shortLabel: "III号北ア", dlcMod: 0 },
+  { id: "toku-chiha", label: "特大発動艇＋チハ", shortLabel: "チハ", dlcMod: 0 },
+  { id: "toku-chiha-kai", label: "特大発動艇＋チハ改", shortLabel: "チハ改", dlcMod: 0 }
+];
+
+const landingCraftDefinitionMap = Object.fromEntries(
+  landingCraftDefinitions.map((definition) => [definition.id, definition])
+) as Record<LandingCraftTypeId, LandingCraftDefinition>;
 
 function getFallbackExpedition(expeditionId: string): Expedition {
   return fallbackExpeditions.find((item) => item.id === expeditionId) ?? fallbackExpeditions[0];
@@ -292,19 +363,97 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function getLandingCraftDefinition(type: LandingCraftTypeId): LandingCraftDefinition {
+  return landingCraftDefinitionMap[type] ?? landingCraftDefinitionMap.daihatsu;
+}
+
+function createLandingCraftSlot(type: LandingCraftTypeId = "daihatsu", stars = 0): LandingCraftSlot {
+  return {
+    id: `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    stars: clampNumber(Math.round(stars), 0, 10)
+  };
+}
+
+function migrateLegacyDaihatsuSlots(count = 0): LandingCraftSlot[] {
+  return Array.from({ length: clampNumber(Math.round(count), 0, MAX_LANDING_CRAFT_SLOTS) }, () =>
+    createLandingCraftSlot("daihatsu", 0)
+  );
+}
+
+function normalizeLandingCraftSlots(slots?: LandingCraftSlot[], legacyDaihatsuCount = 0): LandingCraftSlot[] {
+  const source = slots && slots.length > 0 ? slots : migrateLegacyDaihatsuSlots(legacyDaihatsuCount);
+  return source
+    .slice(0, MAX_LANDING_CRAFT_SLOTS)
+    .map((slot, index) => {
+      const type = landingCraftDefinitionMap[slot.type] ? slot.type : "daihatsu";
+      return {
+        id: slot.id || `${type}-${index}`,
+        type,
+        stars: clampNumber(Math.round(Number(slot.stars) || 0), 0, 10)
+      };
+    });
+}
+
 function getFleetRewardModifier(settings: RewardModifierSettings, fleetNo?: FleetTimer["fleetNo"]): FleetRewardModifier {
   const fleetSetting = fleetNo ? settings.perFleet?.[fleetNo] : undefined;
+  const legacyDaihatsuCount = fleetSetting?.daihatsuCount ?? settings.daihatsuCount ?? 0;
+  const landingCrafts = normalizeLandingCraftSlots(fleetSetting?.landingCrafts ?? settings.landingCrafts, legacyDaihatsuCount);
   return {
-    daihatsuCount: clampNumber(fleetSetting?.daihatsuCount ?? settings.daihatsuCount ?? 0, 0, 4),
-    kinuKaiNiBonus: Boolean(fleetSetting?.kinuKaiNiBonus ?? settings.kinuKaiNiBonus)
+    daihatsuCount: landingCrafts.length,
+    kinuKaiNiBonus: Boolean(fleetSetting?.kinuKaiNiBonus ?? settings.kinuKaiNiBonus),
+    landingCrafts
+  };
+}
+
+function getTokuDaihatsuExtraBonus(tokuDaihatsuCount: number, plainDaihatsuCount: number): number {
+  const toku = clampNumber(Math.floor(tokuDaihatsuCount), 0, MAX_LANDING_CRAFT_SLOTS);
+  const plain = clampNumber(Math.floor(plainDaihatsuCount), 0, 4);
+  if (toku <= 0) return 0;
+  if (toku === 1) return 0.02;
+  if (toku === 2) return 0.04;
+  if (toku === 3) return [0.05, 0.052, 0.054, 0.054, 0.054][plain];
+  return [0.054, 0.056, 0.058, 0.059, 0.06][plain];
+}
+
+function getRewardBonusBreakdown(settings: RewardModifierSettings, fleetNo?: FleetTimer["fleetNo"]): RewardBonusBreakdown {
+  const modifier = getFleetRewardModifier(settings, fleetNo);
+  const landingCrafts = modifier.landingCrafts ?? [];
+  const craftBonuses = landingCrafts.map((slot) => ({ slot, definition: getLandingCraftDefinition(slot.type) }));
+  const dlcBonusRaw =
+    craftBonuses.reduce((total, item) => total + item.definition.dlcMod, 0) +
+    (modifier.kinuKaiNiBonus ? 0.05 : 0);
+  const cappedDlcBonus = Math.min(0.2, dlcBonusRaw);
+  const improvedCrafts = craftBonuses.filter((item) => item.definition.dlcMod > 0);
+  const avgStar = improvedCrafts.length > 0
+    ? improvedCrafts.reduce((total, item) => total + item.slot.stars, 0) / improvedCrafts.length
+    : 0;
+  const improvedDlcBonus = cappedDlcBonus * (1 + avgStar / 100);
+  const tokuDaihatsuCount = craftBonuses.filter((item) => item.definition.isTokuDaihatsu).length;
+  const plainDaihatsuCount = craftBonuses.filter((item) => item.definition.isPlainDaihatsu).length;
+  const tokuBonus = getTokuDaihatsuExtraBonus(tokuDaihatsuCount, plainDaihatsuCount);
+
+  return {
+    craftCount: landingCrafts.length,
+    plainDaihatsuCount,
+    tokuDaihatsuCount,
+    cappedDlcBonus,
+    avgStar,
+    improvedDlcBonus,
+    tokuBonus,
+    totalBonus: improvedDlcBonus + tokuBonus
   };
 }
 
 function getDaihatsuBonusRate(settings: RewardModifierSettings, fleetNo?: FleetTimer["fleetNo"]): number {
-  const modifier = getFleetRewardModifier(settings, fleetNo);
-  const daihatsuBonus = clampNumber(modifier.daihatsuCount, 0, 4) * 0.05;
-  const kinuBonus = modifier.kinuKaiNiBonus ? 0.05 : 0;
-  return Math.min(0.2, daihatsuBonus + kinuBonus);
+  return getRewardBonusBreakdown(settings, fleetNo).totalBonus;
+}
+
+function calculateAdjustedResourceValue(baseValue: number, greatMultiplier: number, breakdown: RewardBonusBreakdown): number {
+  if (baseValue <= 0) return 0;
+  const landingCraftPart = Math.floor(baseValue * greatMultiplier * (1 + breakdown.improvedDlcBonus));
+  const tokuPart = Math.floor(baseValue * greatMultiplier * breakdown.tokuBonus);
+  return landingCraftPart + tokuPart;
 }
 
 function calculateAdjustedRewards(
@@ -315,8 +464,13 @@ function calculateAdjustedRewards(
 ): ResourceRewards {
   const greatSuccess = forceGreatSuccess ?? settings.greatSuccessDefault;
   const greatMultiplier = greatSuccess ? 1.5 : 1;
-  const daihatsuMultiplier = 1 + getDaihatsuBonusRate(settings, fleetNo);
-  return multiplyResources(expedition.rewards, greatMultiplier * daihatsuMultiplier);
+  const breakdown = getRewardBonusBreakdown(settings, fleetNo);
+  return {
+    fuel: calculateAdjustedResourceValue(expedition.rewards.fuel, greatMultiplier, breakdown),
+    ammo: calculateAdjustedResourceValue(expedition.rewards.ammo, greatMultiplier, breakdown),
+    steel: calculateAdjustedResourceValue(expedition.rewards.steel, greatMultiplier, breakdown),
+    bauxite: calculateAdjustedResourceValue(expedition.rewards.bauxite, greatMultiplier, breakdown)
+  };
 }
 
 function getAdjustedResourceRate(expedition: Expedition, settings: RewardModifierSettings, fleetNo?: FleetTimer["fleetNo"]): ResourceRewards {
@@ -330,10 +484,27 @@ function getAdjustedResourceRate(expedition: Expedition, settings: RewardModifie
   };
 }
 
+function formatBonusPercent(rate: number): string {
+  const value = rate * 100;
+  return Number.isInteger(value) ? `${value.toFixed(0)}%` : `${value.toFixed(1)}%`;
+}
+
 function getRewardModifierLabel(settings: RewardModifierSettings, fleetNo?: FleetTimer["fleetNo"]): string {
-  const daihatsuPercent = Math.round(getDaihatsuBonusRate(settings, fleetNo) * 100);
+  const breakdown = getRewardBonusBreakdown(settings, fleetNo);
   const fleetLabel = fleetNo ? `第${fleetNo}艦隊` : "既定";
-  return `${fleetLabel}: ${settings.greatSuccessDefault ? "大成功" : "通常成功"} / 大発補正+${daihatsuPercent}%`;
+  return `${fleetLabel}: ${settings.greatSuccessDefault ? "大成功" : "通常成功"} / 大発系+${formatBonusPercent(breakdown.totalBonus)}`;
+}
+
+function getLandingCraftSummary(settings: RewardModifierSettings, fleetNo?: FleetTimer["fleetNo"]): string {
+  const modifier = getFleetRewardModifier(settings, fleetNo);
+  const breakdown = getRewardBonusBreakdown(settings, fleetNo);
+  const craftNames = (modifier.landingCrafts ?? [])
+    .slice(0, 3)
+    .map((slot) => `${getLandingCraftDefinition(slot.type).shortLabel}★${slot.stars}`)
+    .join(" / ");
+  const more = (modifier.landingCrafts?.length ?? 0) > 3 ? ` ほか${(modifier.landingCrafts?.length ?? 0) - 3}` : "";
+  const craftLabel = craftNames ? `${craftNames}${more}` : "大発系なし";
+  return `${craftLabel}｜基礎${formatBonusPercent(breakdown.cappedDlcBonus)}・改修平均★${breakdown.avgStar.toFixed(1)}・特大発${formatBonusPercent(breakdown.tokuBonus)}`;
 }
 
 function getCombinedFleetRate(
@@ -608,6 +779,91 @@ function App() {
     });
   }
 
+  function updateDefaultLandingCraft(index: number, patch: Partial<LandingCraftSlot>) {
+    setRewardSettings((current) => {
+      const slots = normalizeLandingCraftSlots(current.landingCrafts, current.daihatsuCount);
+      const nextSlots = slots.map((slot, slotIndex) =>
+        slotIndex === index
+          ? {
+              ...slot,
+              ...patch,
+              stars: patch.stars !== undefined ? clampNumber(Math.round(Number(patch.stars)), 0, 10) : slot.stars
+            }
+          : slot
+      );
+      return { ...current, daihatsuCount: nextSlots.length, landingCrafts: nextSlots };
+    });
+  }
+
+  function addDefaultLandingCraft() {
+    setRewardSettings((current) => {
+      const slots = normalizeLandingCraftSlots(current.landingCrafts, current.daihatsuCount);
+      if (slots.length >= MAX_LANDING_CRAFT_SLOTS) return current;
+      const nextSlots = [...slots, createLandingCraftSlot("daihatsu", 0)];
+      return { ...current, daihatsuCount: nextSlots.length, landingCrafts: nextSlots };
+    });
+  }
+
+  function removeDefaultLandingCraft(index: number) {
+    setRewardSettings((current) => {
+      const nextSlots = normalizeLandingCraftSlots(current.landingCrafts, current.daihatsuCount).filter((_, slotIndex) => slotIndex !== index);
+      return { ...current, daihatsuCount: nextSlots.length, landingCrafts: nextSlots };
+    });
+  }
+
+  function updateFleetLandingCraft(fleetNo: FleetTimer["fleetNo"], index: number, patch: Partial<LandingCraftSlot>) {
+    setRewardSettings((current) => {
+      const previous = getFleetRewardModifier(current, fleetNo);
+      const slots = normalizeLandingCraftSlots(previous.landingCrafts, previous.daihatsuCount ?? 0);
+      const nextSlots = slots.map((slot, slotIndex) =>
+        slotIndex === index
+          ? {
+              ...slot,
+              ...patch,
+              stars: patch.stars !== undefined ? clampNumber(Math.round(Number(patch.stars)), 0, 10) : slot.stars
+            }
+          : slot
+      );
+      return {
+        ...current,
+        perFleet: {
+          ...(current.perFleet ?? {}),
+          [fleetNo]: { ...previous, daihatsuCount: nextSlots.length, landingCrafts: nextSlots }
+        }
+      };
+    });
+  }
+
+  function addFleetLandingCraft(fleetNo: FleetTimer["fleetNo"]) {
+    setRewardSettings((current) => {
+      const previous = getFleetRewardModifier(current, fleetNo);
+      const slots = normalizeLandingCraftSlots(previous.landingCrafts, previous.daihatsuCount ?? 0);
+      if (slots.length >= MAX_LANDING_CRAFT_SLOTS) return current;
+      const nextSlots = [...slots, createLandingCraftSlot("daihatsu", 0)];
+      return {
+        ...current,
+        perFleet: {
+          ...(current.perFleet ?? {}),
+          [fleetNo]: { ...previous, daihatsuCount: nextSlots.length, landingCrafts: nextSlots }
+        }
+      };
+    });
+  }
+
+  function removeFleetLandingCraft(fleetNo: FleetTimer["fleetNo"], index: number) {
+    setRewardSettings((current) => {
+      const previous = getFleetRewardModifier(current, fleetNo);
+      const nextSlots = normalizeLandingCraftSlots(previous.landingCrafts, previous.daihatsuCount ?? 0).filter((_, slotIndex) => slotIndex !== index);
+      return {
+        ...current,
+        perFleet: {
+          ...(current.perFleet ?? {}),
+          [fleetNo]: { ...previous, daihatsuCount: nextSlots.length, landingCrafts: nextSlots }
+        }
+      };
+    });
+  }
+
 
   const pinnedExpeditions = useMemo<Expedition[]>(
     () => pinnedExpeditionIds.map((id) => findExpedition(id)).filter(Boolean),
@@ -719,6 +975,8 @@ function App() {
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
+  const defaultRewardModifier = getFleetRewardModifier(rewardSettings);
+  const defaultRewardBreakdown = getRewardBonusBreakdown(rewardSettings);
   const userId = authState.user?.id ?? null;
   const loggedIn = Boolean(userId);
   const webhookRegistered = Boolean(settings.discordWebhookUrl.trim());
@@ -1292,7 +1550,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "3.5.0",
+      version: "3.6.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1358,14 +1616,17 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "3.5.0"
+      appVersion: "3.6.0"
     };
   }
 
-  function isRemoteTimerActive(row: Awaited<ReturnType<typeof loadActiveTimers>>[number]): boolean {
-    const endAt = row.end_at ? new Date(row.end_at).getTime() : NaN;
-    if (!Number.isFinite(endAt)) return false;
-    return row.status === "running" && endAt > getSyncedNow() + 1000;
+  function parseRemoteTimerTimes(row: Awaited<ReturnType<typeof loadActiveTimers>>[number]) {
+    const startAt = row.start_at ? new Date(row.start_at).getTime() : null;
+    const endAt = row.end_at ? new Date(row.end_at).getTime() : null;
+    return {
+      startAt: startAt && Number.isFinite(startAt) ? startAt : null,
+      endAt: endAt && Number.isFinite(endAt) ? endAt : null
+    };
   }
 
   function mergeActiveTimerRows(baseFleets: FleetTimer[], rows: Awaited<ReturnType<typeof loadActiveTimers>>): FleetTimer[] {
@@ -1377,11 +1638,13 @@ function App() {
 
       const rowUpdatedAt = row.updated_at ? new Date(row.updated_at).getTime() : 0;
       const localStartAt = fleet.startAt ?? 0;
+      const syncedNow = getSyncedNow();
+      const { startAt: remoteStartAt, endAt: remoteEndAt } = parseRemoteTimerTimes(row);
+      const localIsRunning = fleet.endAt !== null && fleet.endAt > syncedNow;
 
       if (row.status === "cleared") {
-        // v3.1: クリアは明示操作だけ同期する。
-        // ただし、その後にこの端末で新しく開始したタイマーは消さない。
-        if (fleet.endAt && fleet.endAt > getSyncedNow() && localStartAt > rowUpdatedAt) return fleet;
+        // クリア・記録済みの墓標より新しくこの端末で開始したタイマーは消さない。
+        if (fleet.endAt && fleet.endAt > syncedNow && localStartAt > rowUpdatedAt) return fleet;
         return {
           ...fleet,
           expeditionId: row.expedition_id || fleet.expeditionId,
@@ -1392,16 +1655,27 @@ function App() {
         };
       }
 
-      if (!isRemoteTimerActive(row)) return fleet;
+      if (row.status !== "running" || !remoteEndAt) return fleet;
 
-      const remoteStartAt = row.start_at ? new Date(row.start_at).getTime() : null;
-      const remoteEndAt = row.end_at ? new Date(row.end_at).getTime() : null;
-      if (!remoteEndAt || Number.isNaN(remoteEndAt)) return fleet;
-
-      const localIsRunning = fleet.endAt !== null && fleet.endAt > getSyncedNow();
-
-      // v3.1: 別端末の古い0秒/古い開始データで、新しいローカル実行中タイマーを壊さない。
+      // 別端末の古い行で、新しいローカル実行中タイマーを壊さない。
       if (localIsRunning && localStartAt > rowUpdatedAt && fleet.endAt && fleet.endAt > remoteEndAt) return fleet;
+
+      // v3.6: 通知送信後にアプリを開いた時、active_timersには「過去に終了したrunning行」が残る。
+      // 以前はこれを無視していたため、帰投済みカードが復元されず「成功/大成功で記録」ボタンが出ないことがあった。
+      // 終了時刻を過ぎたrunning行は「完了待ち」として復元する。
+      if (remoteEndAt <= syncedNow + 1000) {
+        if (fleet.recordedAt && fleet.endAt === remoteEndAt) return fleet;
+        return {
+          ...fleet,
+          expeditionId: row.expedition_id || fleet.expeditionId,
+          startAt: remoteStartAt,
+          endAt: remoteEndAt,
+          notifiedAt: fleet.notifiedAt ?? syncedNow,
+          recordedAt: fleet.recordedAt ?? null,
+          pcNotify: Boolean(row.pc_notify),
+          discordNotify: row.discord_notify ?? fleet.discordNotify
+        };
+      }
 
       return {
         ...fleet,
@@ -1727,7 +2001,7 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.5</p>
+          <p className="eyebrow">KanColle Expedition Support v3.6</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
@@ -1969,7 +2243,7 @@ function App() {
             </div>
           </div>
 
-          <div className="reward-settings-grid">
+          <div className="reward-settings-grid reward-settings-grid-v36">
             <label className="toggle-card">
               <input
                 type="checkbox"
@@ -1980,23 +2254,6 @@ function App() {
               <small>ONなら資材1.5倍として表示・記録する。</small>
             </label>
 
-            <label className="number-card">
-              <span>既定の大発動艇系の個数</span>
-              <input
-                type="number"
-                min={0}
-                max={4}
-                value={rewardSettings.daihatsuCount}
-                onChange={(event) =>
-                  setRewardSettings((current) => ({
-                    ...current,
-                    daihatsuCount: clampNumber(Number(event.target.value), 0, 4)
-                  }))
-                }
-              />
-              <small>簡易計算：1個+5%、最大4個で+20%。</small>
-            </label>
-
             <label className="toggle-card">
               <input
                 type="checkbox"
@@ -2004,8 +2261,43 @@ function App() {
                 onChange={(event) => setRewardSettings((current) => ({ ...current, kinuKaiNiBonus: event.target.checked }))}
               />
               <span>鬼怒改二ボーナスを含める</span>
-              <small>大発系の通常上限+20%に含めて簡易計算。</small>
+              <small>大発系ボーナス枠に+5%。改修平均には含めない。</small>
             </label>
+
+            <div className="reward-bonus-summary soft">
+              <span>既定の大発系補正</span>
+              <strong>+{formatBonusPercent(defaultRewardBreakdown.totalBonus)}</strong>
+              <small>{getLandingCraftSummary(rewardSettings)}</small>
+            </div>
+          </div>
+
+          <div className="craft-editor global-craft-editor">
+            <div className="section-head compact">
+              <div>
+                <p className="eyebrow">Landing Craft</p>
+                <h3>既定の大発系装備</h3>
+                <p className="helper-text">艦隊ごとの設定が無いときに使う既定値。第2〜第4艦隊は各艦隊カード内で個別に調整できる。</p>
+              </div>
+              <button type="button" className="secondary small" onClick={addDefaultLandingCraft} disabled={(defaultRewardModifier.landingCrafts?.length ?? 0) >= MAX_LANDING_CRAFT_SLOTS}>装備追加</button>
+            </div>
+            <div className="craft-slot-list">
+              {(defaultRewardModifier.landingCrafts ?? []).length === 0 ? (
+                <p className="empty-text">大発系装備なし。必要なら「装備追加」から追加してね。</p>
+              ) : (defaultRewardModifier.landingCrafts ?? []).map((slot, index) => (
+                <div className="craft-slot-row" key={slot.id}>
+                  <select value={slot.type} onChange={(event) => updateDefaultLandingCraft(index, { type: event.target.value as LandingCraftTypeId })}>
+                    {landingCraftDefinitions.map((definition) => (
+                      <option value={definition.id} key={definition.id}>{definition.label}</option>
+                    ))}
+                  </select>
+                  <label>
+                    <span>★</span>
+                    <input type="number" min={0} max={10} value={slot.stars} onChange={(event) => updateDefaultLandingCraft(index, { stars: Number(event.target.value) })} />
+                  </label>
+                  <button type="button" className="ghost small" onClick={() => removeDefaultLandingCraft(index)}>削除</button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="reward-preview-grid">
@@ -2027,7 +2319,7 @@ function App() {
             </div>
           </div>
 
-          <p className="helper-text">特大発・改修★などの詳細補正は今後の詳細モード候補。まずは普段使いしやすい大発系+20%上限の簡易計算にしているよ。</p>
+          <p className="helper-text">計算は「大発系枠 最大+20%」「改修平均★による最大+2%相当」「特大発動艇の追加枠」を分けて見積もるよ。端数は資材ごとに床関数で丸める。</p>
         </div>
       </details>
 
@@ -2369,6 +2661,7 @@ function App() {
           const almostDone = running && remainingMs <= 5 * 60 * 1000;
           const remaining = fleet.endAt ? formatRemaining(remainingMs) : "--:--:--";
           const fleetModifier = getFleetRewardModifier(rewardSettings, fleet.fleetNo);
+          const fleetBonusBreakdown = getRewardBonusBreakdown(rewardSettings, fleet.fleetNo);
           const rate = getAdjustedResourceRate(expedition, rewardSettings, fleet.fleetNo);
           const adjustedRewards = calculateAdjustedRewards(expedition, rewardSettings, undefined, fleet.fleetNo);
 
@@ -2411,19 +2704,11 @@ function App() {
                   </optgroup>
                 </select>
                 <p className="helper-text">全{totalExpeditionCount}件を収録。★はお気に入り、右上ボタンで追加・解除できる。</p>
-                <div className="fleet-reward-mini">
-                  <label>
-                    <span>大発</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={4}
-                      value={fleetModifier.daihatsuCount}
-                      onChange={(event) =>
-                        updateFleetRewardModifier(fleet.fleetNo, { daihatsuCount: clampNumber(Number(event.target.value), 0, 4) })
-                      }
-                    />
-                  </label>
+                <div className="fleet-reward-mini fleet-reward-mini-v36">
+                  <div className="bonus-pill">
+                    <span>大発系補正</span>
+                    <strong>+{formatBonusPercent(fleetBonusBreakdown.totalBonus)}</strong>
+                  </div>
                   <label className="mini-check">
                     <input
                       type="checkbox"
@@ -2432,8 +2717,33 @@ function App() {
                     />
                     鬼怒改二
                   </label>
-                  <small>{getRewardModifierLabel(rewardSettings, fleet.fleetNo)}</small>
+                  <small>{getLandingCraftSummary(rewardSettings, fleet.fleetNo)}</small>
                 </div>
+                <details className="craft-editor fleet-craft-editor">
+                  <summary>
+                    <span>大発系装備・改修★を編集</span>
+                    <em>{fleetBonusBreakdown.craftCount}/{MAX_LANDING_CRAFT_SLOTS}</em>
+                  </summary>
+                  <div className="craft-slot-list">
+                    {(fleetModifier.landingCrafts ?? []).length === 0 ? (
+                      <p className="empty-text">この艦隊の大発系装備は未設定。</p>
+                    ) : (fleetModifier.landingCrafts ?? []).map((slot, index) => (
+                      <div className="craft-slot-row" key={slot.id}>
+                        <select value={slot.type} onChange={(event) => updateFleetLandingCraft(fleet.fleetNo, index, { type: event.target.value as LandingCraftTypeId })}>
+                          {landingCraftDefinitions.map((definition) => (
+                            <option value={definition.id} key={definition.id}>{definition.label}</option>
+                          ))}
+                        </select>
+                        <label>
+                          <span>★</span>
+                          <input type="number" min={0} max={10} value={slot.stars} onChange={(event) => updateFleetLandingCraft(fleet.fleetNo, index, { stars: Number(event.target.value) })} />
+                        </label>
+                        <button type="button" className="ghost small" onClick={() => removeFleetLandingCraft(fleet.fleetNo, index)}>削除</button>
+                      </div>
+                    ))}
+                    <button type="button" className="secondary" onClick={() => addFleetLandingCraft(fleet.fleetNo)} disabled={(fleetModifier.landingCrafts?.length ?? 0) >= MAX_LANDING_CRAFT_SLOTS}>装備を追加</button>
+                  </div>
+                </details>
                 {pinnedExpeditions.length > 0 && (
                   <div className="fleet-pinned-shortcuts" aria-label="お気に入り遠征ショートカット">
                     {pinnedExpeditions.slice(0, 10).map((item) => (
