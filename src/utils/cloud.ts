@@ -23,6 +23,7 @@ export type CloudSnapshot = {
   customPresets: unknown[];
   history: unknown[];
   resourceStockSnapshots?: unknown[];
+  resourceTargetInputs?: Record<string, unknown>;
   monthlyCompletions?: Record<string, string[]>;
   setupNotificationTestDone?: boolean;
   setupGuideDismissed?: boolean;

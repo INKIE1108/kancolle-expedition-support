@@ -41,6 +41,7 @@ const SETUP_GUIDE_DISMISSED_STORAGE_KEY = "kancolle-expedition-setup-guide-dismi
 const REWARD_MODIFIER_STORAGE_KEY = "kancolle-expedition-reward-modifier-v1";
 const THEME_STORAGE_KEY = "kancolle-expedition-theme-v1";
 const RESOURCE_STOCK_STORAGE_KEY = "kancolle-expedition-resource-stock-v1";
+const RESOURCE_TARGET_STORAGE_KEY = "kancolle-expedition-resource-target-v1";
 
 type SortMode =
   | "ID順"
@@ -153,6 +154,8 @@ type ResourceStockSnapshot = {
   resources: ResourceRewards;
 };
 
+type ResourceTargetInputs = ResourceStockInputs;
+
 type GuideMode =
   | "燃料"
   | "弾薬"
@@ -246,7 +249,8 @@ const backupStorageKeys = [
   SETUP_GUIDE_DISMISSED_STORAGE_KEY,
   REWARD_MODIFIER_STORAGE_KEY,
   THEME_STORAGE_KEY,
-  RESOURCE_STOCK_STORAGE_KEY
+  RESOURCE_STOCK_STORAGE_KEY,
+  RESOURCE_TARGET_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -287,6 +291,7 @@ const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授
 
 const dailyChartModes: DailyChartMode[] = ["合計", "燃料", "弾薬", "鋼材", "ボーキ"];
 const stockChartRanges: StockChartRange[] = ["1日", "1週間", "1か月", "全期間"];
+const stockYAxisTickCount = 4;
 
 const dailyChartResourceKeyMap: Record<Exclude<DailyChartMode, "合計">, keyof ResourceRewards> = {
   燃料: "fuel",
@@ -301,6 +306,15 @@ const resourceShortLabels: Record<keyof ResourceRewards, string> = {
   steel: "鋼",
   bauxite: "ボ"
 };
+
+const resourceFullLabels: Record<keyof ResourceRewards, string> = {
+  fuel: "燃料",
+  ammo: "弾薬",
+  steel: "鋼材",
+  bauxite: "ボーキ"
+};
+
+const resourceKeys = ["fuel", "ammo", "steel", "bauxite"] as const;
 
 const MAX_LANDING_CRAFT_SLOTS = 8;
 
@@ -393,6 +407,27 @@ function formatStockSnapshotLabel(timestamp: number, range: StockChartRange): st
     return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(date);
   }
   return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric" }).format(date);
+}
+
+function formatStockAxisDate(timestamp: number, range: StockChartRange): string {
+  const date = new Date(timestamp);
+  if (range === "1日") return new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" }).format(date);
+  if (range === "全期間") return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric" }).format(date);
+}
+
+function formatAxisNumber(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 10000) return `${Math.round(value / 1000).toLocaleString("ja-JP")}k`;
+  return value.toLocaleString("ja-JP");
+}
+
+function getDaysBetween(start: number, end: number): number {
+  return Math.max(1 / 24, (end - start) / (24 * 60 * 60 * 1000));
+}
+
+function getResourceTargetInputDefaults(): ResourceTargetInputs {
+  return { fuel: "300000", ammo: "300000", steel: "300000", bauxite: "300000" };
 }
 
 function subtractResources(a: ResourceRewards, b: ResourceRewards): ResourceRewards {
@@ -783,6 +818,11 @@ function App() {
     const snapshots = loadFromStorage<ResourceStockSnapshot[]>(RESOURCE_STOCK_STORAGE_KEY, []);
     return resourceStockSnapshotToInputs([...snapshots].sort((a, b) => b.recordedAt - a.recordedAt)[0]);
   });
+  const [selectedStockSnapshotId, setSelectedStockSnapshotId] = useState<string | null>(null);
+  const [resourceTargetInputs, setResourceTargetInputs] = useState<ResourceTargetInputs>(() => ({
+    ...getResourceTargetInputDefaults(),
+    ...loadFromStorage<ResourceTargetInputs>(RESOURCE_TARGET_STORAGE_KEY, getResourceTargetInputDefaults())
+  }));
   const [customPresetName, setCustomPresetName] = useState<string>("");
   const [customPresetDescription, setCustomPresetDescription] = useState<string>("");
   const [serverTimeOffsetMs, setServerTimeOffsetMs] = useState<number>(0);
@@ -1070,6 +1110,58 @@ function App() {
   const stockDelta = firstStockSnapshot && lastStockSnapshot
     ? subtractResources(lastStockSnapshot.resources, firstStockSnapshot.resources)
     : { fuel: 0, ammo: 0, steel: 0, bauxite: 0 };
+  const selectedStockSnapshot = stockChartDisplaySeries.find((snapshot) => snapshot.id === selectedStockSnapshotId)
+    ?? lastStockSnapshot
+    ?? latestStockSnapshot
+    ?? null;
+  const stockYAxisTicks = Array.from({ length: stockYAxisTickCount }, (_, index) => {
+    const ratio = index / Math.max(1, stockYAxisTickCount - 1);
+    return Math.round(stockChartMax - stockChartRangeValue * ratio);
+  });
+  const stockXAxisTicks = stockChartDisplaySeries
+    .map((snapshot, index) => ({ snapshot, index }))
+    .filter(({ index }) => {
+      const lastIndex = stockChartDisplaySeries.length - 1;
+      if (lastIndex <= 2) return true;
+      return index === 0 || index === Math.round(lastIndex / 2) || index === lastIndex;
+    });
+  const targetResources: ResourceRewards = {
+    fuel: parseResourceStockInput(resourceTargetInputs.fuel),
+    ammo: parseResourceStockInput(resourceTargetInputs.ammo),
+    steel: parseResourceStockInput(resourceTargetInputs.steel),
+    bauxite: parseResourceStockInput(resourceTargetInputs.bauxite)
+  };
+  const targetBasisStart = now - 7 * 24 * 60 * 60 * 1000;
+  const targetBasisSeries = [...resourceStockSnapshots]
+    .filter((snapshot) => snapshot.recordedAt >= targetBasisStart)
+    .sort((a, b) => a.recordedAt - b.recordedAt);
+  const targetFallbackSeries = [...resourceStockSnapshots].sort((a, b) => a.recordedAt - b.recordedAt);
+  const targetTrendSeries = targetBasisSeries.length >= 2 ? targetBasisSeries : targetFallbackSeries;
+  const targetTrendFirst = targetTrendSeries[0] ?? null;
+  const targetTrendLast = targetTrendSeries[targetTrendSeries.length - 1] ?? null;
+  const targetTrendDays = targetTrendFirst && targetTrendLast ? getDaysBetween(targetTrendFirst.recordedAt, targetTrendLast.recordedAt) : 1;
+  const targetDailyAverage: ResourceRewards = targetTrendFirst && targetTrendLast
+    ? {
+        fuel: Math.round((targetTrendLast.resources.fuel - targetTrendFirst.resources.fuel) / targetTrendDays),
+        ammo: Math.round((targetTrendLast.resources.ammo - targetTrendFirst.resources.ammo) / targetTrendDays),
+        steel: Math.round((targetTrendLast.resources.steel - targetTrendFirst.resources.steel) / targetTrendDays),
+        bauxite: Math.round((targetTrendLast.resources.bauxite - targetTrendFirst.resources.bauxite) / targetTrendDays)
+      }
+    : { fuel: 0, ammo: 0, steel: 0, bauxite: 0 };
+  const targetPlanRows = resourceKeys.map((key) => {
+    const currentValue = latestStockSnapshot?.resources[key] ?? 0;
+    const targetValue = targetResources[key];
+    const remaining = targetValue - currentValue;
+    const dailyAverage = targetDailyAverage[key];
+    const days = remaining <= 0 ? 0 : dailyAverage > 0 ? Math.ceil(remaining / dailyAverage) : null;
+    return { key, label: resourceFullLabels[key], currentValue, targetValue, remaining, dailyAverage, days };
+  });
+  const targetTotalCurrent = latestStockSnapshot ? getTotalResources(latestStockSnapshot.resources) : 0;
+  const targetTotalGoal = getTotalResources(targetResources);
+  const targetTotalRemaining = targetTotalGoal - targetTotalCurrent;
+  const targetTotalDailyAverage = getTotalResources(targetDailyAverage);
+  const targetTotalDays = targetTotalRemaining <= 0 ? 0 : targetTotalDailyAverage > 0 ? Math.ceil(targetTotalRemaining / targetTotalDailyAverage) : null;
+  const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt);
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
@@ -1175,6 +1267,10 @@ function App() {
   }, [resourceStockSnapshots]);
 
   useEffect(() => {
+    saveToStorage(RESOURCE_TARGET_STORAGE_KEY, resourceTargetInputs);
+  }, [resourceTargetInputs]);
+
+  useEffect(() => {
     saveToStorage(COLLAPSE_STORAGE_KEY, collapsedPanels);
   }, [collapsedPanels]);
 
@@ -1258,7 +1354,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
+  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, resourceTargetInputs, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1619,6 +1715,20 @@ function App() {
     setResourceStockInputs((current) => ({ ...current, [key]: value }));
   }
 
+  function updateResourceTargetInput(key: keyof ResourceRewards, value: string) {
+    setResourceTargetInputs((current) => ({ ...current, [key]: value }));
+  }
+
+  function fillResourceTargetsFromLatest(addAmount = 50000) {
+    if (!latestStockSnapshot) return;
+    setResourceTargetInputs({
+      fuel: String(Math.min(999999, latestStockSnapshot.resources.fuel + addAmount)),
+      ammo: String(Math.min(999999, latestStockSnapshot.resources.ammo + addAmount)),
+      steel: String(Math.min(999999, latestStockSnapshot.resources.steel + addAmount)),
+      bauxite: String(Math.min(999999, latestStockSnapshot.resources.bauxite + addAmount))
+    });
+  }
+
   function recordResourceStockSnapshot() {
     const resources: ResourceRewards = {
       fuel: parseResourceStockInput(resourceStockInputs.fuel),
@@ -1684,7 +1794,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "3.7.0",
+      version: "3.8.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1746,12 +1856,13 @@ function App() {
       customPresets,
       history,
       resourceStockSnapshots,
+      resourceTargetInputs,
       monthlyCompletions,
       setupNotificationTestDone,
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "3.7.0"
+      appVersion: "3.8.0"
     };
   }
 
@@ -1861,6 +1972,10 @@ function App() {
     setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
     setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
     setResourceStockSnapshots((snapshot?.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? resourceStockSnapshots);
+    setResourceTargetInputs({
+      ...getResourceTargetInputDefaults(),
+      ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
+    });
     setMonthlyCompletions((snapshot?.monthlyCompletions as MonthlyCompletionMap | undefined) ?? monthlyCompletions);
     setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
     setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
@@ -2062,7 +2177,7 @@ function App() {
   }
 
   const runningFleetCount = fleets.filter((fleet) => fleet.endAt !== null && now < fleet.endAt).length;
-  const completedFleetCount = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt).length;
+  const completedFleetCount = pendingReturnFleets.length;
   const almostDoneFleetCount = fleets.filter((fleet) => {
     if (!fleet.endAt || now >= fleet.endAt) return false;
     return fleet.endAt - now <= 5 * 60 * 1000;
@@ -2137,7 +2252,7 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.7</p>
+          <p className="eyebrow">KanColle Expedition Support v3.8</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
@@ -2168,6 +2283,38 @@ function App() {
         <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}>記録</button>
         <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}>設定</button>
       </nav>
+
+      {pendingReturnFleets.length > 0 && (
+        <section className="return-check-card" aria-label="帰投チェック">
+          <div className="section-head compact">
+            <div>
+              <p className="eyebrow">Return Check</p>
+              <h2>帰投チェック</h2>
+              <p className="helper-text">通知後にアプリを開いたら、ここからすぐ成功/大成功で記録できるよ。</p>
+            </div>
+            <span className="status done">{pendingReturnFleets.length}件 完了待ち</span>
+          </div>
+          <div className="return-check-list">
+            {pendingReturnFleets.map((fleet) => {
+              const expedition = findExpedition(fleet.expeditionId);
+              return (
+                <article className="return-check-item" key={`return-${fleet.fleetNo}`}>
+                  <div>
+                    <strong>第{fleet.fleetNo}艦隊が帰投</strong>
+                    <span>{expedition.id}: {expedition.name}</span>
+                    <small>終了予定 {formatDateTime(fleet.endAt)} / {getRewardModifierLabel(rewardSettings, fleet.fleetNo)}</small>
+                  </div>
+                  <div className="return-check-actions">
+                    <button type="button" onClick={() => recordFleetResult(fleet, "success")}>成功で記録</button>
+                    <button type="button" onClick={() => recordFleetResult(fleet, "great")}>大成功で記録</button>
+                    <button type="button" className="ghost" onClick={() => jumpToExpeditionDetail(expedition.id)}>条件を見る</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section id="dashboard-section" className="dashboard-strip" aria-label="遠征司令室">
         <article className="command-card status-command-card">
@@ -2817,34 +2964,114 @@ function App() {
                 </div>
               </div>
 
-              <div className="stock-line-chart">
+              <div className="stock-line-chart axis-chart">
                 {stockChartDisplaySeries.length < 2 ? (
                   <p className="empty-text">2件以上記録すると折れ線グラフが表示されるよ。まずは今の資源を記録してみて。</p>
                 ) : (
-                  <svg viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label={`${stockChartRange}の${stockChartMode}推移`}>
-                    <polyline
-                      points={stockChartDisplaySeries.map((snapshot, index) => {
-                        const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
-                        const value = getResourceStockValue(snapshot.resources, stockChartMode);
-                        const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
-                        return `${x.toFixed(2)},${y.toFixed(2)}`;
-                      }).join(" ")}
-                    />
-                    {stockChartDisplaySeries.map((snapshot, index) => {
-                      const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
-                      const value = getResourceStockValue(snapshot.resources, stockChartMode);
-                      const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
-                      return <circle key={snapshot.id} cx={x} cy={y} r="1.25"><title>{formatStockSnapshotLabel(snapshot.recordedAt, stockChartRange)}：{value.toLocaleString("ja-JP")}</title></circle>;
-                    })}
-                  </svg>
+                  <div className="stock-chart-frame">
+                    <div className="stock-y-axis" aria-hidden="true">
+                      {stockYAxisTicks.map((tick) => (
+                        <span key={`stock-y-${tick}`}>{formatAxisNumber(tick)}</span>
+                      ))}
+                    </div>
+                    <div className="stock-plot-area">
+                      <svg viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label={`${stockChartRange}の${stockChartMode}推移`}>
+                        {[0, 1, 2, 3].map((lineIndex) => {
+                          const y = 6 + lineIndex * 14;
+                          return <line key={`grid-y-${lineIndex}`} className="stock-grid-line" x1="0" x2="100" y1={y} y2={y} />;
+                        })}
+                        {stockXAxisTicks.map(({ index }) => {
+                          const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                          return <line key={`grid-x-${index}`} className="stock-grid-line vertical" x1={x} x2={x} y1="6" y2="48" />;
+                        })}
+                        <polyline
+                          points={stockChartDisplaySeries.map((snapshot, index) => {
+                            const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                            const value = getResourceStockValue(snapshot.resources, stockChartMode);
+                            const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
+                            return `${x.toFixed(2)},${y.toFixed(2)}`;
+                          }).join(" ")}
+                        />
+                        {stockChartDisplaySeries.map((snapshot, index) => {
+                          const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                          const value = getResourceStockValue(snapshot.resources, stockChartMode);
+                          const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
+                          return (
+                            <circle
+                              key={snapshot.id}
+                              className={selectedStockSnapshot?.id === snapshot.id ? "selected" : ""}
+                              cx={x}
+                              cy={y}
+                              r={selectedStockSnapshot?.id === snapshot.id ? "2" : "1.45"}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => setSelectedStockSnapshotId(snapshot.id)}
+                              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setSelectedStockSnapshotId(snapshot.id); }}
+                            >
+                              <title>{formatStockSnapshotLabel(snapshot.recordedAt, stockChartRange)}：{value.toLocaleString("ja-JP")}</title>
+                            </circle>
+                          );
+                        })}
+                      </svg>
+                      <div className="stock-x-axis" aria-hidden="true">
+                        {stockXAxisTicks.map(({ snapshot, index }) => {
+                          const left = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                          return <span key={`stock-x-${snapshot.id}`} style={{ left: `${left}%` }}>{formatStockAxisDate(snapshot.recordedAt, stockChartRange)}</span>;
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
+
+              {selectedStockSnapshot && (
+                <div className="stock-point-detail">
+                  <small>選択中の記録</small>
+                  <strong>{formatStockSnapshotLabel(selectedStockSnapshot.recordedAt, stockChartRange)}：{getResourceStockValue(selectedStockSnapshot.resources, stockChartMode).toLocaleString("ja-JP")}</strong>
+                  <span>{formatResources(selectedStockSnapshot.resources)} / {formatShortDateTime(selectedStockSnapshot.recordedAt)}</span>
+                </div>
+              )}
 
               <div className="stock-summary-grid">
                 <div><small>最新</small><strong>{latestStockSnapshot ? getTotalResources(latestStockSnapshot.resources).toLocaleString("ja-JP") : "未記録"}</strong><span>{latestStockSnapshot ? `${formatResources(latestStockSnapshot.resources)} / ${formatShortDateTime(latestStockSnapshot.recordedAt)}` : "現在値を記録すると表示される"}</span></div>
                 <div><small>{stockChartRange}の収支</small><strong>{formatSignedNumber(getResourceStockValue(stockDelta, stockChartMode))}</strong><span>{formatSignedResources(stockDelta)}</span></div>
                 <div><small>記録数</small><strong>{resourceStockSnapshots.length}件</strong><span>表示中：{stockChartDisplaySeries.length}件</span></div>
               </div>
+
+              <section className="resource-target-panel" aria-label="資源目標プランナー">
+                <div className="section-head compact">
+                  <div>
+                    <p className="eyebrow">Target Planner</p>
+                    <h3>資源目標プランナー</h3>
+                    <p className="helper-text">目標値と最近の資源推移から、到達までの目安日数をざっくり出すよ。</p>
+                  </div>
+                  <button type="button" className="ghost small" onClick={() => fillResourceTargetsFromLatest()} disabled={!latestStockSnapshot}>最新+5万</button>
+                </div>
+                <div className="resource-target-input-grid">
+                  {resourceKeys.map((key) => (
+                    <label key={`target-input-${key}`}>{resourceFullLabels[key]}
+                      <input type="number" min={0} max={999999} value={resourceTargetInputs[key]} onChange={(event) => updateResourceTargetInput(key, event.target.value)} placeholder="目標値" />
+                    </label>
+                  ))}
+                </div>
+                <div className="target-overview-card">
+                  <div>
+                    <small>合計目標まで</small>
+                    <strong>{targetTotalRemaining <= 0 ? "達成済み" : targetTotalDays === null ? "ペース不足" : `約${targetTotalDays}日`}</strong>
+                    <span>現在 {targetTotalCurrent.toLocaleString("ja-JP")} / 目標 {targetTotalGoal.toLocaleString("ja-JP")} / 平均 {formatSignedNumber(targetTotalDailyAverage)}/日</span>
+                  </div>
+                </div>
+                <div className="target-plan-grid">
+                  {targetPlanRows.map((row) => (
+                    <article key={`target-row-${row.key}`} className={row.remaining <= 0 ? "achieved" : row.dailyAverage <= 0 ? "warning" : ""}>
+                      <span>{row.label}</span>
+                      <strong>{row.remaining <= 0 ? "達成済み" : row.days === null ? "ペース不足" : `約${row.days}日`}</strong>
+                      <small>現在 {row.currentValue.toLocaleString("ja-JP")} / 目標 {row.targetValue.toLocaleString("ja-JP")}</small>
+                      <em>残り {formatSignedNumber(row.remaining)} / 平均 {formatSignedNumber(row.dailyAverage)}/日</em>
+                    </article>
+                  ))}
+                </div>
+              </section>
             </section>
           </aside>
         </div>
