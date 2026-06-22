@@ -42,6 +42,8 @@ const REWARD_MODIFIER_STORAGE_KEY = "kancolle-expedition-reward-modifier-v1";
 const THEME_STORAGE_KEY = "kancolle-expedition-theme-v1";
 const RESOURCE_STOCK_STORAGE_KEY = "kancolle-expedition-resource-stock-v1";
 const RESOURCE_TARGET_STORAGE_KEY = "kancolle-expedition-resource-target-v1";
+const HISTORY_CLEARED_AT_STORAGE_KEY = "kancolle-expedition-history-cleared-at-v1";
+const RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY = "kancolle-expedition-resource-stock-cleared-at-v1";
 
 type SortMode =
   | "ID順"
@@ -250,7 +252,9 @@ const backupStorageKeys = [
   REWARD_MODIFIER_STORAGE_KEY,
   THEME_STORAGE_KEY,
   RESOURCE_STOCK_STORAGE_KEY,
-  RESOURCE_TARGET_STORAGE_KEY
+  RESOURCE_TARGET_STORAGE_KEY,
+  HISTORY_CLEARED_AT_STORAGE_KEY,
+  RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -863,6 +867,11 @@ function App() {
   const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? "";
   const lastAutoLoadedUserRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
+  const cloudRefreshTimerRef = useRef<number | null>(null);
+  const skipNextAutoSaveRef = useRef<boolean>(false);
+  const latestCloudSavedAtRef = useRef<number>(0);
+  const historyClearedAtRef = useRef<number>(loadFromStorage<number>(HISTORY_CLEARED_AT_STORAGE_KEY, 0));
+  const resourceStockClearedAtRef = useRef<number>(loadFromStorage<number>(RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY, 0));
 
   const allPresets = useMemo(() => [...defaultPresets, ...customPresets], [customPresets]);
   const expeditionTags = useMemo(
@@ -1304,7 +1313,7 @@ function App() {
     if (!userId || lastAutoLoadedUserRef.current === userId) return;
     lastAutoLoadedUserRef.current = userId;
 
-    applyCloudSnapshot(userId, false).catch((error: unknown) => {
+    applyCloudSnapshot(userId, false, { silent: false, reason: "ログイン時の自動読込" }).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "クラウド自動読込に失敗";
       setCloudSyncMessage(message);
     });
@@ -1338,12 +1347,55 @@ function App() {
 
   useEffect(() => {
     const userId = authState.user?.id;
+    const client = supabase;
+    if (!userId || !client) return;
+
+    const channel = client
+      .channel(`user-settings-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_settings", filter: `user_id=eq.${userId}` },
+        () => {
+          scheduleCloudRefresh(userId, "設定・記録データのRealtime更新");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [authState.user?.id]);
+
+  useEffect(() => {
+    const userId = authState.user?.id;
     if (!userId) return;
+
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        scheduleCloudRefresh(userId, "画面復帰時の最新化");
+      }
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [authState.user?.id]);
+
+  useEffect(() => {
+    const userId = authState.user?.id;
+    if (!userId) return;
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      return;
+    }
 
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
       const snapshot = createCloudSnapshot();
-      saveCloudSnapshot(userId, snapshot)
+      saveCloudSnapshotSafely(userId, snapshot)
         .then(() => saveActiveTimers(userId, fleets))
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : "クラウド自動保存に失敗";
@@ -1689,17 +1741,23 @@ function App() {
       itemReward: expedition.itemReward
     };
 
-    setHistory((current) => [record, ...current].slice(0, 200));
+    const nextHistory = mergeExpeditionHistories([record, ...history], [], historyClearedAtRef.current);
+    setHistory((current) => mergeExpeditionHistories([record, ...current], [], historyClearedAtRef.current));
+
+    let nextMonthlyCompletions = monthlyCompletions;
     if (isMonthlyExpedition(expedition)) {
-      setMonthlyCompletions((current) => {
-        const monthItems = new Set(current[currentMonthKey] ?? []);
-        monthItems.add(expedition.id);
-        return { ...current, [currentMonthKey]: Array.from(monthItems).sort((a, b) => a.localeCompare(b, "ja", { numeric: true })) };
-      });
+      const monthItems = new Set(monthlyCompletions[currentMonthKey] ?? []);
+      monthItems.add(expedition.id);
+      nextMonthlyCompletions = {
+        ...monthlyCompletions,
+        [currentMonthKey]: Array.from(monthItems).sort((a, b) => a.localeCompare(b, "ja", { numeric: true }))
+      };
+      setMonthlyCompletions(nextMonthlyCompletions);
     }
     updateFleet(fleet.fleetNo, { recordedAt: Date.now() });
     if (authState.user) {
       clearActiveTimer(authState.user.id, fleet.fleetNo, expedition.id).catch(() => undefined);
+      saveImportantCloudChange({ history: nextHistory, monthlyCompletions: nextMonthlyCompletions });
     }
     addLog(`帰投記録: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
   }
@@ -1707,7 +1765,11 @@ function App() {
   function clearHistory() {
     const ok = window.confirm("遠征履歴をすべて削除しますか？");
     if (!ok) return;
+    const clearedAt = getSyncedNow();
+    historyClearedAtRef.current = clearedAt;
+    saveToStorage(HISTORY_CLEARED_AT_STORAGE_KEY, clearedAt);
     setHistory([]);
+    saveImportantCloudChange({ history: [], historyClearedAt: clearedAt });
     addLog("遠征履歴を削除");
   }
 
@@ -1741,7 +1803,9 @@ function App() {
       recordedAt: getSyncedNow(),
       resources
     };
-    setResourceStockSnapshots((current) => [snapshot, ...current].sort((a, b) => b.recordedAt - a.recordedAt).slice(0, 500));
+    const nextSnapshots = mergeResourceStockSnapshots([snapshot, ...resourceStockSnapshots], [], resourceStockClearedAtRef.current);
+    setResourceStockSnapshots((current) => mergeResourceStockSnapshots([snapshot, ...current], [], resourceStockClearedAtRef.current));
+    saveImportantCloudChange({ resourceStockSnapshots: nextSnapshots });
     addLog(`所持資源を記録: ${formatResources(resources)}`);
   }
 
@@ -1752,8 +1816,12 @@ function App() {
   function clearResourceStockSnapshots() {
     const ok = window.confirm("所持資源の推移記録をすべて削除しますか？遠征の帰投履歴は残ります。");
     if (!ok) return;
+    const clearedAt = getSyncedNow();
+    resourceStockClearedAtRef.current = clearedAt;
+    saveToStorage(RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY, clearedAt);
     setResourceStockSnapshots([]);
     setResourceStockInputs(getInitialResourceStockInputs());
+    saveImportantCloudChange({ resourceStockSnapshots: [], resourceStockClearedAt: clearedAt });
     addLog("所持資源の推移記録を削除");
   }
 
@@ -1794,7 +1862,7 @@ function App() {
   function exportBackup() {
     const backup = {
       app: "kancolle-expedition-support",
-      version: "3.8.0",
+      version: "3.9.0",
       exportedAt: new Date().toISOString(),
       localStorage: backupStorageKeys.reduce<Record<string, string | null>>((items, key) => {
         items[key] = window.localStorage.getItem(key);
@@ -1847,7 +1915,7 @@ function App() {
     }));
   }
 
-  function createCloudSnapshot(): CloudSnapshot {
+  function createCloudSnapshot(overrides: Partial<CloudSnapshot> = {}): CloudSnapshot {
     return {
       fleets: sanitizeFleetsForSnapshot(fleets),
       settings: { ...settings, discordNotifyMode: "direct", serverNotificationMode: "supabase" },
@@ -1857,13 +1925,119 @@ function App() {
       history,
       resourceStockSnapshots,
       resourceTargetInputs,
+      historyClearedAt: historyClearedAtRef.current,
+      resourceStockClearedAt: resourceStockClearedAtRef.current,
       monthlyCompletions,
       setupNotificationTestDone,
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "3.8.0"
+      appVersion: "3.9.0",
+      ...overrides
     };
+  }
+
+  function getCloudSavedAtMs(snapshot: CloudSnapshot | null | undefined): number {
+    const value = snapshot?.savedAt ? new Date(snapshot.savedAt).getTime() : 0;
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function getEffectiveClearedAt(localClearedAt: number, remoteClearedAt?: number): number {
+    const remote = typeof remoteClearedAt === "number" && Number.isFinite(remoteClearedAt) ? remoteClearedAt : 0;
+    return Math.max(localClearedAt || 0, remote || 0);
+  }
+
+  function expeditionHistoryKey(item: ExpeditionHistory): string {
+    return item.id || `${item.completedAt}-${item.fleetNo}-${item.expeditionId}-${item.result}`;
+  }
+
+  function resourceStockSnapshotKey(item: ResourceStockSnapshot): string {
+    return item.id || `${item.recordedAt}-${item.resources.fuel}-${item.resources.ammo}-${item.resources.steel}-${item.resources.bauxite}`;
+  }
+
+  function mergeExpeditionHistories(
+    localItems: ExpeditionHistory[],
+    remoteItems: ExpeditionHistory[],
+    clearedAt = 0
+  ): ExpeditionHistory[] {
+    const map = new Map<string, ExpeditionHistory>();
+    [...remoteItems, ...localItems]
+      .filter((item) => item && typeof item.completedAt === "number" && item.completedAt > clearedAt)
+      .forEach((item) => {
+        map.set(expeditionHistoryKey(item), item);
+      });
+    return Array.from(map.values()).sort((a, b) => b.completedAt - a.completedAt).slice(0, 200);
+  }
+
+  function mergeResourceStockSnapshots(
+    localItems: ResourceStockSnapshot[],
+    remoteItems: ResourceStockSnapshot[],
+    clearedAt = 0
+  ): ResourceStockSnapshot[] {
+    const map = new Map<string, ResourceStockSnapshot>();
+    [...remoteItems, ...localItems]
+      .filter((item) => item && typeof item.recordedAt === "number" && item.recordedAt > clearedAt)
+      .forEach((item) => {
+        map.set(resourceStockSnapshotKey(item), item);
+      });
+    return Array.from(map.values()).sort((a, b) => b.recordedAt - a.recordedAt).slice(0, 500);
+  }
+
+  function createMergedSnapshotForSave(localSnapshot: CloudSnapshot, remoteSnapshot: CloudSnapshot | null): CloudSnapshot {
+    if (!remoteSnapshot) return localSnapshot;
+
+    const historyClearedAt = getEffectiveClearedAt(
+      typeof localSnapshot.historyClearedAt === "number" ? localSnapshot.historyClearedAt : historyClearedAtRef.current,
+      remoteSnapshot.historyClearedAt
+    );
+    const resourceStockClearedAt = getEffectiveClearedAt(
+      typeof localSnapshot.resourceStockClearedAt === "number" ? localSnapshot.resourceStockClearedAt : resourceStockClearedAtRef.current,
+      remoteSnapshot.resourceStockClearedAt
+    );
+
+    const mergedHistory = mergeExpeditionHistories(
+      (localSnapshot.history as ExpeditionHistory[] | undefined) ?? [],
+      (remoteSnapshot.history as ExpeditionHistory[] | undefined) ?? [],
+      historyClearedAt
+    );
+    const mergedStockSnapshots = mergeResourceStockSnapshots(
+      (localSnapshot.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? [],
+      (remoteSnapshot.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? [],
+      resourceStockClearedAt
+    );
+
+    return {
+      ...localSnapshot,
+      history: mergedHistory,
+      resourceStockSnapshots: mergedStockSnapshots,
+      historyClearedAt,
+      resourceStockClearedAt,
+      savedAt: new Date().toISOString()
+    };
+  }
+
+  async function saveCloudSnapshotSafely(userId: string, localSnapshot: CloudSnapshot): Promise<CloudSnapshot> {
+    const remoteSnapshot = await loadCloudSnapshot(userId).catch(() => null);
+    const mergedSnapshot = createMergedSnapshotForSave(localSnapshot, remoteSnapshot);
+    await saveCloudSnapshot(userId, mergedSnapshot);
+    latestCloudSavedAtRef.current = getCloudSavedAtMs(mergedSnapshot);
+    return mergedSnapshot;
+  }
+
+  function saveImportantCloudChange(overrides: Partial<CloudSnapshot> = {}) {
+    const userId = authState.user?.id;
+    if (!userId) return;
+    const snapshot = createCloudSnapshot(overrides);
+    saveCloudSnapshotSafely(userId, snapshot)
+      .then((savedSnapshot) => {
+        if (savedSnapshot.history) setHistory(savedSnapshot.history as ExpeditionHistory[]);
+        if (savedSnapshot.resourceStockSnapshots) setResourceStockSnapshots(savedSnapshot.resourceStockSnapshots as ResourceStockSnapshot[]);
+        addLog("記録系データを即時クラウド保存");
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "記録系データの即時クラウド保存に失敗";
+        addLog(message);
+      });
   }
 
   function parseRemoteTimerTimes(row: Awaited<ReturnType<typeof loadActiveTimers>>[number]) {
@@ -1937,16 +2111,23 @@ function App() {
   }
 
 
-  async function applyCloudSnapshot(userId: string, ask = true) {
-    const ok = !ask || window.confirm("クラウド保存データで現在のローカル設定を上書きしますか？");
+  async function applyCloudSnapshot(
+    userId: string,
+    ask = true,
+    options: { silent?: boolean; reason?: string } = {}
+  ) {
+    const ok = !ask || window.confirm("クラウド保存データを読み込みます。遠征履歴と所持資源推移は端末間でマージします。続行しますか？");
     if (!ok) return false;
 
     const snapshot = await loadCloudSnapshot(userId);
     const activeRows = await loadActiveTimers(userId).catch(() => []);
     if (!snapshot && activeRows.length === 0) {
-      setCloudSyncMessage("クラウド保存データはまだないよ");
+      if (!options.silent) setCloudSyncMessage("クラウド保存データはまだないよ");
       return false;
     }
+
+    const remoteSavedAt = getCloudSavedAtMs(snapshot);
+    latestCloudSavedAtRef.current = Math.max(latestCloudSavedAtRef.current, remoteSavedAt);
 
     const snapshotFleets = (snapshot?.fleets as FleetTimer[] | undefined) ?? initialFleets;
     const baseFleets = snapshotFleets.map((snapshotFleet) => {
@@ -1957,6 +2138,26 @@ function App() {
       return localRunning ? localFleet : snapshotFleet;
     });
     const nextFleets = mergeActiveTimerRows(baseFleets, activeRows);
+
+    const nextHistoryClearedAt = getEffectiveClearedAt(historyClearedAtRef.current, snapshot?.historyClearedAt);
+    const nextResourceStockClearedAt = getEffectiveClearedAt(resourceStockClearedAtRef.current, snapshot?.resourceStockClearedAt);
+    historyClearedAtRef.current = nextHistoryClearedAt;
+    resourceStockClearedAtRef.current = nextResourceStockClearedAt;
+    saveToStorage(HISTORY_CLEARED_AT_STORAGE_KEY, nextHistoryClearedAt);
+    saveToStorage(RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY, nextResourceStockClearedAt);
+
+    const nextHistory = mergeExpeditionHistories(
+      history,
+      (snapshot?.history as ExpeditionHistory[] | undefined) ?? [],
+      nextHistoryClearedAt
+    );
+    const nextResourceStockSnapshots = mergeResourceStockSnapshots(
+      resourceStockSnapshots,
+      (snapshot?.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? [],
+      nextResourceStockClearedAt
+    );
+
+    skipNextAutoSaveRef.current = true;
     setFleets(nextFleets);
     setSettings({ ...initialSettings, ...((snapshot?.settings as AppSettings | undefined) ?? {}), discordNotifyMode: "direct", serverNotificationMode: "supabase" });
     const snapshotRewardSettings = ((snapshot?.rewardSettings ?? {}) as Partial<RewardModifierSettings>);
@@ -1970,8 +2171,8 @@ function App() {
     });
     setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
     setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
-    setHistory((snapshot?.history as ExpeditionHistory[] | undefined) ?? history);
-    setResourceStockSnapshots((snapshot?.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? resourceStockSnapshots);
+    setHistory(nextHistory);
+    setResourceStockSnapshots(nextResourceStockSnapshots);
     setResourceTargetInputs({
       ...getResourceTargetInputDefaults(),
       ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
@@ -1980,9 +2181,22 @@ function App() {
     setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
     setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
     setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
-    setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
-    addLog("クラウド読込完了");
+
+    if (!options.silent) {
+      setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
+    }
+    addLog(options.reason ? `クラウド同期: ${options.reason}` : "クラウド読込完了");
     return true;
+  }
+
+  function scheduleCloudRefresh(userId: string, reason: string) {
+    if (cloudRefreshTimerRef.current) window.clearTimeout(cloudRefreshTimerRef.current);
+    cloudRefreshTimerRef.current = window.setTimeout(() => {
+      applyCloudSnapshot(userId, false, { silent: true, reason }).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "クラウド自動更新に失敗";
+        addLog(message);
+      });
+    }, 350);
   }
 
   async function signUp() {
@@ -2043,8 +2257,10 @@ function App() {
     }
     setCloudSyncBusy(true);
     try {
-      await saveCloudSnapshot(authState.user.id, createCloudSnapshot());
+      const savedSnapshot = await saveCloudSnapshotSafely(authState.user.id, createCloudSnapshot());
       await saveActiveTimers(authState.user.id, fleets);
+      if (savedSnapshot.history) setHistory(savedSnapshot.history as ExpeditionHistory[]);
+      if (savedSnapshot.resourceStockSnapshots) setResourceStockSnapshots(savedSnapshot.resourceStockSnapshots as ResourceStockSnapshot[]);
       setCloudSyncMessage("クラウドへ保存したよ");
       addLog("クラウド保存完了");
     } catch (error) {
@@ -2252,7 +2468,7 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.8</p>
+          <p className="eyebrow">KanColle Expedition Support v3.9</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。

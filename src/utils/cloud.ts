@@ -24,6 +24,8 @@ export type CloudSnapshot = {
   history: unknown[];
   resourceStockSnapshots?: unknown[];
   resourceTargetInputs?: Record<string, unknown>;
+  historyClearedAt?: number;
+  resourceStockClearedAt?: number;
   monthlyCompletions?: Record<string, string[]>;
   setupNotificationTestDone?: boolean;
   setupGuideDismissed?: boolean;
