@@ -1,20 +1,30 @@
-# 艦これ遠征サポート v2.3
+# 艦これ遠征サポート v4.0
 
-艦これ本体は手動操作のまま、遠征タイマー、終了予定時刻、Discord通知予約、成功条件確認、攻略支援、帰投記録、PWA、提督ログイン同期をまとめて管理するサポートツールです。
+艦これ本体は手動操作のまま、遠征タイマー、終了通知、遠征検索、帰投記録、所持資源推移、資源目標プランナー、PWA、クラウド同期をまとめて管理するサポートツールです。
 
-## v2.3 の主な変更
+## v4.0 の主な変更
 
-- 初めて触る人にも伝わりやすいよう、提督ログイン、PWA、通知設定の説明文を整理
-- 端末ごとの時計ズレによる残り時間差を減らすため、Vercel API `/api/server-time` でサーバー時刻同期を追加
-- タイマー開始時の `startAt` / `endAt` をサーバー時刻補正後の時刻で作成
-- ヘッダーの現在時刻欄に「サーバー時刻と同期中」などの状態を表示
+- 所持資源入力欄を艦これ本体と同じ配置に変更
+  - 燃料 / 鋼材
+  - 弾薬 / ボーキ
+- 入力欄を「現在資源を入力」カードとして整理し、最新記録時刻を表示
+- PC版タブにサブ説明を追加し、初心者でも各タブの役割が分かりやすいように調整
+- タイマー、遠征、攻略、記録、設定の色・余白・カード階層を再調整
+- よく使う操作は大きく、低頻度の設定/詳細項目はコンパクトに見えるようUIをブラッシュアップ
+- ライト/ダーク両テーマでパステル寄りの淡い配色に再調整
 
-## v2.1 から継続している主な機能
+## 継続している主な機能
 
-- スマホ下部タブ（タイマー / 攻略 / 一覧 / 設定）の表示切替
-- 実行中タイマーをクラウド同期できる `active_timers` テーブル対応
-- Discord通知は提督ごとの個人Webhook URL + サーバー側通知予約に一本化
-- 簡易カードでもお気に入りショートカット（★02など）を表示
+- 第2〜第4艦隊の遠征タイマー
+- Discord / PWA通知
+- 遠征詳細・成功条件・大成功条件確認
+- 大発系装備、改修★、鬼怒改二込みの報酬補正計算
+- 帰投チェックカード
+- 今日の獲得資材記録
+- 所持資源の折れ線グラフ
+- 資源目標プランナー
+- マンスリー遠征管理
+- Supabaseクラウド同期
 
 ## 起動
 
@@ -31,45 +41,9 @@ npm run build
 
 ## Vercel 環境変数
 
-最低限必要です。
-
 ```txt
 VITE_SUPABASE_URL=https://xxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 CRON_SECRET=ランダム文字列
 ```
-
-`DISCORD_WEBHOOK_URL` はv2.3では通常不要です。旧安全モード互換やフォールバック用として残しても動きます。
-
-## Supabase SQL
-
-`supabase/schema.sql` をSupabase SQL Editorで実行してください。
-
-- `user_settings`: 提督ごとの設定・お気に入り・プリセット・Webhook URLなど
-- `active_timers`: 実行中タイマーの同期
-- `scheduled_notifications`: サーバー側Discord通知予約
-
-
-## v2.3 追加
-
-- `/api/server-time` をService Workerでキャッシュしないように変更し、時刻ズレでタイマーが崩れる問題を軽減。
-- サーバー時刻は `performance.now()` を基準に進め、端末時計がズレても残り時間が安定しやすい方式に変更。
-- Web Push / PWAスマホ通知に対応。`VITE_VAPID_PUBLIC_KEY` と `VAPID_PRIVATE_KEY` を設定し、Supabaseで `push_subscriptions` テーブルを作成すると使える。
-- `cron-dispatch` はDiscord通知に加えて、登録済みPush Subscriptionへスマホ通知も送る。
-
-### VAPIDキー生成
-
-```bash
-npx web-push generate-vapid-keys
-```
-
-Vercel環境変数に以下を追加。
-
-```txt
-VITE_VAPID_PUBLIC_KEY=Public Key
-VAPID_PRIVATE_KEY=Private Key
-VAPID_SUBJECT=mailto:自分のメールアドレス
-```
-
-変更後はRedeployしてください。

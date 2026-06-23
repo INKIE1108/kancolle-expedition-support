@@ -319,6 +319,8 @@ const resourceFullLabels: Record<keyof ResourceRewards, string> = {
 };
 
 const resourceKeys = ["fuel", "ammo", "steel", "bauxite"] as const;
+/** ゲーム画面と同じ並び：燃料 / 鋼材、弾薬 / ボーキ。 */
+const resourceGameGridKeys = ["fuel", "steel", "ammo", "bauxite"] as const;
 
 const MAX_LANDING_CRAFT_SLOTS = 8;
 
@@ -2468,7 +2470,7 @@ function App() {
     <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero">
         <div>
-          <p className="eyebrow">KanColle Expedition Support v3.9</p>
+          <p className="eyebrow">KanColle Expedition Support</p>
           <h1>艦これ遠征サポート</h1>
           <p>
             遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
@@ -2493,11 +2495,11 @@ function App() {
       </header>
 
       <nav className="desktop-tabbar" aria-label="画面タブ">
-        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}>タイマー</button>
-        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}>遠征</button>
-        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}>攻略</button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}>記録</button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}>設定</button>
+        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}><span>タイマー</span><small>司令室</small></button>
+        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}><span>遠征</span><small>検索・条件</small></button>
+        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}><span>攻略</span><small>候補・セット</small></button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><span>記録</span><small>資源・履歴</small></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}><span>設定</span><small>通知・同期</small></button>
       </nav>
 
       {pendingReturnFleets.length > 0 && (
@@ -3158,13 +3160,24 @@ function App() {
                 <button type="button" className="ghost small" onClick={clearResourceStockSnapshots} disabled={resourceStockSnapshots.length === 0}>推移削除</button>
               </div>
 
-              <div className="resource-stock-input-grid">
-                <label>燃料<input type="number" min={0} max={999999} value={resourceStockInputs.fuel} onChange={(event) => updateResourceStockInput("fuel", event.target.value)} placeholder="現在値" /></label>
-                <label>弾薬<input type="number" min={0} max={999999} value={resourceStockInputs.ammo} onChange={(event) => updateResourceStockInput("ammo", event.target.value)} placeholder="現在値" /></label>
-                <label>鋼材<input type="number" min={0} max={999999} value={resourceStockInputs.steel} onChange={(event) => updateResourceStockInput("steel", event.target.value)} placeholder="現在値" /></label>
-                <label>ボーキ<input type="number" min={0} max={999999} value={resourceStockInputs.bauxite} onChange={(event) => updateResourceStockInput("bauxite", event.target.value)} placeholder="現在値" /></label>
-                <button type="button" onClick={recordResourceStockSnapshot}>現在資源を記録</button>
-                <button type="button" className="secondary" onClick={fillResourceStockInputsFromLatest} disabled={!latestStockSnapshot}>最新値を入力欄へ</button>
+              <div className="resource-stock-input-card">
+                <div className="resource-stock-input-head">
+                  <div>
+                    <strong>現在資源を入力</strong>
+                    <span>艦これ画面と同じ配置：燃料/鋼材、弾薬/ボーキ</span>
+                  </div>
+                  {latestStockSnapshot ? <small>最新 {formatShortDateTime(latestStockSnapshot.recordedAt)}</small> : <small>まだ未記録</small>}
+                </div>
+                <div className="resource-stock-input-grid game-resource-grid">
+                  {resourceGameGridKeys.map((key) => (
+                    <label key={`stock-input-${key}`} data-resource={key}>
+                      <span>{resourceFullLabels[key]}</span>
+                      <input type="number" min={0} max={999999} value={resourceStockInputs[key]} onChange={(event) => updateResourceStockInput(key, event.target.value)} placeholder="現在値" inputMode="numeric" />
+                    </label>
+                  ))}
+                  <button type="button" className="stock-record-button" onClick={recordResourceStockSnapshot}>現在資源を記録</button>
+                  <button type="button" className="secondary stock-fill-button" onClick={fillResourceStockInputsFromLatest} disabled={!latestStockSnapshot}>最新値を入力欄へ</button>
+                </div>
               </div>
 
               <div className="stock-chart-controls" aria-label="所持資源グラフ切替">
@@ -3263,10 +3276,11 @@ function App() {
                   </div>
                   <button type="button" className="ghost small" onClick={() => fillResourceTargetsFromLatest()} disabled={!latestStockSnapshot}>最新+5万</button>
                 </div>
-                <div className="resource-target-input-grid">
-                  {resourceKeys.map((key) => (
-                    <label key={`target-input-${key}`}>{resourceFullLabels[key]}
-                      <input type="number" min={0} max={999999} value={resourceTargetInputs[key]} onChange={(event) => updateResourceTargetInput(key, event.target.value)} placeholder="目標値" />
+                <div className="resource-target-input-grid game-resource-grid">
+                  {resourceGameGridKeys.map((key) => (
+                    <label key={`target-input-${key}`} data-resource={key}>
+                      <span>{resourceFullLabels[key]}</span>
+                      <input type="number" min={0} max={999999} value={resourceTargetInputs[key]} onChange={(event) => updateResourceTargetInput(key, event.target.value)} placeholder="目標値" inputMode="numeric" />
                     </label>
                   ))}
                 </div>

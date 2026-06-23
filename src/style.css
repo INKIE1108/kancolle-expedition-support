@@ -4145,3 +4145,443 @@ html[data-theme="light"] .target-plan-grid article em {
     grid-template-columns: 1fr;
   }
 }
+
+/* v4.0: command-room polish + game-order resource inputs */
+:root {
+  --surface-3: rgba(18, 29, 49, 0.9);
+  --surface-4: rgba(12, 22, 39, 0.74);
+  --surface-5: rgba(27, 41, 64, 0.72);
+  --text-strong: #f8fbff;
+  --text-muted-strong: #c4d1e4;
+  --soft-blue-border: rgba(139, 213, 255, 0.2);
+  --tab-bg: rgba(10, 20, 38, 0.74);
+  --tab-active-bg: linear-gradient(135deg, rgba(125, 211, 252, 0.95), rgba(167, 139, 250, 0.92));
+  --danger-soft: rgba(252, 165, 165, 0.16);
+}
+
+html[data-theme="light"] {
+  --bg-0: #fbfdff;
+  --bg-1: #eef8ff;
+  --surface-0: rgba(255, 255, 255, 0.92);
+  --surface-1: rgba(255, 255, 255, 0.98);
+  --surface-2: rgba(239, 248, 255, 0.96);
+  --surface-3: rgba(232, 244, 255, 0.96);
+  --surface-4: rgba(247, 252, 255, 0.98);
+  --surface-5: rgba(224, 242, 254, 0.82);
+  --text-strong: #172033;
+  --text-muted-strong: #516079;
+  --soft-blue-border: rgba(125, 177, 236, 0.36);
+  --tab-bg: rgba(245, 250, 255, 0.92);
+  --tab-active-bg: linear-gradient(135deg, #b8dcff, #d7c9ff);
+  --button-bg: linear-gradient(135deg, #9fd3ff, #d8c7ff);
+  --secondary-bg: rgba(235, 247, 255, 0.96);
+  --ghost-text: #2563eb;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  gap: clamp(12px, 2vw, 28px);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(139, 213, 255, 0.14), transparent 28rem),
+    radial-gradient(circle at 86% 10%, rgba(185, 168, 255, 0.14), transparent 24rem),
+    var(--surface-0) !important;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 26px 0 26px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+  opacity: 0.65;
+}
+
+.hero .eyebrow::after {
+  content: "  v4.0";
+  color: var(--accent-2);
+}
+
+.hero-clock {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-4)) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.hero-clock small {
+  color: var(--accent) !important;
+  font-weight: 850;
+}
+
+.desktop-tabbar {
+  background: var(--tab-bg) !important;
+  border-radius: 28px !important;
+  gap: 6px !important;
+}
+
+.desktop-tabbar button {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  min-height: 52px;
+  line-height: 1.15;
+}
+
+.desktop-tabbar button span {
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.desktop-tabbar button small {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.desktop-tabbar button.active,
+.mobile-tabbar button.active {
+  background: var(--tab-active-bg) !important;
+}
+
+.dashboard-strip {
+  align-items: stretch;
+}
+
+.command-card,
+.return-check-card,
+.resource-stock-panel,
+.resource-target-panel {
+  border-color: var(--soft-blue-border) !important;
+}
+
+.status-command-card {
+  background:
+    radial-gradient(circle at 0 0, rgba(139, 213, 255, 0.14), transparent 18rem),
+    var(--surface-0) !important;
+}
+
+.resource-command-card {
+  background:
+    radial-gradient(circle at 100% 0, rgba(167, 243, 208, 0.14), transparent 17rem),
+    var(--surface-0) !important;
+}
+
+.quick-preset-command-card {
+  background:
+    radial-gradient(circle at 100% 0, rgba(185, 168, 255, 0.14), transparent 17rem),
+    var(--surface-0) !important;
+}
+
+.quick-preset-list button,
+.command-status-grid span,
+.command-chip-row span,
+.daily-total-grid button,
+.stock-summary-grid > div,
+.target-plan-grid article,
+.resource-grid div,
+.success-compare div,
+.mini-info div {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-4)) !important;
+}
+
+.quick-preset-list button:hover,
+.expedition-item:hover,
+.daily-total-grid button:hover:not(:disabled) {
+  border-color: var(--border-strong) !important;
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface-2)) !important;
+}
+
+.resource-stock-panel {
+  background:
+    radial-gradient(circle at 0 0, rgba(139, 213, 255, 0.12), transparent 22rem),
+    var(--surface-0) !important;
+}
+
+.resource-stock-input-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--soft-blue-border);
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--surface-4), var(--surface-2));
+}
+
+.resource-stock-input-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resource-stock-input-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.resource-stock-input-head strong {
+  color: var(--text-0);
+  font-size: 1.02rem;
+}
+
+.resource-stock-input-head span,
+.resource-stock-input-head small {
+  color: var(--text-2);
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.resource-stock-input-grid.game-resource-grid {
+  grid-template-columns: repeat(2, minmax(160px, 1fr)) minmax(180px, 0.68fr);
+  grid-template-areas:
+    "fuel steel record"
+    "ammo bauxite fill";
+  align-items: stretch;
+}
+
+.resource-target-input-grid.game-resource-grid {
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+}
+
+.resource-stock-input-grid.game-resource-grid label[data-resource="fuel"] { grid-area: fuel; }
+.resource-stock-input-grid.game-resource-grid label[data-resource="steel"] { grid-area: steel; }
+.resource-stock-input-grid.game-resource-grid label[data-resource="ammo"] { grid-area: ammo; }
+.resource-stock-input-grid.game-resource-grid label[data-resource="bauxite"] { grid-area: bauxite; }
+.resource-stock-input-grid .stock-record-button { grid-area: record; }
+.resource-stock-input-grid .stock-fill-button { grid-area: fill; }
+
+.game-resource-grid label {
+  min-height: 86px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-1);
+}
+
+.game-resource-grid label span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-1);
+  font-weight: 950;
+}
+
+.game-resource-grid label span::before {
+  content: "";
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.game-resource-grid label[data-resource="fuel"] span::before { background: #7dd3fc; }
+.game-resource-grid label[data-resource="ammo"] span::before { background: #a7f3d0; }
+.game-resource-grid label[data-resource="steel"] span::before { background: #c4b5fd; }
+.game-resource-grid label[data-resource="bauxite"] span::before { background: #fbcfe8; }
+
+.game-resource-grid input {
+  margin-top: 6px;
+  min-height: 48px;
+  border-radius: 17px;
+  font-size: clamp(1.08rem, 2vw, 1.35rem);
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  background: var(--surface-2) !important;
+}
+
+.stock-record-button,
+.stock-fill-button {
+  height: 100%;
+  min-height: 78px;
+  border-radius: 20px;
+  font-size: 0.94rem;
+}
+
+.stock-chart-controls {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-4);
+}
+
+.stock-chart-controls button {
+  min-width: 58px;
+}
+
+.stock-line-chart.axis-chart {
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(139, 213, 255, 0.09), transparent 45%),
+    var(--surface-1) !important;
+}
+
+.stock-plot-area svg {
+  background:
+    linear-gradient(180deg, rgba(139, 213, 255, 0.05), rgba(185, 168, 255, 0.08)),
+    var(--surface-4);
+  border: 1px solid var(--border);
+}
+
+.stock-line-chart svg polyline {
+  stroke-width: 2.8;
+  filter: drop-shadow(0 7px 11px rgba(96, 165, 250, 0.22));
+}
+
+.stock-point-detail {
+  border-color: var(--border-strong) !important;
+}
+
+.resource-target-panel {
+  background:
+    radial-gradient(circle at 0 0, rgba(196, 181, 253, 0.18), transparent 20rem),
+    var(--surface-4) !important;
+}
+
+.target-overview-card {
+  background:
+    linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2)),
+    var(--surface-2) !important;
+}
+
+.target-plan-grid article {
+  min-height: 132px;
+}
+
+.expedition-item:not(.selected) {
+  background: var(--surface-2) !important;
+}
+
+.pinned-box .pinned-edit-item:not(.selected),
+.pin-button:not(.active) {
+  background: var(--surface-2) !important;
+  color: var(--text-2) !important;
+}
+
+.pinned-edit-item.selected,
+.pin-button.active {
+  background: linear-gradient(135deg, #fde68a, #fef3c7) !important;
+  color: #92400e !important;
+  border-color: rgba(245, 158, 11, 0.36) !important;
+}
+
+html[data-theme="dark"] .pinned-edit-item.selected,
+html[data-theme="dark"] .pin-button.active {
+  background: rgba(253, 230, 138, 0.18) !important;
+  color: #fde68a !important;
+}
+
+html[data-theme="light"] .resource-stock-input-card,
+html[data-theme="light"] .game-resource-grid label,
+html[data-theme="light"] .stock-chart-controls,
+html[data-theme="light"] .stock-plot-area svg {
+  background-color: rgba(247, 252, 255, 0.98) !important;
+  color: var(--text-strong) !important;
+}
+
+html[data-theme="light"] .stock-record-button {
+  color: #142033 !important;
+}
+
+@media (min-width: 761px) {
+  .records-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .records-card {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    border-radius: 0 0 26px 26px;
+    margin: -10px -10px 2px;
+  }
+
+  .desktop-tabbar button small {
+    display: none;
+  }
+
+  .mobile-tabbar {
+    left: 10px;
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: auto;
+    border-radius: 24px;
+    padding: 8px;
+    gap: 5px;
+  }
+
+  .mobile-tabbar button {
+    border-radius: 18px;
+    min-height: 54px;
+    font-weight: 950;
+  }
+
+  .resource-stock-input-card {
+    padding: 12px;
+  }
+
+  .resource-stock-input-head {
+    display: grid;
+  }
+
+  .resource-stock-input-grid.game-resource-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "fuel steel"
+      "ammo bauxite"
+      "record record"
+      "fill fill";
+    gap: 9px;
+  }
+
+  .resource-target-input-grid.game-resource-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .game-resource-grid label {
+    min-height: 98px;
+    padding: 12px;
+  }
+
+  .stock-record-button,
+  .stock-fill-button {
+    min-height: 58px;
+  }
+
+  .stock-chart-controls {
+    gap: 8px;
+  }
+
+  .stock-chart-controls > div {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .stock-chart-controls > div:nth-child(2) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .stock-chart-controls button {
+    min-width: 0;
+    padding-inline: 0.3rem;
+  }
+
+  .target-plan-grid article {
+    min-height: unset;
+  }
+}
+
+@media (max-width: 420px) {
+  .game-resource-grid input {
+    font-size: 1.08rem;
+    padding-inline: 0.75rem;
+  }
+
+  .mobile-tabbar button {
+    font-size: 0.76rem;
+  }
+}
