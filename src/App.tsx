@@ -2550,9 +2550,40 @@ function App() {
     switchAppTab("assist", targetId);
   }
 
+  function openSettingsHub() {
+    setMobileTab("account");
+    setCollapsedPanels((current) => ({
+      ...current,
+      account: true,
+      pwa: true,
+      notifications: true,
+      rewards: true,
+      diagnostics: true,
+      log: true
+    }));
+    window.setTimeout(() => {
+      document.getElementById("settings-hub-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
+  function jumpToSettingsPanel(panel: CollapsibleKey, targetId: string) {
+    setMobileTab("account");
+    setCollapsedPanels((current) => ({ ...current, [panel]: false }));
+    window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
   function jumpToAccount(targetId: string = "account-cloud-section") {
-    setCollapsedPanels((current) => ({ ...current, account: false, pwa: false, notifications: false }));
-    switchAppTab("account", targetId);
+    const panelByTarget: Partial<Record<string, CollapsibleKey>> = {
+      "account-cloud-section": "account",
+      "pwa-section": "pwa",
+      "notification-section": "notifications",
+      "reward-section": "rewards",
+      "diagnostics-section": "diagnostics",
+      "log-section": "log"
+    };
+    jumpToSettingsPanel(panelByTarget[targetId] ?? "account", targetId);
   }
 
   async function testDiscord(): Promise<boolean> {
@@ -2579,6 +2610,7 @@ function App() {
       return false;
     }
   }
+
 
   return (
     <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
@@ -2613,7 +2645,7 @@ function App() {
         <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}><span>遠征</span><small>検索・条件</small></button>
         <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}><span>攻略</span><small>候補・セット</small></button>
         <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><span>記録</span><small>資源・履歴</small></button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}><span>設定</span><small>通知・同期</small></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><span>設定</span><small>通知・同期</small></button>
       </nav>
 
       <section className={`ops-overview ${pendingReturnFleets.length > 0 ? "has-returns" : "no-returns"}`}>
@@ -2702,66 +2734,61 @@ function App() {
       </section>
       </section>
 
-      <details
-        id="account-cloud-section"
-        className="account-card fold-card"
-        open={!collapsedPanels.account}
-        onToggle={(event) => handlePanelToggle("account", event.currentTarget.open)}
-      >
-        <summary className="fold-summary">
-          <span><small>Account / Cloud</small><strong>提督ログイン・クラウド同期</strong></span>
-          <em>{collapsedPanels.account ? "開く" : "閉じる"}</em>
-        </summary>
-        <div className="fold-content account-grid">
+      <section id="settings-hub-section" className="settings-hub-card" aria-label="設定メニュー">
+        <div className="settings-hub-head">
           <div>
-            <h2>提督アカウント</h2>
-            <p>メールアドレスとパスワードでログインすると、お気に入り、カスタムプリセット、遠征履歴、実行中タイマーを提督アカウントごとに保存できるよ。PCで保存して、スマホで同じアカウントから読み込める。</p>
-            <p className="helper-text">状態：{isSupabaseConfigured ? (authState.user ? `ログイン中：${authState.user.email}` : "Supabase設定済み / 未ログイン") : "Supabase未設定"}</p>
+            <p className="eyebrow">Settings</p>
+            <h2>設定</h2>
+            <p>目的別に整理しました。よく触る設定だけ素早く開けます。</p>
           </div>
-          <div className="account-form">
-            {!authState.user ? (
-              <>
-                <input value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="メールアドレス" type="email" />
-                <input value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="パスワード" type="password" />
-                <button type="button" onClick={signIn} disabled={!isSupabaseConfigured || cloudSyncBusy}>ログイン</button>
-                <button type="button" className="secondary" onClick={signUp} disabled={!isSupabaseConfigured || cloudSyncBusy}>新規登録</button>
-              </>
-            ) : (
-              <>
-                <button type="button" onClick={saveCloud} disabled={cloudSyncBusy}>クラウドへ保存</button>
-                <button type="button" className="secondary" onClick={loadCloud} disabled={cloudSyncBusy}>クラウドから読込</button>
-                <button type="button" className="ghost" onClick={signOut}>ログアウト</button>
-              </>
-            )}
-          </div>
-          <div className="cloud-message account-message-stack">
-            <span>{cloudSyncMessage || "初めて使う場合は新規登録 → ログイン。ログイン後は「クラウドへ保存」「クラウドから読込」で端末間同期できるよ。"}</span>
-            {setupGuideDismissed ? (
-              <button type="button" className="ghost small" onClick={() => setSetupGuideDismissed(false)}>
-                初回設定ガイドを再表示
-              </button>
-            ) : null}
+          <div className="settings-hub-status">
+            <span>{cloudStatusLabel}</span>
+            <span>{notificationStatusLabel}</span>
           </div>
         </div>
-      </details>
 
-      {showSetupGuide ? (
-        <InitialSetupGuide
-          loggedIn={loggedIn}
-          webhookRegistered={webhookRegistered}
-          deviceRegistered={deviceRegistered}
-          testNotificationDone={testNotificationDone}
-          expeditionStarted={expeditionStarted}
-          autoDismissReady={setupGuideDone}
-          onDismiss={() => setSetupGuideDismissed(true)}
-          onJumpAccount={() => jumpToAccount("account-cloud-section")}
-          onJumpNotification={() => jumpToAccount("notification-section")}
-          onJumpTimer={() => switchAppTab("timers", "fleet-timer-section")}
-          onTestNotification={runSetupNotificationTest}
-        />
-      ) : null}
+        <div className="settings-menu-panel">
+          <div className="settings-menu-copy">
+            <h3>設定メニュー</h3>
+            <p>必要な設定へすぐ移動できます。詳細な編集フォームは下にまとまっています。</p>
+          </div>
+          <div className="settings-menu-grid">
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("account", "account-cloud-section")}>
+              <span className="settings-menu-icon">☁</span>
+              <span><strong>アカウント・同期</strong><small>ログイン・クラウド保存</small></span>
+              <em>›</em>
+            </button>
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("pwa", "pwa-section")}>
+              <span className="settings-menu-icon">📱</span>
+              <span><strong>スマホ・PWA</strong><small>インストール・バックアップ</small></span>
+              <em>›</em>
+            </button>
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("notifications", "notification-section")}>
+              <span className="settings-menu-icon">🔔</span>
+              <span><strong>通知・Push</strong><small>Discord・スマホ通知</small></span>
+              <em>›</em>
+            </button>
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("rewards", "reward-section")}>
+              <span className="settings-menu-icon">⚙</span>
+              <span><strong>報酬補正</strong><small>大成功・大発・鬼怒改二</small></span>
+              <em>›</em>
+            </button>
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("diagnostics", "diagnostics-section")}>
+              <span className="settings-menu-icon">🩺</span>
+              <span><strong>通知履歴・診断</strong><small>失敗原因・送信状態</small></span>
+              <em>›</em>
+            </button>
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("log", "log-section")}>
+              <span className="settings-menu-icon">📝</span>
+              <span><strong>ログ</strong><small>操作履歴・デバッグメモ</small></span>
+              <em>›</em>
+            </button>
+          </div>
+        </div>
+      </section>
 
       <details
+        id="pwa-section"
         className="pwa-card fold-card"
         open={!collapsedPanels.pwa}
         onToggle={(event) => handlePanelToggle("pwa", event.currentTarget.open)}
@@ -3808,6 +3835,7 @@ function App() {
       </details>
 
       <details
+        id="diagnostics-section"
         className="diagnostics-card fold-card"
         open={!collapsedPanels.diagnostics}
         onToggle={(event) => handlePanelToggle("diagnostics", event.currentTarget.open)}
@@ -3857,10 +3885,11 @@ function App() {
         <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}><b>🔎</b><span>遠征</span></button>
         <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}><b>🧭</b><span>攻略</span></button>
         <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b>📈</b><span>記録</span></button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}><b>⚙</b><span>設定</span></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b>⚙</b><span>設定</span></button>
       </nav>
 
       <details
+        id="log-section"
         className="log-card fold-card"
         open={!collapsedPanels.log}
         onToggle={(event) => handlePanelToggle("log", event.currentTarget.open)}

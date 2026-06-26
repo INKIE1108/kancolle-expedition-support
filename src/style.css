@@ -5443,3 +5443,748 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* v4.4 dark-mode polish + settings hub */
+.settings-hub-card {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--surface-0);
+  box-shadow: var(--shadow-card);
+  scroll-margin-top: 96px;
+}
+
+.settings-hub-panel {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+
+.settings-hub-head {
+  margin-bottom: 14px;
+}
+
+.settings-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.settings-hub-tile {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  border-radius: 22px;
+  border: 1px solid var(--border) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 82%, white 18%), var(--surface-2)) !important;
+  color: var(--text-0) !important;
+  box-shadow: none !important;
+  text-align: left;
+}
+
+.settings-hub-tile:hover:not(:disabled) {
+  border-color: var(--border-strong) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 45%, var(--surface-1) 55%), color-mix(in srgb, var(--accent-soft-2) 36%, var(--surface-2) 64%)) !important;
+}
+
+.tile-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
+  color: var(--accent);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.tile-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tile-copy strong {
+  color: var(--text-0);
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.tile-copy small {
+  color: var(--text-2);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.tile-arrow {
+  color: var(--muted);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+#account-cloud-section,
+#pwa-section,
+#notification-section,
+#reward-section,
+#diagnostics-section,
+#log-section,
+#settings-menu-section {
+  scroll-margin-top: 98px;
+}
+
+html[data-theme="dark"] {
+  --bg-0: #05111f;
+  --bg-1: #0b1a2e;
+  --surface-0: rgba(10, 22, 41, 0.95);
+  --surface-1: rgba(15, 30, 53, 0.98);
+  --surface-2: rgba(18, 36, 62, 0.94);
+  --surface-4: rgba(10, 24, 43, 0.98);
+  --text-0: #f8fbff;
+  --text-1: #ecf3fd;
+  --text-2: #c9d8ec;
+  --muted: #a9bdd6;
+  --border: rgba(162, 191, 228, 0.24);
+  --border-strong: rgba(149, 212, 255, 0.48);
+  --accent: #96dcff;
+  --accent-2: #c6b8ff;
+  --accent-soft: rgba(150, 220, 255, 0.16);
+  --accent-soft-2: rgba(198, 184, 255, 0.18);
+  --button-bg: linear-gradient(135deg, #98ddff, #c6b8ff);
+  --button-text: #07131f;
+  --secondary-bg: rgba(219, 234, 254, 0.12);
+  --secondary-text: #eff6ff;
+  --ghost-text: #e5f2ff;
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 34rem),
+    radial-gradient(circle at bottom right, rgba(167, 139, 250, 0.1), transparent 34rem),
+    #05111f;
+}
+
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .command-card,
+html[data-theme="dark"] .fleet-card,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .list-card,
+html[data-theme="dark"] .fold-card,
+html[data-theme="dark"] .records-card,
+html[data-theme="dark"] .preset-card,
+html[data-theme="dark"] .guide-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .pwa-card,
+html[data-theme="dark"] .account-card,
+html[data-theme="dark"] .reward-card,
+html[data-theme="dark"] .diagnostics-card,
+html[data-theme="dark"] .log-card,
+html[data-theme="dark"] .monthly-card,
+html[data-theme="dark"] .settings-hub-card,
+html[data-theme="dark"] .return-check-card {
+  background: linear-gradient(180deg, rgba(10, 22, 41, 0.96), rgba(7, 18, 34, 0.98)) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme="dark"] .hero p,
+html[data-theme="dark"] .helper-text,
+html[data-theme="dark"] .empty-text,
+html[data-theme="dark"] .guide-description,
+html[data-theme="dark"] .monthly-item small,
+html[data-theme="dark"] .expedition-main small,
+html[data-theme="dark"] .pinned-main small,
+html[data-theme="dark"] .quick-preset-list small:not(:only-child),
+html[data-theme="dark"] .fleet-card .helper-text,
+html[data-theme="dark"] .mini-info dd,
+html[data-theme="dark"] .condition-summary-grid small,
+html[data-theme="dark"] .fold-summary small,
+html[data-theme="dark"] .tile-copy small,
+html[data-theme="dark"] .hero-clock span,
+html[data-theme="dark"] .hero-clock small {
+  color: var(--text-2) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar,
+html[data-theme="dark"] .mobile-tabbar,
+html[data-theme="dark"] .theme-switch {
+  background: rgba(14, 27, 47, 0.95) !important;
+  border-color: rgba(169, 194, 226, 0.26) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button,
+html[data-theme="dark"] .mobile-tabbar button,
+html[data-theme="dark"] .theme-switch button {
+  color: var(--text-2) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button small,
+html[data-theme="dark"] .mobile-tabbar span {
+  color: var(--muted) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active):hover,
+html[data-theme="dark"] .mobile-tabbar button:not(.active):hover,
+html[data-theme="dark"] .theme-switch button:not(.active):hover {
+  background: rgba(150, 220, 255, 0.1) !important;
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button.active,
+html[data-theme="dark"] .mobile-tabbar button.active,
+html[data-theme="dark"] .theme-switch button.active {
+  color: var(--button-text) !important;
+  box-shadow: 0 12px 28px rgba(150, 220, 255, 0.14) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .quick-preset-list button,
+html[data-theme="dark"] .command-status-grid span,
+html[data-theme="dark"] .command-chip-row span,
+html[data-theme="dark"] .resource-grid div,
+html[data-theme="dark"] .success-compare div,
+html[data-theme="dark"] .detail-list div,
+html[data-theme="dark"] .mini-info div,
+html[data-theme="dark"] .daily-total-grid button,
+html[data-theme="dark"] .expedition-item,
+html[data-theme="dark"] .pinned-edit-item,
+html[data-theme="dark"] .pinned-main,
+html[data-theme="dark"] .expedition-main,
+html[data-theme="dark"] .manual-timer-row,
+html[data-theme="dark"] .fleet-reward-mini,
+html[data-theme="dark"] .game-resource-grid label,
+html[data-theme="dark"] .return-check-item,
+html[data-theme="dark"] .cloud-message,
+html[data-theme="dark"] .status-message,
+html[data-theme="dark"] .reward-bonus-summary,
+html[data-theme="dark"] .toggle-card,
+html[data-theme="dark"] .notification-history-item,
+html[data-theme="dark"] .notification-diagnosis,
+html[data-theme="dark"] .device-panel,
+html[data-theme="dark"] .device-row,
+html[data-theme="dark"] .device-summary-card,
+html[data-theme="dark"] .settings-hub-panel,
+html[data-theme="dark"] .tile-icon {
+  border-color: rgba(162, 191, 228, 0.24) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: rgba(17, 33, 57, 0.96) !important;
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #8ea5c3 !important;
+}
+
+html[data-theme="dark"] button.secondary,
+html[data-theme="dark"] .file-button {
+  background: rgba(158, 179, 207, 0.14) !important;
+  color: var(--text-1) !important;
+  border: 1px solid rgba(176, 198, 226, 0.22) !important;
+}
+
+html[data-theme="dark"] button.ghost,
+html[data-theme="dark"] .stock-fill-button,
+html[data-theme="dark"] .detail-link {
+  background: rgba(150, 220, 255, 0.06) !important;
+  color: var(--ghost-text) !important;
+  border: 1px solid rgba(150, 220, 255, 0.24) !important;
+}
+
+html[data-theme="dark"] .fold-summary {
+  background: rgba(13, 25, 45, 0.86) !important;
+  border-bottom: 1px solid rgba(162, 191, 228, 0.18) !important;
+}
+
+html[data-theme="dark"] .fold-summary strong,
+html[data-theme="dark"] .fold-summary em,
+html[data-theme="dark"] .return-check-item strong,
+html[data-theme="dark"] .settings-hub-tile strong,
+html[data-theme="dark"] .notification-history-main strong,
+html[data-theme="dark"] .notification-diagnosis b {
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] .status.idle {
+  background: rgba(148, 163, 184, 0.2) !important;
+  color: var(--text-1) !important;
+}
+
+html[data-theme="dark"] .status.running {
+  background: rgba(150, 220, 255, 0.14) !important;
+  color: var(--accent) !important;
+}
+
+html[data-theme="dark"] .status.done {
+  background: rgba(74, 222, 128, 0.14) !important;
+  color: #a7f3b5 !important;
+}
+
+html[data-theme="dark"] .settings-hub-tile .tile-arrow {
+  color: var(--text-2) !important;
+}
+
+.app-shell.mobile-tab-timers .settings-hub-card,
+.app-shell.mobile-tab-search .settings-hub-card,
+.app-shell.mobile-tab-assist .settings-hub-card,
+.app-shell.mobile-tab-records .settings-hub-card {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account .settings-hub-card {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .settings-hub-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .settings-hub-card {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .settings-hub-panel {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .settings-hub-tile {
+    padding: 16px;
+  }
+
+  .tile-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+}
+
+/* settings menu actual markup support */
+#settings-hub-section {
+  scroll-margin-top: 98px;
+}
+
+.settings-hub-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.settings-hub-head h2,
+.settings-menu-copy h3 {
+  margin: 0;
+}
+
+.settings-hub-head p,
+.settings-menu-copy p {
+  margin: 6px 0 0;
+  color: var(--text-2);
+}
+
+.settings-hub-status {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-hub-status span {
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.settings-menu-panel {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+
+.settings-menu-copy {
+  margin-bottom: 14px;
+}
+
+.settings-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.settings-menu-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid var(--border) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)) !important;
+  color: var(--text-0) !important;
+  text-align: left;
+  box-shadow: none !important;
+}
+
+.settings-menu-item:hover:not(:disabled) {
+  border-color: var(--border-strong) !important;
+  background: linear-gradient(180deg, var(--accent-soft), rgba(255,255,255,0.02)) !important;
+}
+
+.settings-menu-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
+  color: var(--accent);
+  font-size: 1.3rem;
+}
+
+.settings-menu-item > span:last-of-type {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-menu-item strong {
+  color: var(--text-0);
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.settings-menu-item small {
+  color: var(--text-2);
+  font-size: 0.82rem;
+}
+
+.settings-menu-item em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+html[data-theme="dark"] .settings-menu-panel,
+html[data-theme="dark"] .settings-menu-item {
+  border-color: rgba(162, 191, 228, 0.24) !important;
+}
+
+html[data-theme="dark"] .settings-menu-item {
+  background: linear-gradient(180deg, rgba(17, 33, 57, 0.98), rgba(10, 21, 39, 0.96)) !important;
+}
+
+html[data-theme="dark"] .settings-menu-item:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(24, 42, 70, 0.98), rgba(15, 30, 53, 0.96)) !important;
+}
+
+@media (max-width: 900px) {
+  .settings-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .settings-hub-head {
+    flex-direction: column;
+  }
+
+  .settings-menu-panel {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .settings-menu-item {
+    padding: 16px;
+  }
+
+  .settings-menu-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+}
+
+/* v4.4 final: settings menu cards + dark contrast hardening */
+.hero .eyebrow::after {
+  content: "  v4.4";
+}
+
+.settings-hub-card {
+  order: 2;
+}
+
+#settings-hub-section,
+#account-cloud-section,
+#pwa-section,
+#notification-section,
+#reward-section,
+#diagnostics-section,
+#log-section {
+  scroll-margin-top: 104px;
+}
+
+.settings-hub-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.settings-hub-head h2 {
+  margin: 0;
+  color: var(--text-0) !important;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem);
+  letter-spacing: -0.03em;
+}
+
+.settings-hub-head p:not(.eyebrow),
+.settings-menu-copy p {
+  margin: 5px 0 0;
+  color: var(--text-2) !important;
+  font-weight: 760;
+  line-height: 1.65;
+}
+
+.settings-hub-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.settings-hub-status span {
+  padding: 0.52rem 0.74rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-4));
+  color: var(--text-1) !important;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.settings-menu-panel {
+  margin-top: 10px;
+  padding: clamp(14px, 2vw, 18px);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 0 0, var(--accent-soft), transparent 16rem),
+    var(--surface-1);
+}
+
+.settings-menu-copy h3 {
+  margin: 0;
+  color: var(--text-0) !important;
+  font-size: 1.08rem;
+  letter-spacing: -0.02em;
+}
+
+.settings-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.settings-menu-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  min-height: 78px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  border: 1px solid var(--border) !important;
+  background: linear-gradient(180deg, var(--surface-1), var(--surface-2)) !important;
+  color: var(--text-0) !important;
+  box-shadow: none !important;
+  text-align: left;
+}
+
+.settings-menu-item:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--border-strong) !important;
+  background:
+    linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2)),
+    var(--surface-2) !important;
+}
+
+.settings-menu-item > span:not(.settings-menu-icon) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-menu-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2));
+  color: var(--accent) !important;
+  font-size: 1.18rem;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 58%, transparent);
+}
+
+.settings-menu-item strong {
+  color: var(--text-0) !important;
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.settings-menu-item small {
+  color: var(--text-2) !important;
+  font-size: 0.82rem;
+  font-weight: 820;
+  line-height: 1.35;
+}
+
+.settings-menu-item em {
+  color: var(--muted) !important;
+  font-style: normal;
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active),
+html[data-theme="dark"] .mobile-tabbar button:not(.active),
+html[data-theme="dark"] .theme-switch button:not(.active) {
+  color: #d6e6f8 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active) small,
+html[data-theme="dark"] .mobile-tabbar button:not(.active) span {
+  color: #aebfd6 !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button.active,
+html[data-theme="dark"] .mobile-tabbar button.active,
+html[data-theme="dark"] .theme-switch button.active,
+html[data-theme="dark"] .settings-menu-item:hover:not(:disabled) {
+  color: #07131f !important;
+}
+
+html[data-theme="dark"] .settings-menu-item:hover:not(:disabled) strong,
+html[data-theme="dark"] .settings-menu-item:hover:not(:disabled) small,
+html[data-theme="dark"] .settings-menu-item:hover:not(:disabled) em {
+  color: #07131f !important;
+}
+
+html[data-theme="dark"] .settings-menu-panel,
+html[data-theme="dark"] .settings-hub-status span,
+html[data-theme="dark"] .settings-menu-item {
+  border-color: rgba(170, 200, 236, 0.26) !important;
+}
+
+html[data-theme="dark"] .settings-menu-item {
+  background: linear-gradient(180deg, rgba(16, 33, 57, 0.98), rgba(10, 24, 43, 0.98)) !important;
+}
+
+html[data-theme="dark"] .settings-menu-icon {
+  color: #b8e7ff !important;
+  background: linear-gradient(135deg, rgba(150, 220, 255, 0.18), rgba(198, 184, 255, 0.18));
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] .field-head > span,
+html[data-theme="dark"] .label,
+html[data-theme="dark"] .checkbox-row,
+html[data-theme="dark"] .settings-card p,
+html[data-theme="dark"] .pwa-card p,
+html[data-theme="dark"] .account-card p,
+html[data-theme="dark"] .reward-card p,
+html[data-theme="dark"] .diagnostics-card p,
+html[data-theme="dark"] .log-card p {
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] .quick-preset-list button small,
+html[data-theme="dark"] .fleet-reward-mini small,
+html[data-theme="dark"] .command-status-grid span,
+html[data-theme="dark"] .command-chip-row span,
+html[data-theme="dark"] .daily-total-grid button,
+html[data-theme="dark"] .return-check-item small,
+html[data-theme="dark"] .device-row p,
+html[data-theme="dark"] .notification-history-item small {
+  color: var(--text-2) !important;
+}
+
+html[data-theme="dark"] button:disabled {
+  background: rgba(72, 88, 112, 0.45) !important;
+  color: #aebdd0 !important;
+  border-color: rgba(176, 198, 226, 0.18) !important;
+}
+
+@media (max-width: 900px) {
+  .settings-hub-head {
+    display: grid;
+  }
+
+  .settings-hub-status {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .settings-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .settings-hub-card {
+    padding: 16px;
+    border-radius: 24px;
+  }
+
+  .settings-menu-panel {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .settings-menu-item {
+    min-height: 72px;
+    padding: 13px;
+    border-radius: 19px;
+  }
+
+  .settings-menu-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+  }
+}
