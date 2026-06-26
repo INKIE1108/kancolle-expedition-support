@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kancolle-expedition-support-v2.3.0';
+const CACHE_NAME = 'kancolle-expedition-support-v4.7.0';
 
 function scopeUrl(path) {
   return new URL(path, self.registration.scope).toString();
@@ -79,6 +79,12 @@ self.addEventListener('fetch', (event) => {
 
   // APIレスポンスは時刻や通知状態が命なので絶対にキャッシュしない。
   if (sameOrigin && requestUrl.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
+  // 遠征データは更新頻度があるため、古いService Workerキャッシュを優先しない。
+  if (sameOrigin && requestUrl.pathname.endsWith('/data/expeditions.json')) {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }

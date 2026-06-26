@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { expeditions as fallbackExpeditions } from "./data/expeditions";
-import type { AppSettings, Expedition, FleetTimer, ResourceRewards } from "./types";
+import type { AppSettings, Expedition, ExpeditionPrerequisite, FleetTimer, ResourceRewards } from "./types";
 import { formatClock, formatDateTime, formatRemaining, minutesToLabel } from "./utils/time";
 import { loadFromStorage, saveToStorage } from "./utils/storage";
 import {
@@ -77,6 +77,76 @@ type ExpeditionHistory = {
 };
 
 type MonthlyCompletionMap = Record<string, string[]>;
+
+
+type PrerequisiteTrailItem = {
+  expedition: Expedition;
+  depth: number;
+  note?: string;
+};
+
+const DATA_VERSION = "4.7.0";
+
+const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
+  (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
+);
+
+function getExpeditionPrerequisites(expedition: Expedition | null | undefined): ExpeditionPrerequisite[] {
+  if (!expedition) return [];
+  if (Array.isArray(expedition.prerequisites) && expedition.prerequisites.length > 0) return expedition.prerequisites;
+  return fallbackPrerequisiteMap[expedition.id] ?? [];
+}
+
+function findExpeditionByIdIn(expeditionId: string, list: Expedition[]): Expedition | undefined {
+  return list.find((item) => item.id === expeditionId) ?? (fallbackExpeditions as Expedition[]).find((item) => item.id === expeditionId);
+}
+
+function buildPrerequisiteTrail(expeditionId: string, list: Expedition[]): PrerequisiteTrailItem[] {
+  const result: PrerequisiteTrailItem[] = [];
+  const seen = new Set<string>();
+
+  function walk(targetId: string, depth: number) {
+    const target = findExpeditionByIdIn(targetId, list);
+    const prerequisites = getExpeditionPrerequisites(target);
+    for (const prerequisite of prerequisites) {
+      if (!prerequisite.expeditionId || seen.has(prerequisite.expeditionId)) continue;
+      const linked = findExpeditionByIdIn(prerequisite.expeditionId, list);
+      if (!linked) continue;
+      seen.add(linked.id);
+      walk(linked.id, depth + 1);
+      result.push({ expedition: linked, depth, note: prerequisite.note });
+    }
+  }
+
+  walk(expeditionId, 0);
+  return result;
+}
+
+function collectRouteRequirements(expeditionId: string, list: Expedition[]): ExpeditionPrerequisite[] {
+  const result: ExpeditionPrerequisite[] = [];
+  const seenLabels = new Set<string>();
+  const seenIds = new Set<string>();
+
+  function walk(targetId: string) {
+    if (seenIds.has(targetId)) return;
+    seenIds.add(targetId);
+    const target = findExpeditionByIdIn(targetId, list);
+    const prerequisites = getExpeditionPrerequisites(target);
+    for (const prerequisite of prerequisites) {
+      if (prerequisite.expeditionId) {
+        walk(prerequisite.expeditionId);
+        continue;
+      }
+      const key = `${prerequisite.label}|${prerequisite.note ?? ""}`;
+      if (seenLabels.has(key)) continue;
+      seenLabels.add(key);
+      result.push(prerequisite);
+    }
+  }
+
+  walk(expeditionId);
+  return result;
+}
 
 type LandingCraftTypeId =
   | "daihatsu"
@@ -1287,7 +1357,9 @@ function App() {
   const targetTotalDays = targetTotalRemaining <= 0 ? 0 : targetTotalDailyAverage > 0 ? Math.ceil(targetTotalRemaining / targetTotalDailyAverage) : null;
   const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt);
   const selectedFormationPatterns = getFormationPatterns(selectedDetail);
-  const selectedPrerequisites = selectedDetail.prerequisites ?? [];
+  const selectedPrerequisites = getExpeditionPrerequisites(selectedDetail);
+  const selectedPrerequisiteTrail = useMemo(() => buildPrerequisiteTrail(selectedDetail.id, expeditions), [selectedDetail.id, expeditions]);
+  const selectedRouteRequirements = useMemo(() => collectRouteRequirements(selectedDetail.id, expeditions), [selectedDetail.id, expeditions]);
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
@@ -1307,14 +1379,14 @@ function App() {
 
     async function loadExpeditionsJson() {
       try {
-        const response = await fetch(`${import.meta.env.BASE_URL}data/expeditions.json`, { cache: "no-cache" });
+        const response = await fetch(`${import.meta.env.BASE_URL}data/expeditions.json?v=${DATA_VERSION}`, { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const parsed = (await response.json()) as Expedition[];
         if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("遠征データJSONが空です");
         if (!cancelled) {
           setExpeditions(parsed);
           setDataStatus("external");
-          setDataMessage(`${parsed.length}件を /data/expeditions.json から読み込み`);
+          setDataMessage(`${parsed.length}件を /data/expeditions.json v${DATA_VERSION} から読み込み`);
         }
       } catch (error) {
         if (!cancelled) {
@@ -3746,6 +3818,37 @@ function App() {
                         </article>
                       );
                     })}
+                    {selectedPrerequisiteTrail.length > 0 && (
+                      <div className="prerequisite-chain">
+                        <strong>開放ルート</strong>
+                        <p>前提の前提までまとめて表示。カードを押すとその遠征詳細へ移動するよ。</p>
+                        <div className="prerequisite-chain-list">
+                          {selectedPrerequisiteTrail.slice(0, 16).map((item) => (
+                            <button
+                              type="button"
+                              key={`${selectedDetail.id}-trail-${item.expedition.id}`}
+                              className={item.note?.includes("毎月") ? "monthly" : ""}
+                              style={{ marginLeft: `${Math.min(item.depth, 3) * 10}px` }}
+                              onClick={() => jumpToExpeditionDetail(item.expedition.id)}
+                            >
+                              <span>{item.expedition.id}</span>
+                              <strong>{item.expedition.name}</strong>
+                              {item.note?.includes("毎月") && <em>毎月</em>}
+                            </button>
+                          ))}
+                          {selectedPrerequisiteTrail.length > 16 && <small>ほか {selectedPrerequisiteTrail.length - 16} 件の前提あり</small>}
+                          <div className="prerequisite-current"><span>{selectedDetail.id}</span><strong>{selectedDetail.name}</strong></div>
+                        </div>
+                      </div>
+                    )}
+                    {selectedRouteRequirements.length > 0 && (
+                      <div className="route-requirement-list">
+                        <strong>遠征以外の開放条件</strong>
+                        {selectedRouteRequirements.map((item, index) => (
+                          <span key={`${selectedDetail.id}-route-${index}`}>{item.label}{item.note ? ` / ${item.note}` : ""}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </dd>
