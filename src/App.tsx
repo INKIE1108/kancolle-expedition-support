@@ -652,6 +652,119 @@ function formatResources(resources: ResourceRewards): string {
   return `燃${resources.fuel} / 弾${resources.ammo} / 鋼${resources.steel} / ボ${resources.bauxite}`;
 }
 
+
+type FormationPattern = {
+  label: string;
+  requirement: string;
+  example: string;
+  note?: string;
+};
+
+const COMPOSITION_NAME_MAP: Array<[RegExp, string]> = [
+  [/護衛空母/g, "護衛空母"],
+  [/軽空母/g, "軽空母"],
+  [/軽巡洋艦/g, "軽巡洋艦"],
+  [/軽巡/g, "軽巡洋艦"],
+  [/練巡/g, "練習巡洋艦"],
+  [/駆逐艦/g, "駆逐艦"],
+  [/駆逐/g, "駆逐艦"],
+  [/海防艦/g, "海防艦"],
+  [/海防/g, "海防艦"],
+  [/正規空母/g, "正規空母"],
+  [/装甲空母/g, "装甲空母"],
+  [/空母系/g, "空母系"],
+  [/航空戦艦/g, "航空戦艦"],
+  [/戦艦/g, "戦艦"],
+  [/重巡/g, "重巡洋艦"],
+  [/水母/g, "水上機母艦"],
+  [/潜水母艦/g, "潜水母艦"],
+  [/潜水空母/g, "潜水空母"],
+  [/潜水艦/g, "潜水艦"],
+  [/自由枠/g, "自由枠"],
+  [/自由/g, "自由枠"]
+];
+
+function normalizeCompositionText(value: string): string {
+  let text = value
+    .replace(/\s+/g, "")
+    .replace(/旗艦([0-9]+)/g, "(旗艦)×$1")
+    .replace(/([\u4e00-\u9fffA-Za-z/・]+)([0-9]+)/g, "$1×$2")
+    .replace(/\+/g, "＋")
+    .replace(/\//g, "または")
+    .replace(/or/g, "または")
+    .replace(/駆逐艦または海防艦/g, "駆逐艦または海防艦")
+    .replace(/駆逐または海防/g, "駆逐艦または海防艦");
+
+  for (const [pattern, replacement] of COMPOSITION_NAME_MAP) {
+    text = text.replace(pattern, replacement);
+  }
+
+  return text
+    .replace(/＋/g, " / ")
+    .replace(/または/g, " または ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function buildCompositionExample(value: string): string {
+  let text = value
+    .replace(/\s+/g, "")
+    .replace(/護衛空母\/軽巡/g, "護衛空母")
+    .replace(/練巡\/軽巡/g, "軽巡")
+    .replace(/練巡\/護衛空母/g, "練巡")
+    .replace(/駆逐\/海防/g, "駆逐")
+    .replace(/空母系\/水母/g, "軽空母")
+    .replace(/潜水艦\/潜水空母/g, "潜水艦")
+    .replace(/潜水艦\/潜水空母/g, "潜水艦")
+    .replace(/潜水艦\/潜水空母/g, "潜水艦")
+    .replace(/潜水空母/g, "潜水艦")
+    .replace(/\//g, "")
+    .replace(/旗艦/g, "")
+    .replace(/。.*$/, "")
+    .replace(/、.*$/, "")
+    .replace(/または.*$/, "");
+
+  text = normalizeCompositionText(text)
+    .replace(/\(旗艦\)/g, "")
+    .replace(/ または .+?(?=×|\/|$)/g, "")
+    .replace(/空母系×/g, "軽空母×")
+    .replace(/自由枠×/g, "自由枠×");
+
+  return text ? `${text} の例` : "この条件を満たす最小編成を使用";
+}
+
+function getFormationPatterns(expedition: Expedition): FormationPattern[] {
+  if (expedition.id === "43") {
+    return [
+      {
+        label: "パターン1：護衛空母ルート",
+        requirement: "護衛空母(旗艦)×1 / 駆逐艦×2 または 海防艦×2 / 自由枠×3",
+        example: "護衛空母×1＋駆逐艦×2＋重巡洋艦×1＋軽巡洋艦×1＋駆逐艦×1",
+        note: "駆逐艦1＋海防艦1の混在は不可。護衛空母が旗艦。自由枠で火力・対空・対潜・索敵を調整。"
+      },
+      {
+        label: "パターン2：軽空母ルート",
+        requirement: "軽空母(旗艦)×1 / 軽巡洋艦×1 / 駆逐艦×4",
+        example: "軽空母×1＋軽巡洋艦×1＋駆逐艦×4",
+        note: "軽空母が旗艦。自由枠がないため、要求ステータスを満たせる艦・装備で調整。"
+      }
+    ];
+  }
+
+  const rawParts = expedition.requirements.formation
+    .split(/、または|または|。例：|。/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0 && !item.includes("旗艦固定") && !item.includes("実際の支援威力"));
+
+  const parts = rawParts.length > 0 ? rawParts : [expedition.requirements.formation];
+  return parts.slice(0, 8).map((part, index) => ({
+    label: parts.length > 1 ? `パターン${index + 1}` : "編成条件",
+    requirement: normalizeCompositionText(part),
+    example: buildCompositionExample(part),
+    note: expedition.requirements.formation.includes("旗艦固定") || part.includes("旗艦") ? "指定艦が旗艦。" : undefined
+  }));
+}
+
 function getNextActions(expedition: Expedition): string[] {
   const actions = ["艦これ側で遠征帰投を確認", "補給してから再出発"];
 
@@ -1173,6 +1286,7 @@ function App() {
   const targetTotalDailyAverage = getTotalResources(targetDailyAverage);
   const targetTotalDays = targetTotalRemaining <= 0 ? 0 : targetTotalDailyAverage > 0 ? Math.ceil(targetTotalRemaining / targetTotalDailyAverage) : null;
   const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt);
+  const selectedFormationPatterns = getFormationPatterns(selectedDetail);
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
@@ -3559,13 +3673,29 @@ function App() {
               <dt>海域</dt>
               <dd>{selectedDetail.area}</dd>
             </div>
-            <div>
+            <div className="condition-card">
               <dt>成功条件</dt>
               <dd>
-                旗艦：{selectedDetail.requirements.flagshipLevel}<br />
-                隻数：{selectedDetail.requirements.ships}<br />
-                編成：{selectedDetail.requirements.formation}<br />
-                ステータス：{selectedDetail.requirements.stats}
+                <div className="condition-summary-grid">
+                  <span><small>旗艦Lv</small><strong>{selectedDetail.requirements.flagshipLevel}</strong></span>
+                  <span><small>隻数</small><strong>{selectedDetail.requirements.ships}</strong></span>
+                  <span><small>ステータス/その他</small><strong>{selectedDetail.requirements.stats}</strong></span>
+                </div>
+              </dd>
+            </div>
+            <div className="composition-card">
+              <dt>編成条件・編成例</dt>
+              <dd>
+                <div className="composition-pattern-list">
+                  {selectedFormationPatterns.map((pattern) => (
+                    <article className="composition-pattern" key={pattern.label}>
+                      <strong>{pattern.label}</strong>
+                      <p>{pattern.requirement}</p>
+                      <small>編成例：{pattern.example}</small>
+                      {pattern.note && <em>{pattern.note}</em>}
+                    </article>
+                  ))}
+                </div>
               </dd>
             </div>
             <div>

@@ -4585,3 +4585,207 @@ html[data-theme="light"] .stock-record-button {
     font-size: 0.76rem;
   }
 }
+
+/* v4.2: detailed composition patterns + dark contrast rescue */
+.hero .eyebrow::after {
+  content: "  v4.2";
+}
+
+.condition-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.condition-summary-grid span,
+.composition-pattern {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-4, var(--surface-1))) !important;
+}
+
+.condition-summary-grid small,
+.composition-pattern small,
+.composition-pattern em {
+  color: var(--text-2) !important;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.condition-summary-grid strong,
+.composition-pattern p,
+.composition-pattern strong {
+  color: var(--text-0) !important;
+  margin: 0;
+  line-height: 1.55;
+}
+
+.composition-pattern-list {
+  display: grid;
+  gap: 10px;
+}
+
+.composition-pattern strong {
+  color: var(--accent) !important;
+  font-size: 0.93rem;
+}
+
+.composition-pattern small {
+  color: var(--accent) !important;
+}
+
+.composition-pattern em {
+  padding-top: 2px;
+  color: var(--text-1) !important;
+}
+
+html[data-theme="dark"] {
+  --bg-0: #07111f;
+  --bg-1: #0b1728;
+  --surface-0: rgba(13, 24, 43, 0.94);
+  --surface-1: rgba(18, 32, 54, 0.96);
+  --surface-2: rgba(9, 19, 35, 0.92);
+  --surface-4: rgba(15, 29, 50, 0.96);
+  --text-0: #f8fbff;
+  --text-1: #e3edf8;
+  --text-2: #b8c8dc;
+  --muted: #9fb2ca;
+  --border: rgba(179, 205, 236, 0.22);
+  --border-strong: rgba(139, 213, 255, 0.44);
+  --accent: #8bd5ff;
+  --accent-2: #c4b5fd;
+  --accent-soft: rgba(139, 213, 255, 0.16);
+  --accent-soft-2: rgba(196, 181, 253, 0.18);
+  --button-bg: linear-gradient(135deg, #8bd5ff, #c4b5fd);
+  --button-text: #07111f;
+  --secondary-bg: rgba(219, 234, 254, 0.12);
+  --secondary-text: #edf6ff;
+  --ghost-text: #d8efff;
+}
+
+html[data-theme="dark"] .hero,
+html[data-theme="dark"] .command-card,
+html[data-theme="dark"] .fleet-card,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .list-card,
+html[data-theme="dark"] .fold-card,
+html[data-theme="dark"] .records-card,
+html[data-theme="dark"] .preset-card,
+html[data-theme="dark"] .guide-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .pwa-card,
+html[data-theme="dark"] .account-card,
+html[data-theme="dark"] .reward-card,
+html[data-theme="dark"] .diagnostics-card,
+html[data-theme="dark"] .log-card,
+html[data-theme="dark"] .monthly-card {
+  background: rgba(13, 24, 43, 0.94) !important;
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] p,
+html[data-theme="dark"] label,
+html[data-theme="dark"] dd,
+html[data-theme="dark"] .field-head > span,
+html[data-theme="dark"] .quick-preset-list button span,
+html[data-theme="dark"] .preset-button span,
+html[data-theme="dark"] .expedition-main span,
+html[data-theme="dark"] .pinned-main span,
+html[data-theme="dark"] .daily-total-grid button,
+html[data-theme="dark"] .theme-switch button:not(.active),
+html[data-theme="dark"] .desktop-tabbar button:not(.active),
+html[data-theme="dark"] .mobile-tabbar button:not(.active) {
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] .helper-text,
+html[data-theme="dark"] .empty-text,
+html[data-theme="dark"] .hero p,
+html[data-theme="dark"] .guide-description,
+html[data-theme="dark"] .monthly-item small,
+html[data-theme="dark"] .expedition-main small,
+html[data-theme="dark"] .pinned-main small,
+html[data-theme="dark"] .quick-preset-list small:not(:only-child),
+html[data-theme="dark"] .fleet-card .helper-text,
+html[data-theme="dark"] .mini-info dd,
+html[data-theme="dark"] .condition-summary-grid small {
+  color: var(--text-2) !important;
+}
+
+html[data-theme="dark"] .quick-preset-list button,
+html[data-theme="dark"] .command-status-grid span,
+html[data-theme="dark"] .command-chip-row span,
+html[data-theme="dark"] .resource-grid div,
+html[data-theme="dark"] .success-compare div,
+html[data-theme="dark"] .detail-list div,
+html[data-theme="dark"] .mini-info div,
+html[data-theme="dark"] .daily-total-grid button,
+html[data-theme="dark"] .expedition-item,
+html[data-theme="dark"] .pinned-edit-item,
+html[data-theme="dark"] .pinned-main,
+html[data-theme="dark"] .expedition-main,
+html[data-theme="dark"] .manual-timer-row,
+html[data-theme="dark"] .fleet-reward-mini,
+html[data-theme="dark"] .game-resource-grid label,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select {
+  background: linear-gradient(180deg, rgba(12, 25, 45, 0.98), rgba(9, 19, 35, 0.96)) !important;
+  border-color: rgba(179, 205, 236, 0.22) !important;
+  color: var(--text-0) !important;
+}
+
+html[data-theme="dark"] .quick-preset-list small,
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .detail-list dt,
+html[data-theme="dark"] .mini-info dt,
+html[data-theme="dark"] .success-compare span,
+html[data-theme="dark"] .resource-grid div,
+html[data-theme="dark"] .fleet-reward-mini small {
+  color: var(--accent) !important;
+}
+
+html[data-theme="dark"] .mobile-tabbar,
+html[data-theme="dark"] .desktop-tabbar,
+html[data-theme="dark"] .theme-switch {
+  background: rgba(11, 21, 38, 0.94) !important;
+  border-color: rgba(179, 205, 236, 0.24) !important;
+}
+
+html[data-theme="dark"] .mobile-tabbar button.active,
+html[data-theme="dark"] .desktop-tabbar button.active,
+html[data-theme="dark"] .theme-switch button.active {
+  background: var(--button-bg) !important;
+  color: #07111f !important;
+}
+
+html[data-theme="dark"] button.secondary,
+html[data-theme="dark"] button.ghost,
+html[data-theme="dark"] .detail-link,
+html[data-theme="dark"] .stock-fill-button {
+  color: var(--secondary-text) !important;
+}
+
+html[data-theme="dark"] .pin-button:not(.active),
+html[data-theme="dark"] .pinned-box .pinned-edit-item:not(.selected) {
+  background: rgba(15, 29, 50, 0.96) !important;
+  color: var(--text-1) !important;
+}
+
+@media (max-width: 760px) {
+  .condition-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .composition-pattern {
+    padding: 11px;
+    border-radius: 15px;
+  }
+}
