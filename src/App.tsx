@@ -2616,6 +2616,7 @@ function App() {
         <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}><span>設定</span><small>通知・同期</small></button>
       </nav>
 
+      <section className={`ops-overview ${pendingReturnFleets.length > 0 ? "has-returns" : "no-returns"}`}>
       {pendingReturnFleets.length > 0 && (
         <section className="return-check-card" aria-label="帰投チェック">
           <div className="section-head compact">
@@ -2698,6 +2699,7 @@ function App() {
             <span>{notificationStatusLabel}</span>
           </div>
         </article>
+      </section>
       </section>
 
       <details
@@ -3851,11 +3853,11 @@ function App() {
       </details>
 
       <nav className="mobile-tabbar" aria-label="スマホ用ナビゲーション">
-        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}>タイマー</button>
-        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}>遠征</button>
-        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}>攻略</button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}>記録</button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}>設定</button>
+        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}><b>⏱</b><span>タイマー</span></button>
+        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}><b>🔎</b><span>遠征</span></button>
+        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}><b>🧭</b><span>攻略</span></button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b>📈</b><span>記録</span></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={() => switchAppTab("account", "account-cloud-section")}><b>⚙</b><span>設定</span></button>
       </nav>
 
       <details
