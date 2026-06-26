@@ -6290,3 +6290,161 @@ html[data-theme="dark"] .theme-switch button:focus-visible {
   outline: 3px solid rgba(139, 213, 255, 0.48);
   outline-offset: 2px;
 }
+
+/* v4.6: prerequisite links + compact favorite dropdown + dark detail polish */
+.hero .eyebrow::after {
+  content: "  v4.6";
+}
+
+.prerequisite-list {
+  display: grid;
+  gap: 10px;
+}
+
+.prerequisite-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-4, var(--surface-1)));
+}
+
+.prerequisite-item button,
+.prerequisite-static {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: inherit;
+}
+
+.prerequisite-item button {
+  cursor: pointer;
+}
+
+.prerequisite-item button:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prerequisite-item strong {
+  color: var(--text-0);
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.prerequisite-item span,
+.prerequisite-item small {
+  color: var(--text-2);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.prerequisite-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.prerequisite-meta em {
+  font-style: normal;
+  font-weight: 950;
+  font-size: 0.76rem;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.prerequisite-meta em.done {
+  color: #065f46;
+  background: rgba(167, 243, 208, 0.74);
+  border-color: rgba(52, 211, 153, 0.42);
+}
+
+.prerequisite-meta em.pending {
+  color: #92400e;
+  background: rgba(254, 240, 138, 0.76);
+  border-color: rgba(251, 191, 36, 0.42);
+}
+
+.fleet-card select optgroup {
+  font-weight: 950;
+  color: var(--accent);
+}
+
+.fleet-card select option {
+  color: var(--text-0);
+  background: var(--surface-0);
+}
+
+html[data-theme="dark"] .prerequisite-item {
+  background: linear-gradient(180deg, rgba(12, 25, 45, 0.98), rgba(9, 19, 35, 0.98)) !important;
+  border-color: rgba(179, 205, 236, 0.24) !important;
+}
+
+html[data-theme="dark"] .prerequisite-item strong,
+html[data-theme="dark"] .prerequisite-static strong,
+html[data-theme="dark"] .favorite-toggle,
+html[data-theme="dark"] .fleet-card select,
+html[data-theme="dark"] .fleet-card option,
+html[data-theme="dark"] .fleet-card optgroup {
+  color: #f7fbff !important;
+}
+
+html[data-theme="dark"] .prerequisite-item span,
+html[data-theme="dark"] .prerequisite-item small,
+html[data-theme="dark"] .prerequisite-meta small {
+  color: #c7d7ec !important;
+}
+
+html[data-theme="dark"] .prerequisite-meta em.done {
+  color: #bbf7d0 !important;
+  background: rgba(20, 83, 45, 0.72) !important;
+  border-color: rgba(74, 222, 128, 0.34) !important;
+}
+
+html[data-theme="dark"] .prerequisite-meta em.pending {
+  color: #fde68a !important;
+  background: rgba(113, 63, 18, 0.7) !important;
+  border-color: rgba(251, 191, 36, 0.36) !important;
+}
+
+html[data-theme="dark"] .quick-preset-list button span,
+html[data-theme="dark"] .preset-button span,
+html[data-theme="dark"] .label span,
+html[data-theme="dark"] .field-head span,
+html[data-theme="dark"] .mini-check,
+html[data-theme="dark"] .fleet-card .helper-text,
+html[data-theme="dark"] .craft-editor summary span,
+html[data-theme="dark"] .craft-editor summary em {
+  color: #edf6ff !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .quick-preset-list button,
+html[data-theme="dark"] .favorite-toggle,
+html[data-theme="dark"] .fleet-pinned-shortcuts button:not(.active) {
+  background: rgba(12, 25, 45, 0.96) !important;
+  border-color: rgba(179, 205, 236, 0.26) !important;
+}
+
+@media (max-width: 760px) {
+  .fleet-card select {
+    font-size: 0.98rem;
+  }
+
+  .fleet-pinned-shortcuts {
+    display: none !important;
+  }
+
+  .prerequisite-item {
+    padding: 11px;
+    border-radius: 15px;
+  }
+}

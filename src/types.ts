@@ -7,6 +7,12 @@ export type ResourceRewards = {
 
 export type GreatSuccessType = "normalKira" | "drum" | "special" | "unknown";
 
+export type ExpeditionPrerequisite = {
+  label: string;
+  expeditionId?: string;
+  note?: string;
+};
+
 export type Expedition = {
   id: string;
   area: string;
@@ -27,6 +33,7 @@ export type Expedition = {
   purposeTags: string[];
   memo: string;
   sourceNote: string;
+  prerequisites?: ExpeditionPrerequisite[];
 };
 
 export type FleetTimer = {

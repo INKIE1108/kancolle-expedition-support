@@ -1287,6 +1287,7 @@ function App() {
   const targetTotalDays = targetTotalRemaining <= 0 ? 0 : targetTotalDailyAverage > 0 ? Math.ceil(targetTotalRemaining / targetTotalDailyAverage) : null;
   const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt);
   const selectedFormationPatterns = getFormationPatterns(selectedDetail);
+  const selectedPrerequisites = selectedDetail.prerequisites ?? [];
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
   const selectedAdjustedRate = getAdjustedResourceRate(selectedDetail, rewardSettings);
@@ -3490,6 +3491,18 @@ function App() {
                   value={fleet.expeditionId}
                   onChange={(event) => setFleetExpedition(fleet.fleetNo, event.target.value)}
                 >
+                  {pinnedExpeditions.length > 0 && (
+                    <optgroup label={`★ お気に入り ${pinnedExpeditions.length}件`}>
+                      {pinnedExpeditions.map((item) => {
+                        const monthlyDone = isMonthlyDone(item.id);
+                        return (
+                          <option value={item.id} key={`fav-${fleet.fleetNo}-${item.id}`} disabled={monthlyDone && item.id !== fleet.expeditionId}>
+                            ★ {monthlyDone ? "済 " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
                   <optgroup label={`全遠征 ${totalExpeditionCount}件`}>
                     {expeditions.map((item) => {
                       const monthlyDone = isMonthlyDone(item.id);
@@ -3501,7 +3514,7 @@ function App() {
                     })}
                   </optgroup>
                 </select>
-                <p className="helper-text">全{totalExpeditionCount}件を収録。★はお気に入り、右上ボタンで追加・解除できる。</p>
+                <p className="helper-text">お気に入りはドロップダウン最上部に表示。★は右上ボタンで追加・解除できる。</p>
                 <div className="fleet-reward-mini fleet-reward-mini-v36">
                   <div className="bonus-pill">
                     <span>大発系補正</span>
@@ -3701,6 +3714,41 @@ function App() {
             <div>
               <dt>海域</dt>
               <dd>{selectedDetail.area}</dd>
+            </div>
+            <div className="prerequisite-card">
+              <dt>前提遠征・開放条件</dt>
+              <dd>
+                {selectedPrerequisites.length === 0 ? (
+                  <p className="empty-text">前提条件なし、または通常開放済みの遠征です。</p>
+                ) : (
+                  <div className="prerequisite-list">
+                    {selectedPrerequisites.map((item, index) => {
+                      const linkedExpedition = item.expeditionId ? findExpedition(item.expeditionId) : null;
+                      const prerequisiteDone = item.expeditionId ? isMonthlyDone(item.expeditionId) : false;
+                      return (
+                        <article className="prerequisite-item" key={`${selectedDetail.id}-pre-${index}`}>
+                          {linkedExpedition ? (
+                            <button type="button" onClick={() => jumpToExpeditionDetail(linkedExpedition.id)}>
+                              <strong>{linkedExpedition.id}: {linkedExpedition.name}</strong>
+                              <span>{minutesToLabel(linkedExpedition.durationMinutes)} / {linkedExpedition.area}</span>
+                            </button>
+                          ) : (
+                            <div className="prerequisite-static">
+                              <strong>{item.label}</strong>
+                            </div>
+                          )}
+                          <div className="prerequisite-meta">
+                            {item.note && <small>{item.note}</small>}
+                            {item.note?.includes("毎月") && (
+                              <em className={prerequisiteDone ? "done" : "pending"}>{prerequisiteDone ? "今月済" : "今月未記録"}</em>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </dd>
             </div>
             <div className="condition-card">
               <dt>成功条件</dt>
