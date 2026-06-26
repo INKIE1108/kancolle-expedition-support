@@ -51,3 +51,7 @@ git push origin main
 - ダークモードで非アクティブタブの文字が黒く沈んで見える問題を修正。
 - デスクトップ上部タブ、スマホ下部タブ、ライト/ダーク切替の文字色をそれぞれ直接指定し、子要素のspan/small/bにも上書きが効くように調整。
 - 非アクティブ、ホバー、アクティブ、フォーカス時のコントラストを整理し、黒背景でも読みやすいナビゲーションに変更。
+
+
+## v4.6.1
+- package-lock.json の resolved URL を public npm registry に修正し、Vercel/GitHub Actions の依存関係インストール失敗を防止。
