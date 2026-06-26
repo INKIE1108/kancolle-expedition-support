@@ -6188,3 +6188,105 @@ html[data-theme="dark"] button:disabled {
     border-radius: 15px;
   }
 }
+
+
+/* v4.5: dark tab readability hotfix */
+.hero .eyebrow::after {
+  content: "  v4.5";
+}
+
+html[data-theme="dark"] {
+  --nav-text-main: #f1f7ff;
+  --nav-text-sub: #b8c9dd;
+  --nav-text-hover: #ffffff;
+  --nav-active-text: #06111f;
+  --nav-surface: rgba(13, 27, 48, 0.97);
+  --nav-button-surface: rgba(148, 197, 253, 0.055);
+  --nav-button-hover: rgba(139, 213, 255, 0.14);
+}
+
+html[data-theme="dark"] .desktop-tabbar,
+html[data-theme="dark"] .mobile-tabbar,
+html[data-theme="dark"] .theme-switch {
+  background: var(--nav-surface) !important;
+  border-color: rgba(177, 205, 239, 0.34) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button,
+html[data-theme="dark"] .mobile-tabbar button,
+html[data-theme="dark"] .theme-switch button {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--nav-text-main) !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active),
+html[data-theme="dark"] .mobile-tabbar button:not(.active),
+html[data-theme="dark"] .theme-switch button:not(.active) {
+  background: var(--nav-button-surface) !important;
+  color: var(--nav-text-main) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active) span,
+html[data-theme="dark"] .desktop-tabbar button:not(.active) small,
+html[data-theme="dark"] .mobile-tabbar button:not(.active) b,
+html[data-theme="dark"] .mobile-tabbar button:not(.active) span,
+html[data-theme="dark"] .theme-switch button:not(.active),
+html[data-theme="dark"] .theme-switch button:not(.active) * {
+  color: var(--nav-text-main) !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active) small,
+html[data-theme="dark"] .mobile-tabbar button:not(.active) span {
+  color: var(--nav-text-sub) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active):hover,
+html[data-theme="dark"] .mobile-tabbar button:not(.active):hover,
+html[data-theme="dark"] .theme-switch button:not(.active):hover {
+  background: var(--nav-button-hover) !important;
+  border-color: rgba(139, 213, 255, 0.28) !important;
+  color: var(--nav-text-hover) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:not(.active):hover span,
+html[data-theme="dark"] .desktop-tabbar button:not(.active):hover small,
+html[data-theme="dark"] .mobile-tabbar button:not(.active):hover b,
+html[data-theme="dark"] .mobile-tabbar button:not(.active):hover span,
+html[data-theme="dark"] .theme-switch button:not(.active):hover,
+html[data-theme="dark"] .theme-switch button:not(.active):hover * {
+  color: var(--nav-text-hover) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button.active,
+html[data-theme="dark"] .mobile-tabbar button.active,
+html[data-theme="dark"] .theme-switch button.active {
+  background: var(--button-bg) !important;
+  color: var(--nav-active-text) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 14px 34px rgba(125, 211, 252, 0.2) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button.active span,
+html[data-theme="dark"] .desktop-tabbar button.active small,
+html[data-theme="dark"] .mobile-tabbar button.active b,
+html[data-theme="dark"] .mobile-tabbar button.active span,
+html[data-theme="dark"] .theme-switch button.active,
+html[data-theme="dark"] .theme-switch button.active * {
+  color: var(--nav-active-text) !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar button:focus-visible,
+html[data-theme="dark"] .mobile-tabbar button:focus-visible,
+html[data-theme="dark"] .theme-switch button:focus-visible {
+  outline: 3px solid rgba(139, 213, 255, 0.48);
+  outline-offset: 2px;
+}
