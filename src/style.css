@@ -9173,3 +9173,737 @@ html[data-theme="dark"] .stock-grid-line { stroke: rgba(255,255,255,.08) !import
 .app-shell.mobile-tab-timers > .desktop-tabbar.ios-tabbar { order: 1 !important; }
 .app-shell.mobile-tab-timers > .nozaki-timer-card,
 .app-shell.mobile-tab-timers > #fleet-timer-section { order: 3 !important; }
+
+/* ========================================================================== */
+/* v5.2 — semantic dynamic colors / Light & Dark contrast pass               */
+/* UI/UX layout and app logic are intentionally unchanged.                   */
+/* ========================================================================== */
+
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-primary: #F2F2F7;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F2F2F7;
+
+  --label-primary: #000000;
+  --label-secondary: rgba(60, 60, 67, 0.60);
+  --label-tertiary: rgba(60, 60, 67, 0.42);
+  --label-disabled: rgba(60, 60, 67, 0.30);
+
+  --separator: rgba(60, 60, 67, 0.18);
+  --separator-soft: rgba(60, 60, 67, 0.10);
+
+  --fill-primary: rgba(120, 120, 128, 0.20);
+  --fill-secondary: rgba(120, 120, 128, 0.12);
+  --fill-tertiary: rgba(120, 120, 128, 0.08);
+
+  --accent: #007AFF;
+  --accent-soft: rgba(0, 122, 255, 0.10);
+  --accent-focus: rgba(0, 122, 255, 0.22);
+
+  --success: #34C759;
+  --success-soft: rgba(52, 199, 89, 0.11);
+  --warning: #FF9500;
+  --warning-soft: rgba(255, 149, 0, 0.11);
+  --danger: #FF3B30;
+  --danger-soft: rgba(255, 59, 48, 0.10);
+  --favorite: #C99600;
+  --purple: #AF52DE;
+  --purple-soft: rgba(175, 82, 222, 0.10);
+  --cyan: #32ADE6;
+  --mint: #2DBE85;
+
+  --segmented-bg: #E5E5EA;
+  --segmented-selected: #FFFFFF;
+  --segmented-selected-label: #000000;
+
+  /* Compatibility aliases used by the existing components. */
+  --ios-bg: var(--bg-primary);
+  --ios-surface: var(--bg-secondary);
+  --ios-surface-2: var(--bg-tertiary);
+  --ios-text: var(--label-primary);
+  --ios-secondary: var(--label-secondary);
+  --ios-tertiary: var(--label-tertiary);
+  --ios-separator: var(--separator);
+  --ios-fill: var(--fill-secondary);
+  --ios-fill-strong: var(--fill-primary);
+  --ios-blue: var(--accent);
+  --ios-blue-soft: var(--accent-soft);
+  --ios-green: var(--success);
+  --ios-green-soft: var(--success-soft);
+  --ios-orange: var(--warning);
+  --ios-red: var(--danger);
+  --ios-red-soft: var(--danger-soft);
+  --ios-yellow: #FFCC00;
+  --ios-purple: var(--purple);
+  --ios-purple-soft: var(--purple-soft);
+  --ios-cyan: var(--cyan);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-primary: #000000;
+  --bg-secondary: #1C1C1E;
+  --bg-tertiary: #2C2C2E;
+
+  --label-primary: #FFFFFF;
+  --label-secondary: rgba(235, 235, 245, 0.60);
+  --label-tertiary: rgba(235, 235, 245, 0.40);
+  --label-disabled: rgba(235, 235, 245, 0.28);
+
+  --separator: rgba(84, 84, 88, 0.65);
+  --separator-soft: rgba(84, 84, 88, 0.35);
+
+  --fill-primary: rgba(120, 120, 128, 0.36);
+  --fill-secondary: rgba(120, 120, 128, 0.24);
+  --fill-tertiary: rgba(120, 120, 128, 0.18);
+
+  --accent: #0A84FF;
+  --accent-soft: rgba(10, 132, 255, 0.16);
+  --accent-focus: rgba(10, 132, 255, 0.30);
+
+  --success: #30D158;
+  --success-soft: rgba(48, 209, 88, 0.15);
+  --warning: #FF9F0A;
+  --warning-soft: rgba(255, 159, 10, 0.16);
+  --danger: #FF453A;
+  --danger-soft: rgba(255, 69, 58, 0.15);
+  --favorite: #FFD60A;
+  --purple: #BF5AF2;
+  --purple-soft: rgba(191, 90, 242, 0.16);
+  --cyan: #64D2FF;
+  --mint: #63E6BE;
+
+  --segmented-bg: #2C2C2E;
+  --segmented-selected: #48484A;
+  --segmented-selected-label: #FFFFFF;
+
+  --ios-bg: var(--bg-primary);
+  --ios-surface: var(--bg-secondary);
+  --ios-surface-2: var(--bg-tertiary);
+  --ios-text: var(--label-primary);
+  --ios-secondary: var(--label-secondary);
+  --ios-tertiary: var(--label-tertiary);
+  --ios-separator: var(--separator);
+  --ios-fill: var(--fill-secondary);
+  --ios-fill-strong: var(--fill-primary);
+  --ios-blue: var(--accent);
+  --ios-blue-soft: var(--accent-soft);
+  --ios-green: var(--success);
+  --ios-green-soft: var(--success-soft);
+  --ios-orange: var(--warning);
+  --ios-red: var(--danger);
+  --ios-red-soft: var(--danger-soft);
+  --ios-yellow: var(--favorite);
+  --ios-purple: var(--purple);
+  --ios-purple-soft: var(--purple-soft);
+  --ios-cyan: var(--cyan);
+}
+
+/* ----- Global semantic surfaces and text ----- */
+html,
+body,
+#root,
+.app-shell {
+  background: var(--bg-primary) !important;
+  color: var(--label-primary) !important;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  color: var(--label-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+strong,
+.field-head > span,
+.settings-menu-item strong,
+.fold-summary strong,
+.notification-history-main strong,
+.notification-diagnosis b {
+  color: var(--label-primary) !important;
+}
+
+p,
+label,
+dd,
+.helper-text,
+.empty-text,
+.guide-description,
+.monthly-item small,
+.quick-preset-list small,
+.expedition-main small,
+.pinned-main small,
+.fleet-card .helper-text,
+.condition-summary-grid small,
+.fold-summary small,
+.tile-copy small,
+.hero-clock span,
+.hero-clock small,
+.result-count,
+.muted-text {
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+}
+
+.eyebrow,
+.detail-list dt,
+.mini-info dt,
+.success-compare span,
+.fleet-reward-mini small,
+.stock-y-axis,
+.stock-x-axis,
+.daily-chart-item small,
+.diagnostic-tech-line {
+  opacity: 1 !important;
+}
+
+/* Enabled UI must never look disabled. */
+.app-shell button:not(:disabled),
+.app-shell input:not(:disabled),
+.app-shell select:not(:disabled),
+.app-shell textarea:not(:disabled),
+.app-shell label:not(.disabled),
+.app-shell .checkbox-row:not(.disabled) {
+  opacity: 1 !important;
+}
+
+.app-shell button:disabled,
+.app-shell input:disabled,
+.app-shell select:disabled,
+.app-shell textarea:disabled,
+.app-shell [aria-disabled="true"] {
+  opacity: 1 !important;
+  color: var(--label-disabled) !important;
+  -webkit-text-fill-color: var(--label-disabled) !important;
+  background: var(--fill-secondary) !important;
+  cursor: not-allowed !important;
+}
+
+/* ----- Neutral Apple surfaces; no navy theme ----- */
+.command-card,
+.return-check-card,
+.timer-hub-card,
+.nozaki-timer-card,
+.fleet-card,
+.detail-card,
+.list-card,
+.records-card,
+.fold-card,
+.preset-card,
+.guide-card,
+.monthly-card,
+.daily-summary,
+.settings-menu-panel,
+.appearance-setting,
+.resource-stock-input-card,
+.resource-target-panel,
+.notification-history-list,
+.device-summary-grid,
+.device-list {
+  background: var(--bg-secondary) !important;
+  color: var(--label-primary) !important;
+}
+
+.command-status-grid span,
+.command-chip-row span,
+.home-stock-grid span,
+.daily-total-grid button,
+.quick-preset-list button,
+.resource-grid,
+.success-compare,
+.mini-info div,
+.fleet-reward-mini,
+.craft-editor,
+.manual-timer-row,
+.next-actions,
+.reward-bonus-summary,
+.reward-preview-grid > div,
+.toggle-card,
+.stock-summary-grid,
+.target-plan-grid,
+.target-overview-card,
+.stock-point-detail,
+.daily-breakdown-card {
+  background: var(--bg-tertiary) !important;
+  color: var(--label-primary) !important;
+}
+
+html[data-theme="dark"] .command-card,
+html[data-theme="dark"] .return-check-card,
+html[data-theme="dark"] .timer-hub-card,
+html[data-theme="dark"] .nozaki-timer-card,
+html[data-theme="dark"] .fleet-card,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .list-card,
+html[data-theme="dark"] .records-card,
+html[data-theme="dark"] .fold-card,
+html[data-theme="dark"] .preset-card,
+html[data-theme="dark"] .guide-card,
+html[data-theme="dark"] .monthly-card {
+  border-color: var(--separator) !important;
+  box-shadow: none !important;
+}
+
+/* ----- Navigation / tabs ----- */
+.desktop-tabbar.ios-tabbar,
+.mobile-tabbar.ios-bottom-tabbar {
+  border-color: var(--separator) !important;
+}
+
+html[data-theme="light"] .desktop-tabbar.ios-tabbar,
+html[data-theme="light"] .mobile-tabbar.ios-bottom-tabbar {
+  background: rgba(249, 249, 249, 0.84) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar.ios-tabbar,
+html[data-theme="dark"] .mobile-tabbar.ios-bottom-tabbar {
+  background: rgba(28, 28, 30, 0.88) !important;
+}
+
+.desktop-tabbar.ios-tabbar button,
+.mobile-tabbar.ios-bottom-tabbar button {
+  color: var(--label-secondary) !important;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+
+.desktop-tabbar.ios-tabbar button small,
+.mobile-tabbar.ios-bottom-tabbar button span {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+.desktop-tabbar.ios-tabbar button.active,
+.desktop-tabbar.ios-tabbar .timer-primary-tab.active,
+.mobile-tabbar.ios-bottom-tabbar button.active,
+.mobile-tabbar.ios-bottom-tabbar .timer-primary-tab.active {
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+}
+
+/* ----- Segmented controls ----- */
+.ios-segmented-control,
+.timer-hub-card .ios-segmented-control,
+.nozaki-remodel-picker .ios-segmented-control,
+.theme-switch,
+.daily-chart-toolbar,
+.stock-chart-controls {
+  background: var(--segmented-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.ios-segmented-control button,
+.timer-hub-card .ios-segmented-control button,
+.nozaki-remodel-picker .ios-segmented-control button,
+.theme-switch button,
+.daily-chart-toolbar button,
+.stock-chart-controls button {
+  background: transparent !important;
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+
+.ios-segmented-control button.active,
+.timer-hub-card .ios-segmented-control button.active,
+.nozaki-remodel-picker .ios-segmented-control button.active,
+.theme-switch button.active,
+.daily-chart-toolbar button.active,
+.stock-chart-controls button.active {
+  background: var(--segmented-selected) !important;
+  color: var(--segmented-selected-label) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ----- Buttons: blue only for real primary actions ----- */
+.app-shell button,
+.app-shell .file-button {
+  background: var(--fill-secondary) !important;
+  color: var(--label-primary) !important;
+}
+
+.button-row > button:first-child,
+.nozaki-actions > button:first-child,
+.stock-record-button,
+.custom-preset-form > button,
+.pwa-actions > button:first-child {
+  background: var(--accent) !important;
+  color: #FFFFFF !important;
+}
+
+button.secondary,
+.file-button {
+  background: var(--fill-secondary) !important;
+  color: var(--label-primary) !important;
+}
+
+button.ghost,
+.stock-fill-button,
+.detail-link {
+  background: transparent !important;
+  color: var(--accent) !important;
+}
+
+.button-row > button.ghost,
+.delete-preset,
+button[title*="削除"] {
+  color: var(--danger) !important;
+  background: transparent !important;
+}
+
+.return-check-actions button:first-child,
+.record-actions button:first-child {
+  background: var(--success-soft) !important;
+  color: var(--success) !important;
+}
+
+.return-check-actions button:nth-child(2),
+.record-actions button:nth-child(2) {
+  background: var(--purple-soft) !important;
+  color: var(--purple) !important;
+}
+
+/* ----- Frequently faint labels / notification controls ----- */
+.fleet-card .label,
+.checkbox-row,
+.checkbox-row label,
+.checkbox-row span,
+.manual-timer-row label,
+.manual-timer-row .helper-text,
+.game-resource-grid label > span,
+.settings-card p,
+.pwa-card p,
+.account-card p,
+.reward-card p,
+.diagnostics-card p,
+.log-card p {
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+}
+
+.checkbox-row input:not(:disabled) + span,
+.checkbox-row input:not(:disabled) ~ span,
+.checkbox-row input:not(:disabled) + label {
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+}
+
+/* ----- Expedition list: neutral rows, tint only selected ----- */
+.pinned-list,
+.expedition-list {
+  background: var(--bg-secondary) !important;
+}
+
+.pinned-edit-item,
+.expedition-item,
+.pinned-main,
+.expedition-main {
+  background: var(--bg-secondary) !important;
+  color: var(--label-primary) !important;
+}
+
+.pinned-edit-item,
+.expedition-item {
+  border-color: var(--separator) !important;
+}
+
+.pinned-main span,
+.expedition-main span {
+  color: var(--label-primary) !important;
+}
+
+.pinned-main small,
+.expedition-main small {
+  color: var(--label-secondary) !important;
+}
+
+.expedition-item.selected .expedition-main,
+.pinned-edit-item.selected .pinned-main {
+  background: var(--accent-soft) !important;
+  color: var(--label-primary) !important;
+}
+
+.pin-button:not(.active),
+.expedition-item > .pin-button:not(.active) {
+  color: var(--label-tertiary) !important;
+  background: transparent !important;
+}
+
+.pin-button.active,
+.expedition-item > .pin-button.active {
+  color: var(--favorite) !important;
+  background: transparent !important;
+}
+
+/* ----- Today / stock resource cards: neutral backgrounds + tiny accents ----- */
+.daily-total-grid button,
+.home-stock-grid span {
+  background: var(--bg-tertiary) !important;
+  color: var(--label-primary) !important;
+}
+
+.daily-total-grid button strong,
+.home-stock-grid span strong {
+  color: var(--label-primary) !important;
+}
+
+.daily-total-grid button.active {
+  background: var(--accent-soft) !important;
+  color: var(--label-primary) !important;
+}
+
+.daily-total-grid button::before,
+.home-stock-grid span::before { background: var(--cyan) !important; }
+
+/* Daily order: fuel / ammo / steel / bauxite. */
+.daily-total-grid button:nth-child(2)::before { background: var(--mint) !important; }
+.daily-total-grid button:nth-child(3)::before { background: var(--purple) !important; }
+.daily-total-grid button:nth-child(4)::before { background: var(--warning) !important; }
+
+/* Home stock order: fuel / steel / ammo / bauxite. */
+.home-stock-grid span:nth-child(2)::before { background: var(--purple) !important; }
+.home-stock-grid span:nth-child(3)::before { background: var(--mint) !important; }
+.home-stock-grid span:nth-child(4)::before { background: var(--warning) !important; }
+
+/* ----- Forms / focus ----- */
+input,
+select,
+textarea,
+.search-row input,
+.search-row select,
+.fleet-card select,
+.craft-slot-row select,
+.craft-slot-row input {
+  background: var(--fill-secondary) !important;
+  color: var(--label-primary) !important;
+  border-color: transparent !important;
+  opacity: 1 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--label-tertiary) !important;
+  opacity: 1 !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--accent-focus) !important;
+}
+
+/* ----- Timer ----- */
+.timer-box,
+.nozaki-countdown {
+  background: transparent !important;
+  color: var(--label-primary) !important;
+}
+
+.timer-box strong,
+.nozaki-countdown strong {
+  color: var(--label-primary) !important;
+}
+
+.timer-box span,
+.nozaki-countdown span,
+.nozaki-countdown small,
+.mini-info dt {
+  color: var(--label-secondary) !important;
+}
+
+.nozaki-progress-track {
+  background: var(--fill-secondary) !important;
+}
+
+.nozaki-progress-track i {
+  background: var(--accent) !important;
+}
+
+/* ----- Graphs ----- */
+.stock-line-chart,
+.stock-chart-frame {
+  background: transparent !important;
+  color: var(--label-primary) !important;
+}
+
+.stock-grid-line {
+  stroke: var(--separator-soft) !important;
+  opacity: 1 !important;
+}
+
+.stock-y-axis,
+.stock-x-axis,
+.stock-x-axis span,
+.daily-chart-item small {
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+}
+
+.stock-chart-frame svg polyline,
+.stock-line-chart svg polyline {
+  stroke: var(--accent) !important;
+  opacity: 1 !important;
+}
+
+.stock-chart-frame svg circle,
+.stock-line-chart svg circle {
+  fill: var(--accent) !important;
+  stroke: var(--bg-secondary) !important;
+  opacity: 1 !important;
+}
+
+.stock-chart-frame svg circle.selected,
+.stock-line-chart svg circle.selected {
+  fill: var(--accent) !important;
+  stroke: var(--label-primary) !important;
+}
+
+.daily-chart-bar {
+  background: var(--accent) !important;
+  opacity: .78 !important;
+}
+
+.daily-chart-bar-wrap {
+  background: var(--fill-secondary) !important;
+}
+
+/* ----- Settings.app-like Dark Appearance ----- */
+.settings-hub-card,
+.settings-hub-panel {
+  background: transparent !important;
+}
+
+.settings-menu-panel,
+.appearance-setting,
+.app-shell.mobile-tab-account > details.fold-card,
+.device-summary-grid,
+.device-list,
+.notification-history-list {
+  background: var(--bg-secondary) !important;
+}
+
+.settings-menu-item,
+.device-summary-card,
+.device-row,
+.notification-history-item,
+.fold-summary {
+  background: transparent !important;
+  border-color: var(--separator) !important;
+  color: var(--label-primary) !important;
+}
+
+.settings-menu-item small,
+.device-summary-card span,
+.device-row small,
+.fold-summary small,
+.notification-history-item small {
+  color: var(--label-secondary) !important;
+}
+
+.settings-menu-item em,
+.settings-hub-tile .tile-arrow {
+  color: var(--label-tertiary) !important;
+}
+
+/* ----- Status colors as text/badges, not large backgrounds ----- */
+.status.idle { color: var(--label-secondary) !important; background: var(--fill-secondary) !important; }
+.status.running { color: var(--accent) !important; background: var(--accent-soft) !important; }
+.status.done { color: var(--success) !important; background: var(--success-soft) !important; }
+.status.error { color: var(--danger) !important; background: var(--danger-soft) !important; }
+.status.warn,
+.status.warning { color: var(--warning) !important; background: var(--warning-soft) !important; }
+
+/* Dark appearance: eliminate leftover navy/blue borders from older rules. */
+html[data-theme="dark"] .command-card,
+html[data-theme="dark"] .fleet-card,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .list-card,
+html[data-theme="dark"] .fold-card,
+html[data-theme="dark"] .records-card,
+html[data-theme="dark"] .preset-card,
+html[data-theme="dark"] .guide-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .pwa-card,
+html[data-theme="dark"] .account-card,
+html[data-theme="dark"] .reward-card,
+html[data-theme="dark"] .diagnostics-card,
+html[data-theme="dark"] .log-card,
+html[data-theme="dark"] .monthly-card,
+html[data-theme="dark"] .settings-menu-panel,
+html[data-theme="dark"] .device-panel,
+html[data-theme="dark"] .notification-history-list {
+  background-color: var(--bg-secondary) !important;
+  background-image: none !important;
+  border-color: var(--separator) !important;
+}
+
+html[data-theme="dark"] .command-status-grid span,
+html[data-theme="dark"] .command-chip-row span,
+html[data-theme="dark"] .quick-preset-list button,
+html[data-theme="dark"] .resource-grid div,
+html[data-theme="dark"] .success-compare div,
+html[data-theme="dark"] .detail-list div,
+html[data-theme="dark"] .mini-info div,
+html[data-theme="dark"] .daily-total-grid button,
+html[data-theme="dark"] .manual-timer-row,
+html[data-theme="dark"] .fleet-reward-mini,
+html[data-theme="dark"] .game-resource-grid label,
+html[data-theme="dark"] .return-check-item,
+html[data-theme="dark"] .cloud-message,
+html[data-theme="dark"] .status-message,
+html[data-theme="dark"] .reward-bonus-summary,
+html[data-theme="dark"] .toggle-card,
+html[data-theme="dark"] .notification-diagnosis,
+html[data-theme="dark"] .device-summary-card,
+html[data-theme="dark"] .device-row {
+  background-color: var(--bg-tertiary) !important;
+  background-image: none !important;
+  border-color: var(--separator) !important;
+}
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] .fleet-card .label,
+html[data-theme="dark"] .checkbox-row,
+html[data-theme="dark"] .quick-preset-list button span,
+html[data-theme="dark"] .expedition-main span,
+html[data-theme="dark"] .pinned-main span,
+html[data-theme="dark"] .resource-grid strong,
+html[data-theme="dark"] .daily-total-grid strong,
+html[data-theme="dark"] .home-stock-grid strong {
+  color: var(--label-primary) !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .helper-text,
+html[data-theme="dark"] .empty-text,
+html[data-theme="dark"] .hero p,
+html[data-theme="dark"] .guide-description,
+html[data-theme="dark"] .monthly-item small,
+html[data-theme="dark"] .expedition-main small,
+html[data-theme="dark"] .pinned-main small,
+html[data-theme="dark"] .quick-preset-list small,
+html[data-theme="dark"] .fleet-card .helper-text,
+html[data-theme="dark"] .mini-info dd,
+html[data-theme="dark"] .condition-summary-grid small,
+html[data-theme="dark"] .stock-y-axis,
+html[data-theme="dark"] .stock-x-axis,
+html[data-theme="dark"] .daily-chart-item small {
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+}
