@@ -1079,6 +1079,7 @@ function App() {
   const [pushBusy, setPushBusy] = useState<boolean>(false);
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
   const [recordingFleetNos, setRecordingFleetNos] = useState<FleetTimer["fleetNo"][]>([]);
+  const [dismissedReturnKeys, setDismissedReturnKeys] = useState<string[]>([]);
   const [notificationHistory, setNotificationHistory] = useState<NotificationLogRecord[]>([]);
   const [notificationHistoryBusy, setNotificationHistoryBusy] = useState<boolean>(false);
   const [notificationHistoryMessage, setNotificationHistoryMessage] = useState<string>("");
@@ -1388,7 +1389,7 @@ function App() {
   const targetTotalRemaining = targetTotalGoal - targetTotalCurrent;
   const targetTotalDailyAverage = getTotalResources(targetDailyAverage);
   const targetTotalDays = targetTotalRemaining <= 0 ? 0 : targetTotalDailyAverage > 0 ? Math.ceil(targetTotalRemaining / targetTotalDailyAverage) : null;
-  const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt);
+  const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt && !dismissedReturnKeys.includes(getReturnDismissKey(fleet)));
   const selectedFormationPatterns = getFormationPatterns(selectedDetail);
   const selectedPrerequisites = getExpeditionPrerequisites(selectedDetail);
   const selectedPrerequisiteTrail = useMemo(() => buildPrerequisiteTrail(selectedDetail.id, expeditions), [selectedDetail.id, expeditions]);
@@ -1810,7 +1811,16 @@ function App() {
     );
   }
 
+  function getReturnDismissKey(fleet: Pick<FleetTimer, "fleetNo" | "endAt">) {
+    return `${fleet.fleetNo}-${fleet.endAt ?? "none"}`;
+  }
+
+  function clearDismissedReturnForFleet(fleetNo: FleetTimer["fleetNo"]) {
+    setDismissedReturnKeys((current) => current.filter((key) => !key.startsWith(`${fleetNo}-`)));
+  }
+
   function setFleetExpedition(fleetNo: FleetTimer["fleetNo"], expeditionId: string) {
+    clearDismissedReturnForFleet(fleetNo);
     if (authState.user) {
       clearActiveTimer(authState.user.id, fleetNo, expeditionId).catch(() => undefined);
     }
@@ -1825,6 +1835,7 @@ function App() {
   }
 
   function startFleet(fleet: FleetTimer, manualRemainingMinutes?: number) {
+    clearDismissedReturnForFleet(fleet.fleetNo);
     const expedition = findExpedition(fleet.expeditionId);
     const syncedNow = getSyncedNow();
     const totalMinutes = expedition.durationMinutes;
@@ -1973,10 +1984,12 @@ function App() {
 
 
   function recordFleetResult(fleet: FleetTimer, result: HistoryResult) {
-    if (fleet.recordedAt || recordingFleetNos.includes(fleet.fleetNo)) return;
+    const returnDismissKey = getReturnDismissKey(fleet);
+    if (fleet.recordedAt || recordingFleetNos.includes(fleet.fleetNo) || dismissedReturnKeys.includes(returnDismissKey)) return;
 
     const recordedAt = Date.now();
     setRecordingFleetNos((current) => (current.includes(fleet.fleetNo) ? current : [...current, fleet.fleetNo]));
+    setDismissedReturnKeys((current) => (current.includes(returnDismissKey) ? current : [...current, returnDismissKey]));
 
     const expedition = findExpedition(fleet.expeditionId);
     const rewards = calculateAdjustedRewards(expedition, rewardSettings, result === "great", fleet.fleetNo);
@@ -3525,7 +3538,6 @@ function App() {
                 <div className="resource-stock-input-head">
                   <div>
                     <strong>現在資源を入力</strong>
-                    <span>艦これ画面と同じ配置：燃料/鋼材、弾薬/ボーキ</span>
                   </div>
                   {latestStockSnapshot ? <small>最新 {formatShortDateTime(latestStockSnapshot.recordedAt)}</small> : <small>まだ未記録</small>}
                 </div>
