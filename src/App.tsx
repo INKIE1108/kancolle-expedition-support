@@ -86,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "5.0.0";
+const DATA_VERSION = "5.1.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -2204,7 +2204,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.0.0",
+      appVersion: "5.1.0",
       ...overrides
     };
   }
@@ -2837,7 +2837,7 @@ function App() {
         <div className="ios-brand">
           <p className="eyebrow">KanColle Expedition Support</p>
           <h1>艦これ遠征サポート</h1>
-          <p className="ios-subtitle">遠征と資源管理を、ひとつの司令室に。</p>
+          <p className="ios-subtitle">遠征司令室</p>
         </div>
       </header>
 
@@ -2963,7 +2963,7 @@ function App() {
           <div>
             <p className="eyebrow">Settings</p>
             <h2>設定</h2>
-            <p>目的別に整理しました。よく触る設定だけ素早く開けます。</p>
+            <p>通知・同期・外観</p>
           </div>
           <div className="settings-hub-status">
             <span>{cloudStatusLabel}</span>
@@ -3803,7 +3803,6 @@ function App() {
                     })}
                   </optgroup>
                 </select>
-                <p className="helper-text">お気に入りはドロップダウン最上部に表示。★は右上ボタンで追加・解除できる。</p>
                 <div className="fleet-reward-mini fleet-reward-mini-v36">
                   <div className="bonus-pill">
                     <span>大発系補正</span>

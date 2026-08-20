@@ -8183,3 +8183,993 @@ button:not(.ghost):not(.secondary):not(.favorite-toggle):not(.settings-menu-item
   letter-spacing: -0.04em !important;
   font-weight: 760 !important;
 }
+
+/* ========================================================================== */
+/* v5.1 — Apple-native cleanup: less color, fewer cards, list-first UI       */
+/* ========================================================================== */
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+  --ios-bg: #F2F2F7;
+  --ios-surface: #FFFFFF;
+  --ios-surface-2: #F7F7F9;
+  --ios-fill: rgba(118, 118, 128, 0.12);
+  --ios-fill-strong: rgba(118, 118, 128, 0.18);
+  --ios-text: #111114;
+  --ios-secondary: #6D6D72;
+  --ios-tertiary: #AEAEB2;
+  --ios-separator: rgba(60, 60, 67, 0.18);
+  --ios-blue: #007AFF;
+  --ios-blue-soft: rgba(0, 122, 255, 0.08);
+  --ios-green: #34C759;
+  --ios-green-soft: rgba(52, 199, 89, 0.10);
+  --ios-orange: #FF9500;
+  --ios-red: #FF3B30;
+  --ios-red-soft: rgba(255, 59, 48, 0.08);
+  --ios-yellow: #FFCC00;
+  --ios-purple: #AF52DE;
+  --ios-purple-soft: rgba(175, 82, 222, 0.09);
+  --ios-cyan: #32ADE6;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ios-bg: #000000;
+  --ios-surface: #1C1C1E;
+  --ios-surface-2: #2C2C2E;
+  --ios-fill: rgba(120, 120, 128, 0.24);
+  --ios-fill-strong: rgba(120, 120, 128, 0.30);
+  --ios-text: #F5F5F7;
+  --ios-secondary: #AEAEB2;
+  --ios-tertiary: #8E8E93;
+  --ios-separator: rgba(84, 84, 88, 0.65);
+  --ios-blue: #0A84FF;
+  --ios-blue-soft: rgba(10, 132, 255, 0.13);
+  --ios-green: #30D158;
+  --ios-green-soft: rgba(48, 209, 88, 0.12);
+  --ios-orange: #FF9F0A;
+  --ios-red: #FF453A;
+  --ios-red-soft: rgba(255, 69, 58, 0.12);
+  --ios-yellow: #FFD60A;
+  --ios-purple: #BF5AF2;
+  --ios-purple-soft: rgba(191, 90, 242, 0.13);
+  --ios-cyan: #64D2FF;
+}
+
+html,
+body,
+#root,
+button,
+input,
+select,
+textarea {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "SF Pro Display",
+    "Hiragino Sans",
+    "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP",
+    "Yu Gothic UI",
+    "Segoe UI",
+    sans-serif !important;
+}
+
+html,
+body,
+#root {
+  background: var(--ios-bg) !important;
+}
+
+body {
+  color: var(--ios-text) !important;
+  font-size: 16px !important;
+  line-height: 1.5;
+  letter-spacing: -0.012em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 36px)) !important;
+  margin: 0 auto !important;
+  padding: 26px 0 92px !important;
+  gap: 18px !important;
+  background: transparent !important;
+}
+
+/* Keep the timer switch above navigation, and every timer content below it. */
+.hero.ios-app-header { order: 0 !important; }
+#timer-hub-section { order: 0 !important; }
+.desktop-tabbar.ios-tabbar { order: 1 !important; }
+.nozaki-timer-card,
+#fleet-timer-section { order: 3 !important; }
+
+/* ----- Typography ----- */
+.ios-brand .eyebrow,
+.eyebrow {
+  margin-bottom: 4px !important;
+  color: var(--ios-blue) !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  font-weight: 600 !important;
+  letter-spacing: .055em !important;
+}
+
+.ios-brand h1 {
+  font-size: clamp(30px, 3.4vw, 34px) !important;
+  line-height: 1.08 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.ios-subtitle {
+  margin-top: 6px !important;
+  color: var(--ios-secondary) !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+}
+
+h2 { font-size: 22px !important; line-height: 1.2 !important; font-weight: 650 !important; letter-spacing: -0.025em !important; }
+h3 { font-size: 18px !important; line-height: 1.25 !important; font-weight: 600 !important; letter-spacing: -0.018em !important; }
+p, dd, label, input, select, button { font-size: 15px; }
+.helper-text, .empty-text, small, .result-count { font-size: 13px !important; line-height: 1.45 !important; }
+
+.timer-box strong,
+.nozaki-countdown strong,
+.hero-clock strong,
+.daily-total-grid strong,
+.home-stock-grid strong,
+.resource-grid strong,
+.stock-summary-grid strong,
+.target-overview-card strong,
+.target-plan-grid strong,
+.command-status-grid strong {
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.timer-box strong,
+.nozaki-countdown strong {
+  font-size: clamp(46px, 6vw, 64px) !important;
+  font-weight: 650 !important;
+}
+
+/* ----- Large title header: no web-card chrome ----- */
+.hero.ios-app-header {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 14px 2px 8px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ----- Navigation is one of the few places that keeps blur ----- */
+.desktop-tabbar.ios-tabbar {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 5px !important;
+  border: 0.5px solid var(--ios-separator) !important;
+  border-radius: 18px !important;
+  background: rgba(249, 249, 249, 0.82) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.025), 0 4px 16px rgba(0,0,0,.025) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar.ios-tabbar {
+  background: rgba(28, 28, 30, 0.82) !important;
+}
+
+.desktop-tabbar.ios-tabbar button {
+  min-height: 46px !important;
+  padding: 7px 10px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  background: transparent !important;
+  color: var(--ios-secondary) !important;
+  box-shadow: none !important;
+  transition: background-color 180ms ease, color 180ms ease, transform 180ms ease !important;
+}
+
+.desktop-tabbar.ios-tabbar button b { font-size: 15px !important; font-weight: 500 !important; }
+.desktop-tabbar.ios-tabbar button span { font-size: 14px !important; font-weight: 600 !important; }
+.desktop-tabbar.ios-tabbar button.active,
+.desktop-tabbar.ios-tabbar .timer-primary-tab.active {
+  background: var(--ios-blue-soft) !important;
+  color: var(--ios-blue) !important;
+}
+
+/* ----- Sections: solid surfaces, almost no shadows ----- */
+.command-card,
+.return-check-card,
+.timer-hub-card,
+.nozaki-timer-card,
+.fleet-card,
+.detail-card,
+.list-card,
+.records-card,
+.settings-hub-card,
+.fold-card,
+.preset-card,
+.guide-card,
+.monthly-card,
+.daily-summary,
+.pinned-box,
+.custom-preset-card,
+.notification-history-item,
+.monthly-item,
+.guide-item,
+.preset-button-wrap,
+.next-actions,
+.manual-timer-row,
+.daily-breakdown-card {
+  background: var(--ios-surface) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.025), 0 4px 16px rgba(0,0,0,.035) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.timer-hub-card,
+.command-card,
+.return-check-card,
+.settings-hub-card,
+.records-card,
+.detail-search-fold,
+.preset-card,
+.guide-card,
+.monthly-card {
+  border-radius: 22px !important;
+}
+
+.nozaki-timer-card,
+.fleet-card,
+.detail-card,
+.list-card {
+  border-radius: 18px !important;
+}
+
+/* Nested UI should use spacing or separators, not more cards. */
+.command-status-grid span,
+.command-chip-row span,
+.daily-total-grid button,
+.home-stock-grid span,
+.quick-preset-list button,
+.resource-grid div,
+.success-compare div,
+.mini-info div,
+.fleet-reward-mini,
+.craft-editor,
+.nozaki-remodel-picker,
+.nozaki-countdown,
+.nozaki-stats > div,
+.stock-chart-frame,
+.stock-chart-controls,
+.stock-point-detail,
+.stock-summary-grid > div,
+.resource-stock-input-card,
+.resource-target-panel,
+.target-overview-card,
+.target-plan-grid > article,
+.daily-chart-item,
+.reward-bonus-summary,
+.reward-preview-grid > div,
+.toggle-card {
+  background: var(--ios-surface-2) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.command-card,
+.return-check-card { padding: 22px !important; }
+.command-status-grid { gap: 8px !important; }
+.command-status-grid span { border-radius: 14px !important; padding: 13px 14px !important; }
+.command-status-grid strong { font-size: 25px !important; }
+
+/* ----- Button hierarchy ----- */
+.app-shell button,
+.app-shell .file-button {
+  min-height: 44px;
+  border: 0 !important;
+  border-radius: 13px !important;
+  background: var(--ios-fill) !important;
+  background-image: none !important;
+  color: var(--ios-text) !important;
+  box-shadow: none !important;
+  font-weight: 550 !important;
+  transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease, transform 180ms ease !important;
+}
+
+.app-shell button:hover:not(:disabled) { transform: none !important; background: var(--ios-fill-strong) !important; }
+.app-shell button:active:not(:disabled) { transform: scale(.985) !important; }
+.app-shell button:disabled { opacity: .38 !important; }
+
+/* Primary actions only. */
+.button-row > button:first-child,
+.nozaki-actions > button:first-child,
+.stock-record-button,
+.custom-preset-form > button,
+.pwa-actions > button:first-child {
+  background: var(--ios-blue) !important;
+  color: #FFFFFF !important;
+}
+
+.button-row > button:first-child:hover:not(:disabled),
+.nozaki-actions > button:first-child:hover:not(:disabled),
+.stock-record-button:hover:not(:disabled),
+.custom-preset-form > button:hover:not(:disabled),
+.pwa-actions > button:first-child:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ios-blue) 88%, #000 12%) !important;
+}
+
+/* Record actions use state colors as small, quiet accents. */
+.return-check-actions button:first-child,
+.record-actions button:first-child {
+  background: var(--ios-green-soft) !important;
+  color: var(--ios-green) !important;
+}
+.return-check-actions button:nth-child(2),
+.record-actions button:nth-child(2) {
+  background: var(--ios-purple-soft) !important;
+  color: var(--ios-purple) !important;
+}
+
+button.secondary,
+.file-button {
+  background: var(--ios-fill) !important;
+  color: var(--ios-text) !important;
+}
+
+button.ghost,
+.detail-link {
+  background: transparent !important;
+  color: var(--ios-blue) !important;
+}
+
+.button-row > button.ghost,
+.delete-preset,
+button[title*="削除"] {
+  color: var(--ios-red) !important;
+}
+
+.detail-link {
+  border-top: 0.5px solid var(--ios-separator) !important;
+  border-radius: 0 !important;
+  text-align: left !important;
+  padding-inline: 4px !important;
+}
+
+/* ----- Home: resource values are neutral, color is only a small marker ----- */
+.daily-total-grid.compact-resource-cards,
+.home-stock-grid {
+  gap: 8px !important;
+}
+
+.daily-total-grid button,
+.home-stock-grid span {
+  position: relative;
+  min-height: 74px !important;
+  padding: 14px 14px 12px 26px !important;
+  border-radius: 14px !important;
+  background: var(--ios-surface-2) !important;
+  text-align: left !important;
+}
+
+.daily-total-grid button::before,
+.home-stock-grid span::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 18px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ios-blue);
+}
+.daily-total-grid button:nth-child(2)::before,
+.home-stock-grid span:nth-child(3)::before { background: var(--ios-purple); }
+.daily-total-grid button:nth-child(3)::before,
+.home-stock-grid span:nth-child(2)::before { background: var(--ios-secondary); }
+.daily-total-grid button:nth-child(4)::before,
+.home-stock-grid span:nth-child(4)::before { background: var(--ios-orange); }
+
+.daily-total-grid button.active {
+  background: var(--ios-blue-soft) !important;
+  color: var(--ios-text) !important;
+}
+
+.daily-total-grid strong,
+.home-stock-grid strong {
+  display: block !important;
+  margin-top: 4px !important;
+  color: var(--ios-text) !important;
+  font-size: 24px !important;
+  font-weight: 650 !important;
+}
+
+/* ----- Timer selector and timer page ----- */
+.timer-hub-card {
+  padding: 18px 20px !important;
+  box-shadow: none !important;
+}
+
+.timer-hub-card .ios-segmented-control,
+.nozaki-remodel-picker .ios-segmented-control {
+  background: var(--ios-fill) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  padding: 2px !important;
+}
+
+.timer-hub-card .ios-segmented-control button,
+.nozaki-remodel-picker .ios-segmented-control button {
+  background: transparent !important;
+  color: var(--ios-secondary) !important;
+  border-radius: 10px !important;
+}
+
+.timer-hub-card .ios-segmented-control button.active,
+.nozaki-remodel-picker .ios-segmented-control button.active {
+  background: var(--ios-surface) !important;
+  color: var(--ios-text) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08) !important;
+}
+
+.nozaki-timer-card,
+#fleet-timer-section {
+  width: min(100%, 760px) !important;
+  justify-self: center !important;
+  align-self: center !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+#fleet-timer-section {
+  grid-template-columns: minmax(0, 760px) !important;
+  justify-content: center !important;
+}
+
+.nozaki-timer-card { padding: 24px !important; }
+.nozaki-remodel-picker { padding: 0 !important; background: transparent !important; }
+.nozaki-countdown {
+  margin-top: 18px !important;
+  padding: 30px 12px 20px !important;
+  background: transparent !important;
+}
+.nozaki-progress-track { background: var(--ios-fill) !important; height: 4px !important; }
+.nozaki-progress-track i { background: var(--ios-blue) !important; }
+.nozaki-stats { gap: 0 !important; border-top: .5px solid var(--ios-separator); border-bottom: .5px solid var(--ios-separator); }
+.nozaki-stats > div { border-radius: 0 !important; background: transparent !important; padding: 14px 12px !important; }
+.nozaki-stats > div + div { border-left: .5px solid var(--ios-separator) !important; }
+
+.fleet-card { padding: 24px !important; }
+.fleet-card .label { background: transparent !important; padding: 0 !important; }
+.fleet-reward-mini { border-radius: 14px !important; padding: 14px !important; }
+.fleet-pinned-shortcuts { gap: 6px !important; }
+.fleet-pinned-shortcuts button {
+  min-height: 36px !important;
+  padding: 6px 10px !important;
+  background: var(--ios-fill) !important;
+  color: var(--ios-secondary) !important;
+  border-radius: 999px !important;
+}
+.fleet-pinned-shortcuts button.active {
+  background: var(--ios-blue-soft) !important;
+  color: var(--ios-blue) !important;
+}
+.timer-box { margin-top: 4px !important; padding: 26px 12px !important; background: transparent !important; }
+.mini-info { gap: 0 !important; margin-top: 0 !important; }
+.mini-info div {
+  grid-template-columns: minmax(110px, .45fr) 1fr !important;
+  align-items: center !important;
+  padding: 13px 4px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+}
+.mini-info dt { color: var(--ios-secondary) !important; font-size: 13px !important; }
+.mini-info dd { color: var(--ios-text) !important; text-align: right; }
+.manual-timer-row { border-radius: 14px !important; box-shadow: none !important; background: var(--ios-surface-2) !important; }
+.next-actions { border-radius: 14px !important; box-shadow: none !important; background: var(--ios-surface-2) !important; }
+
+/* ----- Expedition detail: list/separator hierarchy ----- */
+.detail-search-fold {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.detail-search-fold > .fold-summary { display: none !important; }
+.detail-search-fold > .fold-content { padding: 0 !important; }
+.two-column { gap: 18px !important; }
+.detail-card,
+.list-card { padding: 22px !important; box-shadow: none !important; }
+
+.resource-grid { gap: 0 !important; border-radius: 16px !important; overflow: hidden; background: var(--ios-surface-2); }
+.resource-grid div {
+  position: relative;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 14px 16px !important;
+}
+.resource-grid div + div { border-left: .5px solid var(--ios-separator) !important; }
+.resource-grid strong { color: var(--ios-text) !important; font-size: 24px !important; }
+.resource-grid small { color: var(--ios-secondary) !important; }
+
+.success-compare { gap: 0 !important; border-radius: 16px !important; overflow: hidden; background: var(--ios-surface-2); }
+.success-compare div { border-radius: 0 !important; background: transparent !important; padding: 14px !important; }
+.success-compare div + div { border-left: .5px solid var(--ios-separator) !important; }
+
+.detail-list { gap: 0 !important; }
+.detail-list > div {
+  margin: 0 !important;
+  padding: 17px 2px !important;
+  border-radius: 0 !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.detail-list > div:last-child { border-bottom: 0 !important; }
+.detail-list dt { color: var(--ios-secondary) !important; font-size: 13px !important; }
+.detail-list dd { color: var(--ios-text) !important; font-size: 15px !important; }
+.condition-summary-grid span,
+.composition-pattern,
+.prerequisite-item,
+.prerequisite-chain,
+.route-requirement-list {
+  background: var(--ios-surface-2) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Expedition list becomes an iOS-style grouped list. */
+.pinned-box {
+  margin-top: 16px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.pinned-list,
+.expedition-list {
+  display: block !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+  background: var(--ios-surface) !important;
+  overflow: hidden !important;
+}
+
+.pinned-edit-item,
+.expedition-item {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 48px !important;
+  gap: 0 !important;
+  background: transparent !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+}
+.pinned-edit-item:last-child,
+.expedition-item:last-child { border-bottom: 0 !important; }
+
+.pinned-main,
+.expedition-main {
+  position: relative;
+  min-height: 72px !important;
+  padding: 13px 30px 13px 14px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ios-text) !important;
+  text-align: left !important;
+}
+.pinned-main::after,
+.expedition-main::after {
+  content: "›";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ios-tertiary);
+  font-size: 24px;
+  font-weight: 300;
+}
+.pinned-main span,
+.expedition-main span { color: var(--ios-text) !important; font-size: 15px !important; font-weight: 600 !important; }
+.pinned-main small,
+.expedition-main small { color: var(--ios-secondary) !important; font-size: 13px !important; }
+.expedition-item.selected .expedition-main,
+.pinned-edit-item.selected .pinned-main {
+  background: var(--ios-blue-soft) !important;
+  color: var(--ios-text) !important;
+}
+.pin-order-actions { border-left: .5px solid var(--ios-separator); }
+.pin-order-actions button,
+.expedition-item > .pin-button {
+  min-height: 36px !important;
+  min-width: 44px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ios-tertiary) !important;
+}
+.pin-button.active,
+.expedition-item > .pin-button.active { color: #C99A00 !important; background: transparent !important; }
+html[data-theme="dark"] .pin-button.active,
+html[data-theme="dark"] .expedition-item > .pin-button.active { color: var(--ios-yellow) !important; }
+
+.search-row { gap: 8px !important; }
+.search-row input,
+.search-row select,
+.fleet-card select,
+.craft-slot-row select,
+.craft-slot-row input {
+  min-height: 44px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--ios-fill) !important;
+  color: var(--ios-text) !important;
+  box-shadow: none !important;
+}
+input:focus,
+select:focus { outline: none !important; box-shadow: 0 0 0 3px var(--ios-blue-soft) !important; }
+
+/* ----- Records: chart is the hero, not the frame ----- */
+.records-card { padding: 22px !important; }
+.records-content { gap: 26px !important; }
+.daily-summary.records-summary { padding: 0 !important; box-shadow: none !important; }
+.daily-chart-toolbar,
+.stock-chart-controls {
+  background: var(--ios-fill) !important;
+  padding: 2px !important;
+  border-radius: 12px !important;
+}
+.daily-chart-toolbar button,
+.stock-chart-controls button {
+  min-height: 36px !important;
+  padding: 6px 9px !important;
+  background: transparent !important;
+  color: var(--ios-secondary) !important;
+  border-radius: 10px !important;
+}
+.daily-chart-toolbar button.active,
+.stock-chart-controls button.active {
+  background: var(--ios-surface) !important;
+  color: var(--ios-text) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08) !important;
+}
+
+.stock-line-chart,
+.stock-chart-frame {
+  min-height: 270px !important;
+  padding: 8px 0 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.stock-grid-line { stroke: rgba(60,60,67,.10) !important; }
+html[data-theme="dark"] .stock-grid-line { stroke: rgba(255,255,255,.08) !important; }
+.stock-chart-frame svg polyline { stroke: var(--ios-blue) !important; stroke-width: 1.15 !important; }
+.stock-chart-frame svg circle {
+  fill: var(--ios-surface) !important;
+  stroke: var(--ios-blue) !important;
+  stroke-width: 1.1 !important;
+}
+.stock-chart-frame svg circle.selected {
+  fill: var(--ios-blue) !important;
+  stroke: var(--ios-surface) !important;
+  stroke-width: 1.25 !important;
+}
+.daily-chart-bar { background: var(--ios-blue) !important; opacity: .72 !important; }
+
+.stock-summary-grid,
+.target-plan-grid { gap: 0 !important; border-radius: 16px !important; overflow: hidden; background: var(--ios-surface-2); }
+.stock-summary-grid > div,
+.target-plan-grid > article {
+  border-radius: 0 !important;
+  background: transparent !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+}
+.stock-summary-grid > div:last-child,
+.target-plan-grid > article:last-child { border-bottom: 0 !important; }
+
+/* Resource inputs use Settings.app-like rows. */
+.resource-stock-input-card,
+.resource-target-panel {
+  padding: 0 !important;
+  background: var(--ios-surface) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+.resource-stock-input-head { padding: 16px 16px 10px !important; }
+.resource-stock-input-grid.game-resource-grid,
+.resource-target-grid.game-resource-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+.resource-stock-input-grid.game-resource-grid label,
+.resource-target-grid.game-resource-grid label {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  min-height: 54px !important;
+  padding: 7px 16px !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+  background: transparent !important;
+}
+.resource-stock-input-grid.game-resource-grid label span,
+.resource-target-grid.game-resource-grid label span {
+  color: var(--ios-text) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+.resource-stock-input-grid.game-resource-grid input,
+.resource-target-grid.game-resource-grid input {
+  width: min(46%, 190px) !important;
+  min-height: 40px !important;
+  padding: 6px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--ios-text) !important;
+  text-align: right !important;
+  font-size: 16px !important;
+  font-variant-numeric: tabular-nums;
+}
+.resource-stock-input-grid.game-resource-grid .stock-record-button,
+.resource-stock-input-grid.game-resource-grid .stock-fill-button,
+.resource-target-grid.game-resource-grid button {
+  margin: 10px 12px 0 !important;
+}
+.resource-stock-input-grid.game-resource-grid .stock-fill-button { margin-bottom: 12px !important; }
+
+/* ----- Settings.app-style grouped list ----- */
+.settings-hub-card {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.settings-hub-head { padding: 6px 2px 14px !important; }
+.settings-hub-head > div > p:not(.eyebrow) { color: var(--ios-secondary) !important; font-size: 14px !important; }
+.settings-hub-status { display: none !important; }
+.appearance-setting {
+  margin: 0 0 22px !important;
+  padding: 0 16px !important;
+  min-height: 58px !important;
+  border-radius: 16px !important;
+  background: var(--ios-surface) !important;
+}
+.settings-menu-panel {
+  padding: 0 !important;
+  border-radius: 16px !important;
+  background: var(--ios-surface) !important;
+  overflow: hidden !important;
+}
+.settings-menu-copy { display: none !important; }
+.settings-menu-grid { display: block !important; }
+.settings-menu-item {
+  width: 100% !important;
+  min-height: 58px !important;
+  display: grid !important;
+  grid-template-columns: 30px 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 14px !important;
+  border-radius: 0 !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+  background: transparent !important;
+  text-align: left !important;
+}
+.settings-menu-item:last-child { border-bottom: 0 !important; }
+.settings-menu-item:hover:not(:disabled) { background: var(--ios-fill) !important; }
+.settings-menu-item strong { font-size: 15px !important; font-weight: 500 !important; }
+.settings-menu-item small { color: var(--ios-secondary) !important; font-size: 12px !important; }
+.settings-menu-item em { color: var(--ios-tertiary) !important; font-size: 24px !important; font-style: normal !important; font-weight: 300 !important; }
+.settings-menu-icon { font-size: 17px !important; filter: grayscale(1); opacity: .72; }
+
+.app-shell.mobile-tab-account > details.fold-card {
+  margin-top: 18px !important;
+  border-radius: 16px !important;
+  background: var(--ios-surface) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+.app-shell.mobile-tab-account > details.fold-card > .fold-summary {
+  min-height: 58px !important;
+  padding: 10px 16px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.app-shell.mobile-tab-account > details.fold-card > .fold-summary em {
+  color: var(--ios-blue) !important;
+  background: transparent !important;
+  font-size: 13px !important;
+}
+.app-shell.mobile-tab-account > details.fold-card[open] > .fold-summary {
+  border-bottom: .5px solid var(--ios-separator) !important;
+}
+.app-shell.mobile-tab-account > details.fold-card > .fold-content { padding: 16px !important; }
+
+.settings-grid.simplified,
+.pwa-actions { gap: 8px !important; }
+.settings-grid.simplified input { background: var(--ios-fill) !important; border: 0 !important; }
+.toggle-card { border-radius: 0 !important; border-bottom: .5px solid var(--ios-separator) !important; }
+.reward-settings-grid { gap: 0 !important; border-radius: 16px; overflow: hidden; background: var(--ios-surface-2); }
+
+/* ----- Mobile native tab bar and safe area ----- */
+@media (max-width: 760px) {
+  .app-shell {
+    width: 100% !important;
+    padding: 14px 16px calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .ios-brand h1 { font-size: 32px !important; }
+  .ios-subtitle { font-size: 14px !important; }
+
+  .mobile-tabbar.ios-bottom-tabbar {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    min-height: 66px !important;
+    padding: 5px 6px calc(5px + env(safe-area-inset-bottom) * .10) !important;
+    border: .5px solid var(--ios-separator) !important;
+    border-radius: 20px !important;
+    background: rgba(249, 249, 249, 0.84) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 6px 22px rgba(0,0,0,.08) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  }
+  html[data-theme="dark"] .mobile-tabbar.ios-bottom-tabbar { background: rgba(28,28,30,.84) !important; }
+
+  .mobile-tabbar.ios-bottom-tabbar button {
+    min-height: 56px !important;
+    border-radius: 13px !important;
+    background: transparent !important;
+    color: var(--ios-secondary) !important;
+  }
+  .mobile-tabbar.ios-bottom-tabbar button.active,
+  .mobile-tabbar.ios-bottom-tabbar .timer-primary-tab.active {
+    background: transparent !important;
+    color: var(--ios-blue) !important;
+  }
+  .mobile-tabbar.ios-bottom-tabbar button b { font-size: 21px !important; }
+  .mobile-tabbar.ios-bottom-tabbar button span { font-size: 10px !important; font-weight: 600 !important; }
+
+  .timer-hub-card { padding: 16px !important; }
+  .nozaki-timer-card,
+  .fleet-card { padding: 18px !important; }
+  .timer-box strong,
+  .nozaki-countdown strong { font-size: clamp(44px, 14vw, 58px) !important; }
+
+  .two-column { grid-template-columns: 1fr !important; }
+  .detail-card,
+  .list-card,
+  .records-card { padding: 16px !important; }
+  .resource-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .resource-grid div:nth-child(3) { border-left: 0 !important; border-top: .5px solid var(--ios-separator) !important; }
+  .resource-grid div:nth-child(4) { border-top: .5px solid var(--ios-separator) !important; }
+  .success-compare { display: block !important; }
+  .success-compare div + div { border-left: 0 !important; border-top: .5px solid var(--ios-separator) !important; }
+
+  .search-row.search-row-v04 { grid-template-columns: 1fr 1fr !important; }
+  .search-row.search-row-v04 input { grid-column: 1 / -1 !important; }
+
+  .daily-total-grid.compact-resource-cards,
+  .home-stock-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  .return-check-item { grid-template-columns: 1fr !important; }
+  .return-check-actions { justify-content: stretch !important; display: grid !important; grid-template-columns: 1fr 1fr !important; }
+  .return-check-actions button:last-child { grid-column: 1 / -1; }
+
+  .button-row { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+  .button-row > button:first-child { grid-column: 1 / -1; }
+
+  .mini-info div { grid-template-columns: 1fr auto !important; }
+
+  .settings-menu-item { min-height: 62px !important; }
+}
+
+@media (max-width: 430px) {
+  body { font-size: 16px !important; }
+  .app-shell { padding-left: 14px !important; padding-right: 14px !important; }
+  .ios-brand h1 { font-size: 30px !important; }
+  .timer-box strong,
+  .nozaki-countdown strong { font-size: 46px !important; }
+  .nozaki-stats > div { padding-inline: 8px !important; }
+  .nozaki-stats strong { font-size: 14px !important; }
+  .search-row.search-row-v04 { grid-template-columns: 1fr !important; }
+  .search-row.search-row-v04 input { grid-column: auto !important; }
+  .resource-stock-input-grid.game-resource-grid input,
+  .resource-target-grid.game-resource-grid input { width: 50% !important; }
+}
+
+/* Settings subviews: flatten management-style widgets into grouped rows. */
+.device-panel {
+  margin-top: 14px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.device-panel .mini-heading,
+.device-list-title {
+  margin: 18px 4px 8px !important;
+  color: var(--ios-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: .02em !important;
+}
+.device-summary-grid,
+.device-list {
+  display: block !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: var(--ios-surface-2) !important;
+}
+.device-summary-card,
+.device-row {
+  min-height: 56px !important;
+  margin: 0 !important;
+  padding: 10px 14px !important;
+  border: 0 !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.device-summary-card:last-child,
+.device-row:last-child { border-bottom: 0 !important; }
+.device-summary-card span,
+.device-row small,
+.muted-text { color: var(--ios-secondary) !important; }
+.device-summary-card strong,
+.device-row strong { color: var(--ios-text) !important; font-weight: 550 !important; }
+.device-action-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-top: 12px !important;
+}
+.device-action-row button:last-child {
+  color: var(--ios-red) !important;
+  background: var(--ios-red-soft) !important;
+}
+
+.pwa-status {
+  gap: 8px !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+.status-dot {
+  background: var(--ios-fill) !important;
+  color: var(--ios-secondary) !important;
+  border: 0 !important;
+}
+.status-dot.ok { color: var(--ios-green) !important; }
+.status-dot.warn { color: var(--ios-orange) !important; }
+
+.notification-history-list { gap: 0 !important; border-radius: 16px; overflow: hidden; background: var(--ios-surface-2); }
+.notification-history-item {
+  margin: 0 !important;
+  padding: 14px !important;
+  border-radius: 0 !important;
+  border-bottom: .5px solid var(--ios-separator) !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.notification-history-item:last-child { border-bottom: 0 !important; }
+.diagnostic-tech-line { color: var(--ios-tertiary) !important; font-size: 12px !important; }
+
+/* Keep the desktop timer nav consistently between timer selector and content. */
+.app-shell.mobile-tab-timers > #timer-hub-section { order: 0 !important; }
+.app-shell.mobile-tab-timers > .desktop-tabbar.ios-tabbar { order: 1 !important; }
+.app-shell.mobile-tab-timers > .nozaki-timer-card,
+.app-shell.mobile-tab-timers > #fleet-timer-section { order: 3 !important; }
