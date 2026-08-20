@@ -1078,6 +1078,7 @@ function App() {
   const [pushMessage, setPushMessage] = useState<string>("");
   const [pushBusy, setPushBusy] = useState<boolean>(false);
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
+  const [recordingFleetNos, setRecordingFleetNos] = useState<FleetTimer["fleetNo"][]>([]);
   const [notificationHistory, setNotificationHistory] = useState<NotificationLogRecord[]>([]);
   const [notificationHistoryBusy, setNotificationHistoryBusy] = useState<boolean>(false);
   const [notificationHistoryMessage, setNotificationHistoryMessage] = useState<string>("");
@@ -1972,12 +1973,16 @@ function App() {
 
 
   function recordFleetResult(fleet: FleetTimer, result: HistoryResult) {
-    if (fleet.recordedAt) return;
+    if (fleet.recordedAt || recordingFleetNos.includes(fleet.fleetNo)) return;
+
+    const recordedAt = Date.now();
+    setRecordingFleetNos((current) => (current.includes(fleet.fleetNo) ? current : [...current, fleet.fleetNo]));
+
     const expedition = findExpedition(fleet.expeditionId);
     const rewards = calculateAdjustedRewards(expedition, rewardSettings, result === "great", fleet.fleetNo);
     const record: ExpeditionHistory = {
-      id: `${Date.now()}-${fleet.fleetNo}-${expedition.id}-${result}`,
-      completedAt: Date.now(),
+      id: `${recordedAt}-${fleet.fleetNo}-${expedition.id}-${result}`,
+      completedAt: recordedAt,
       fleetNo: fleet.fleetNo,
       expeditionId: expedition.id,
       expeditionName: expedition.name,
@@ -1999,13 +2004,21 @@ function App() {
       };
       setMonthlyCompletions(nextMonthlyCompletions);
     }
-    updateFleet(fleet.fleetNo, { recordedAt: Date.now() });
+
+    updateFleet(fleet.fleetNo, { recordedAt });
+
     if (authState.user) {
       clearActiveTimer(authState.user.id, fleet.fleetNo, expedition.id).catch(() => undefined);
       saveImportantCloudChange({ history: nextHistory, monthlyCompletions: nextMonthlyCompletions });
     }
+
     addLog(`帰投記録: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
+
+    window.setTimeout(() => {
+      setRecordingFleetNos((current) => current.filter((fleetNo) => fleetNo !== fleet.fleetNo));
+    }, 400);
   }
+
 
   function clearHistory() {
     const ok = window.confirm("遠征履歴をすべて削除しますか？");
@@ -2837,7 +2850,6 @@ function App() {
             <div>
               <p className="eyebrow">Return Check</p>
               <h2>帰投チェック</h2>
-              <p className="helper-text">通知後にアプリを開いたら、ここからすぐ成功/大成功で記録できるよ。</p>
             </div>
             <span className="status done">{pendingReturnFleets.length}件 完了待ち</span>
           </div>
@@ -2852,8 +2864,8 @@ function App() {
                     <small>終了予定 {formatDateTime(fleet.endAt)} / {getRewardModifierLabel(rewardSettings, fleet.fleetNo)}</small>
                   </div>
                   <div className="return-check-actions">
-                    <button type="button" onClick={() => recordFleetResult(fleet, "success")}>成功で記録</button>
-                    <button type="button" onClick={() => recordFleetResult(fleet, "great")}>大成功で記録</button>
+                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>成功で記録</button>
+                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>大成功で記録</button>
                     <button type="button" className="ghost" onClick={() => jumpToExpeditionDetail(expedition.id)}>条件を見る</button>
                   </div>
                 </article>
@@ -3505,7 +3517,6 @@ function App() {
                 <div>
                   <p className="eyebrow">Resource Stock</p>
                   <h3>所持資源の推移</h3>
-                  <p className="helper-text">1日1〜2回、艦これ側の現在資源を入力。総量の増減や各資源の収支を折れ線で見られるよ。</p>
                 </div>
                 <button type="button" className="ghost small" onClick={clearResourceStockSnapshots} disabled={resourceStockSnapshots.length === 0}>推移削除</button>
               </div>
@@ -3868,10 +3879,10 @@ function App() {
                     ))}
                   </ol>
                   <div className="record-actions">
-                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={Boolean(fleet.recordedAt)}>
+                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={Boolean(fleet.recordedAt) || recordingFleetNos.includes(fleet.fleetNo)}>
                       成功で記録
                     </button>
-                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={Boolean(fleet.recordedAt)}>
+                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={Boolean(fleet.recordedAt) || recordingFleetNos.includes(fleet.fleetNo)}>
                       大成功で記録
                     </button>
                   </div>

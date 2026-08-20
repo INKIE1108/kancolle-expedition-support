@@ -7704,3 +7704,269 @@ html[data-theme="dark"] .monthly-card small {
 .target-plan-grid > article { background: var(--ios-surface-2) !important; color: var(--ios-text) !important; }
 .resource-stock-input-card,
 .resource-target-panel { background: var(--ios-surface) !important; border-color: var(--ios-separator) !important; }
+
+/* ========================================================================== */
+/* v5.0.1 — softer blue, liquid-glass polish, chart visibility improvements   */
+/* ========================================================================== */
+:root,
+html[data-theme="light"] {
+  --ios-surface-glass: rgba(255, 255, 255, 0.72);
+  --ios-surface-glass-strong: rgba(255, 255, 255, 0.84);
+  --ios-blue-soft: rgba(0, 122, 255, 0.12);
+  --ios-blue-soft-strong: rgba(0, 122, 255, 0.16);
+}
+
+html[data-theme="dark"] {
+  --ios-surface-glass: rgba(28, 28, 30, 0.76);
+  --ios-surface-glass-strong: rgba(44, 44, 46, 0.88);
+  --ios-blue-soft: rgba(10, 132, 255, 0.18);
+  --ios-blue-soft-strong: rgba(10, 132, 255, 0.24);
+}
+
+body,
+.app-shell {
+  background: var(--ios-bg) !important;
+}
+
+.hero.ios-app-header {
+  padding-bottom: 10px !important;
+}
+
+.desktop-tabbar.ios-tabbar,
+.mobile-tabbar.ios-bottom-tabbar,
+.expedition-view-switch,
+.command-card,
+.return-check-card,
+.timer-hub-card,
+.nozaki-timer-card,
+.detail-card,
+.list-card,
+.records-card,
+.settings-hub-card,
+.fold-card,
+.preset-card,
+.guide-card,
+.monthly-card {
+  background: var(--ios-surface-glass) !important;
+  backdrop-filter: blur(22px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+}
+
+.command-card,
+.return-check-card,
+.timer-hub-card,
+.nozaki-timer-card,
+.detail-card,
+.list-card,
+.records-card,
+.settings-hub-card,
+.fold-card,
+.preset-card,
+.guide-card,
+.monthly-card {
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+html[data-theme="dark"] .command-card,
+html[data-theme="dark"] .return-check-card,
+html[data-theme="dark"] .timer-hub-card,
+html[data-theme="dark"] .nozaki-timer-card,
+html[data-theme="dark"] .detail-card,
+html[data-theme="dark"] .list-card,
+html[data-theme="dark"] .records-card,
+html[data-theme="dark"] .settings-hub-card,
+html[data-theme="dark"] .fold-card,
+html[data-theme="dark"] .preset-card,
+html[data-theme="dark"] .guide-card,
+html[data-theme="dark"] .monthly-card {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.20) !important;
+}
+
+/* Soften high-contrast blues while keeping primary actions readable */
+.daily-total-grid button,
+.quick-preset-list button,
+.command-status-grid span,
+.home-stock-grid span,
+.resource-grid div,
+.success-compare div,
+.target-plan-grid > article,
+.stock-summary-grid > div,
+.resource-stock-input-card,
+.resource-target-panel,
+.target-overview-card,
+.return-check-item,
+.expedition-main,
+.pinned-main,
+.fleet-card .label,
+.fleet-reward-mini,
+.timer-box,
+.next-actions,
+.manual-timer-row,
+.craft-editor,
+.mini-info > div,
+.nozaki-remodel-picker,
+.nozaki-countdown,
+.nozaki-stats > div,
+.stock-chart-frame,
+.stock-chart-controls,
+.daily-chart-item,
+.daily-breakdown-card {
+  background: var(--ios-surface-glass-strong) !important;
+}
+
+.mini-dashboard-resources button.active,
+.daily-chart-item.selected,
+.expedition-item.selected .expedition-main,
+.pinned-edit-item.selected .pinned-main,
+.expedition-main.selected,
+.pinned-main.selected,
+.desktop-tabbar.ios-tabbar button.active:not(.timer-primary-tab),
+.mobile-tabbar.ios-bottom-tabbar button.active:not(.timer-primary-tab),
+.favorite-toggle,
+button.secondary,
+.file-button,
+.stock-chart-controls button.active,
+.ios-segmented-control button.active,
+.theme-switch button.active,
+.bonus-pill,
+.return-check-actions button.ghost,
+.command-card .ghost.small,
+.next-actions .record-actions button.secondary {
+  background: var(--ios-blue-soft) !important;
+  color: var(--ios-blue) !important;
+  border-color: transparent !important;
+}
+
+.mini-dashboard-resources button.active strong,
+.daily-chart-item.selected strong,
+.expedition-item.selected .expedition-main span,
+.expedition-item.selected .expedition-main small,
+.pinned-edit-item.selected .pinned-main span,
+.pinned-edit-item.selected .pinned-main small,
+.stock-chart-controls button.active,
+.ios-segmented-control button.active,
+.theme-switch button.active,
+.bonus-pill strong {
+  color: var(--ios-text) !important;
+}
+
+button:not(.ghost):not(.secondary):not(.favorite-toggle):not(.settings-menu-item):not(.daily-chart-item):not(.quick-preset-list button):not(.mobile-tabbar button):not(.desktop-tabbar button):not(.theme-switch button):not(.ios-segmented-control button) {
+  background: linear-gradient(180deg, #0A84FF, #007AFF) !important;
+  color: #fff !important;
+}
+
+button:not(.ghost):not(.secondary):not(.favorite-toggle):not(.settings-menu-item):not(.daily-chart-item):not(.quick-preset-list button):not(.mobile-tabbar button):not(.desktop-tabbar button):not(.theme-switch button):not(.ios-segmented-control button):hover:not(:disabled) {
+  filter: saturate(.94) brightness(.98);
+}
+
+.return-check-actions button,
+.record-actions button,
+.nozaki-actions button,
+.button-row button,
+.stock-record-button {
+  min-height: 44px !important;
+}
+
+.quick-preset-list button span,
+.expedition-main span,
+.pinned-main span,
+.resource-grid strong,
+.daily-total-grid button strong,
+.stock-summary-grid strong,
+.target-overview-card strong,
+.target-plan-grid strong,
+.nozaki-stats strong,
+.nozaki-countdown strong {
+  color: var(--ios-text) !important;
+}
+
+.quick-preset-list button small,
+.expedition-main small,
+.pinned-main small,
+.home-stock-grid small,
+.stock-summary-grid span,
+.target-plan-grid small,
+.target-plan-grid em,
+.daily-breakdown-card p,
+.return-check-item small {
+  color: var(--ios-secondary) !important;
+}
+
+/* Remove visual heaviness in list selection */
+.expedition-item,
+.pinned-edit-item {
+  background: transparent !important;
+}
+
+.return-check-item {
+  border: 1px solid rgba(52, 199, 89, 0.16) !important;
+}
+
+.return-check-actions button.ghost {
+  background: rgba(50, 173, 230, 0.12) !important;
+  color: #0A84FF !important;
+}
+
+/* Chart visibility */
+.stock-line-chart svg polyline,
+.stock-chart-frame svg polyline {
+  fill: none !important;
+  stroke: #4A90E2 !important;
+  stroke-width: 1.4 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  opacity: 0.95 !important;
+}
+
+.stock-line-chart circle,
+.stock-chart-frame svg circle {
+  fill: #AF52DE !important;
+  stroke: rgba(255, 255, 255, 0.96) !important;
+  stroke-width: 0.95 !important;
+  opacity: 1 !important;
+}
+
+.stock-line-chart circle.selected,
+.stock-chart-frame svg circle.selected {
+  fill: #007AFF !important;
+  stroke: #FFFFFF !important;
+  stroke-width: 1.25 !important;
+}
+
+.stock-grid-line {
+  stroke: rgba(60, 60, 67, 0.18) !important;
+  opacity: 1 !important;
+}
+
+.stock-grid-line.vertical {
+  stroke: rgba(60, 60, 67, 0.12) !important;
+}
+
+.stock-point-detail,
+.daily-breakdown-card {
+  border: 1px solid rgba(60, 60, 67, 0.10) !important;
+}
+
+.daily-chart-bar-wrap {
+  background: rgba(118, 118, 128, 0.12) !important;
+}
+
+.daily-chart-bar {
+  background: linear-gradient(180deg, rgba(10, 132, 255, 0.88), rgba(0, 122, 255, 0.74)) !important;
+}
+
+/* Remove extra helper copy from layouts once component text is trimmed */
+.return-check-card .helper-text:empty,
+.resource-stock-panel .helper-text:empty {
+  display: none !important;
+}
+
+/* Make helper copy generally quieter */
+.helper-text,
+.empty-text {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: var(--ios-secondary) !important;
+}
