@@ -24,6 +24,7 @@ export type CloudSnapshot = {
   history: unknown[];
   resourceStockSnapshots?: unknown[];
   resourceTargetInputs?: Record<string, unknown>;
+  nozakiTimer?: Record<string, unknown>;
   historyClearedAt?: number;
   resourceStockClearedAt?: number;
   monthlyCompletions?: Record<string, string[]>;
@@ -111,7 +112,6 @@ export async function loadCloudSnapshot(userId: string): Promise<CloudSnapshot |
 
 export async function scheduleCloudNotification(input: ScheduledNotificationInput): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
-  if (!input.webhookUrl.trim()) throw new Error("Discord Webhook URLが未設定です");
 
   // 同じ艦隊の未送信予約が残っていると二重通知になりやすいので、開始時に古いpendingをキャンセル。
   await supabase
@@ -128,7 +128,7 @@ export async function scheduleCloudNotification(input: ScheduledNotificationInpu
     expedition_name: input.expeditionName,
     end_at: new Date(input.endAt).toISOString(),
     content: input.content,
-    webhook_url: input.webhookUrl.trim(),
+    webhook_url: input.webhookUrl.trim() || null,
     status: "pending"
   });
   if (error) throw error;

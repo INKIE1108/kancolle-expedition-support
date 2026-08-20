@@ -6609,3 +6609,1098 @@ html[data-theme="dark"] .fleet-pinned-shortcuts button:not(.active) {
     width: fit-content;
   }
 }
+
+/* ========================================================================== */
+/* v5.0 — iOS-inspired information architecture & visual system               */
+/* ========================================================================== */
+
+:root,
+html[data-theme="light"] {
+  --ios-bg: #F2F2F7;
+  --ios-surface: #FFFFFF;
+  --ios-surface-2: #F7F7FA;
+  --ios-fill: rgba(118, 118, 128, 0.12);
+  --ios-fill-strong: rgba(118, 118, 128, 0.18);
+  --ios-text: #0B0B0F;
+  --ios-secondary: #8E8E93;
+  --ios-tertiary: #AEAEB2;
+  --ios-separator: rgba(60, 60, 67, 0.18);
+  --ios-blue: #007AFF;
+  --ios-blue-soft: rgba(0, 122, 255, 0.09);
+  --ios-green: #34C759;
+  --ios-green-soft: rgba(52, 199, 89, 0.10);
+  --ios-orange: #FF9500;
+  --ios-orange-soft: rgba(255, 149, 0, 0.10);
+  --ios-red: #FF3B30;
+  --ios-purple: #AF52DE;
+  --ios-cyan: #32ADE6;
+  --ios-shadow: 0 1px 3px rgba(0, 0, 0, 0.045);
+}
+
+html[data-theme="dark"] {
+  --ios-bg: #000000;
+  --ios-surface: #1C1C1E;
+  --ios-surface-2: #2C2C2E;
+  --ios-fill: rgba(120, 120, 128, 0.24);
+  --ios-fill-strong: rgba(120, 120, 128, 0.32);
+  --ios-text: #F5F5F7;
+  --ios-secondary: #AEAEB2;
+  --ios-tertiary: #8E8E93;
+  --ios-separator: rgba(84, 84, 88, 0.65);
+  --ios-blue: #0A84FF;
+  --ios-blue-soft: rgba(10, 132, 255, 0.16);
+  --ios-green: #30D158;
+  --ios-green-soft: rgba(48, 209, 88, 0.15);
+  --ios-orange: #FF9F0A;
+  --ios-orange-soft: rgba(255, 159, 10, 0.16);
+  --ios-red: #FF453A;
+  --ios-purple: #BF5AF2;
+  --ios-cyan: #64D2FF;
+  --ios-shadow: none;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--ios-bg) !important;
+}
+
+body {
+  margin: 0;
+  color: var(--ios-text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 32px)) !important;
+  margin: 0 auto !important;
+  padding: 24px 0 110px !important;
+  color: var(--ios-text) !important;
+  background: transparent !important;
+}
+
+/* ----- Strict page visibility: one task at a time ----- */
+.app-shell > .ops-overview,
+.app-shell > #settings-hub-section,
+.app-shell > #pwa-section,
+.app-shell > #notification-section,
+.app-shell > #reward-section,
+.app-shell > #preset-section,
+.app-shell > #monthly-section,
+.app-shell > #strategy-section,
+.app-shell > #records-section,
+.app-shell > #timer-hub-section,
+.app-shell > .nozaki-timer-card,
+.app-shell > #fleet-timer-section,
+.app-shell > #detail-search-section,
+.app-shell > #diagnostics-section,
+.app-shell > #log-section {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-home > .ops-overview { display: block !important; }
+.app-shell.mobile-tab-timers > #timer-hub-section { display: block !important; }
+.app-shell.mobile-tab-timers.timer-focus-nozaki > .nozaki-timer-card { display: block !important; }
+.app-shell.mobile-tab-timers:not(.timer-focus-nozaki) > #fleet-timer-section { display: grid !important; }
+.app-shell.mobile-tab-records > #records-section { display: block !important; }
+.app-shell.mobile-tab-account > #settings-hub-section,
+.app-shell.mobile-tab-account > #pwa-section,
+.app-shell.mobile-tab-account > #notification-section,
+.app-shell.mobile-tab-account > #reward-section,
+.app-shell.mobile-tab-account > #diagnostics-section,
+.app-shell.mobile-tab-account > #log-section { display: block !important; }
+.app-shell.mobile-tab-expeditions.expedition-subtab-search > #detail-search-section { display: block !important; }
+.app-shell.mobile-tab-expeditions.expedition-subtab-assist > #preset-section,
+.app-shell.mobile-tab-expeditions.expedition-subtab-assist > #monthly-section,
+.app-shell.mobile-tab-expeditions.expedition-subtab-assist > #strategy-section { display: block !important; }
+
+.timer-focus-2 #fleet-timer-section .fleet-card:not([data-fleet-no="2"]),
+.timer-focus-3 #fleet-timer-section .fleet-card:not([data-fleet-no="3"]),
+.timer-focus-4 #fleet-timer-section .fleet-card:not([data-fleet-no="4"]) {
+  display: none !important;
+}
+
+/* ----- iOS-style app header ----- */
+.ios-app-header,
+.hero.ios-app-header {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+  min-height: 0 !important;
+  margin: 0 0 18px !important;
+  padding: 10px 4px 4px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.ios-brand .eyebrow {
+  margin: 0 0 6px !important;
+  color: var(--ios-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase;
+}
+
+.ios-brand h1 {
+  margin: 0 !important;
+  color: var(--ios-text) !important;
+  font-size: clamp(28px, 4vw, 38px) !important;
+  line-height: 1.08 !important;
+  font-weight: 760 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.ios-subtitle {
+  margin: 8px 0 0 !important;
+  color: var(--ios-secondary) !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+}
+
+.ios-header-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.theme-switch,
+.ios-segmented-control {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: 1fr !important;
+  gap: 2px !important;
+  padding: 3px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--ios-fill) !important;
+  box-shadow: none !important;
+}
+
+.theme-switch button,
+.ios-segmented-control button {
+  min-height: 36px !important;
+  padding: 7px 13px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  color: var(--ios-secondary) !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  font-weight: 650 !important;
+  white-space: nowrap;
+}
+
+.theme-switch button.active,
+.ios-segmented-control button.active {
+  color: var(--ios-text) !important;
+  background: var(--ios-surface) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08) !important;
+}
+
+html[data-theme="dark"] .theme-switch button.active,
+html[data-theme="dark"] .ios-segmented-control button.active {
+  background: #3A3A3C !important;
+}
+
+/* ----- Navigation ----- */
+.desktop-tabbar.ios-tabbar {
+  position: sticky !important;
+  top: 10px !important;
+  z-index: 40 !important;
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: 4px !important;
+  margin: 0 0 24px !important;
+  padding: 6px !important;
+  border: 1px solid var(--ios-separator) !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.76) !important;
+  background-image: none !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  box-shadow: var(--ios-shadow) !important;
+}
+
+html[data-theme="dark"] .desktop-tabbar.ios-tabbar {
+  background: rgba(28,28,30,.78) !important;
+}
+
+.desktop-tabbar.ios-tabbar button {
+  min-height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  color: var(--ios-secondary) !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.desktop-tabbar.ios-tabbar button b {
+  font-size: 18px !important;
+  font-weight: 500 !important;
+}
+
+.desktop-tabbar.ios-tabbar button span {
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+
+.desktop-tabbar.ios-tabbar button.active {
+  color: var(--ios-blue) !important;
+  background: var(--ios-blue-soft) !important;
+}
+
+.desktop-tabbar.ios-tabbar .timer-primary-tab.active {
+  color: #fff !important;
+  background: var(--ios-blue) !important;
+}
+
+.expedition-view-switch {
+  width: min(440px, 100%) !important;
+  margin: 0 auto 22px !important;
+}
+
+/* ----- Universal card surface ----- */
+.command-card,
+.return-check-card,
+.settings-hub-card,
+.fold-card,
+.records-card,
+.timer-hub-card,
+.nozaki-timer-card,
+.fleet-card,
+.detail-search-fold,
+.guide-card,
+.preset-card,
+.monthly-card,
+.reward-card,
+.settings-card,
+.pwa-card,
+.diagnostics-card,
+.log-card {
+  color: var(--ios-text) !important;
+  border: 1px solid rgba(60,60,67,.08) !important;
+  border-radius: 18px !important;
+  background: var(--ios-surface) !important;
+  background-image: none !important;
+  box-shadow: var(--ios-shadow) !important;
+}
+
+html[data-theme="dark"] .command-card,
+html[data-theme="dark"] .return-check-card,
+html[data-theme="dark"] .settings-hub-card,
+html[data-theme="dark"] .fold-card,
+html[data-theme="dark"] .records-card,
+html[data-theme="dark"] .timer-hub-card,
+html[data-theme="dark"] .nozaki-timer-card,
+html[data-theme="dark"] .fleet-card {
+  border-color: rgba(84,84,88,.45) !important;
+}
+
+.eyebrow {
+  color: var(--ios-blue) !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  letter-spacing: .07em !important;
+}
+
+.helper-text,
+.empty-text,
+.guide-description,
+.fold-summary small,
+.section-head p,
+.command-card p,
+.settings-hub-head p,
+.settings-menu-copy p,
+.fleet-card .label > .helper-text {
+  color: var(--ios-secondary) !important;
+}
+
+h1,h2,h3,h4,strong,b,dt,dd,label,span,p,small,em {
+  text-shadow: none !important;
+}
+
+/* ----- Home ----- */
+.ops-overview {
+  margin: 0 !important;
+}
+
+.dashboard-strip {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 14px !important;
+  margin: 0 !important;
+}
+
+.command-card {
+  min-height: 0 !important;
+  padding: 20px !important;
+}
+
+.status-command-card {
+  grid-column: 1 / -1;
+}
+
+.command-card h2,
+.command-card h3 {
+  margin: 4px 0 14px !important;
+  color: var(--ios-text) !important;
+  letter-spacing: -.02em !important;
+}
+
+.command-status-grid {
+  gap: 10px !important;
+}
+
+.command-status-grid span,
+.daily-total-grid button,
+.home-stock-grid span,
+.quick-preset-list button {
+  border: 0 !important;
+  border-radius: 14px !important;
+  color: var(--ios-text) !important;
+  background: var(--ios-fill) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.command-status-grid span strong {
+  color: var(--ios-text) !important;
+}
+
+.mini-dashboard-resources button.active {
+  color: var(--ios-blue) !important;
+  background: var(--ios-blue-soft) !important;
+}
+
+.home-stock-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 8px !important;
+}
+
+.home-stock-grid span {
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  padding: 12px 14px !important;
+}
+
+.home-stock-grid small { color: var(--ios-secondary) !important; }
+.home-stock-grid strong { font-size: 18px !important; }
+
+.quick-preset-list {
+  gap: 8px !important;
+}
+
+.quick-preset-list button {
+  min-height: 48px !important;
+  padding: 12px 14px !important;
+  text-align: left !important;
+}
+
+.quick-preset-list button small { color: var(--ios-blue) !important; }
+
+.return-check-card {
+  padding: 20px !important;
+  margin: 0 0 14px !important;
+  border-color: rgba(52,199,89,.24) !important;
+  background: var(--ios-surface) !important;
+}
+
+.return-check-item {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--ios-green-soft) !important;
+}
+
+/* ----- Timer hub ----- */
+.timer-hub-card {
+  padding: 16px !important;
+  margin-bottom: 14px !important;
+}
+
+.timer-hub-head {
+  margin-bottom: 12px !important;
+}
+
+.timer-focus-control {
+  width: 100% !important;
+}
+
+.timer-focus-control button {
+  min-height: 42px !important;
+}
+
+#fleet-timer-section.fleet-grid {
+  grid-template-columns: minmax(0, 760px) !important;
+  justify-content: center !important;
+  gap: 14px !important;
+  margin: 0 !important;
+}
+
+.fleet-card {
+  padding: 22px !important;
+}
+
+.fleet-card-head h2 {
+  color: var(--ios-text) !important;
+  font-size: 28px !important;
+  letter-spacing: -.03em !important;
+}
+
+.fleet-card .label,
+.fleet-reward-mini,
+.timer-box,
+.mini-info,
+.manual-timer-row,
+.next-actions,
+.craft-editor,
+.checkbox-row {
+  border-color: var(--ios-separator) !important;
+  background: var(--ios-surface-2) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.fleet-card select,
+.fleet-card input,
+.settings-card input,
+.settings-card select,
+.records-card input,
+.records-card select {
+  color: var(--ios-text) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--ios-fill) !important;
+  background-image: none !important;
+  min-height: 44px !important;
+}
+
+.favorite-toggle {
+  color: var(--ios-blue) !important;
+  border-color: transparent !important;
+  background: var(--ios-blue-soft) !important;
+  background-image: none !important;
+}
+
+.favorite-toggle.active {
+  color: var(--ios-orange) !important;
+  background: var(--ios-orange-soft) !important;
+}
+
+.bonus-pill {
+  border: 0 !important;
+  background: var(--ios-blue-soft) !important;
+}
+
+.bonus-pill strong,
+.fleet-reward-mini small,
+.mini-info dt,
+.mini-info dd {
+  color: var(--ios-text) !important;
+}
+
+.timer-box {
+  padding: 24px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+}
+
+.timer-box span { color: var(--ios-secondary) !important; }
+.timer-box strong {
+  color: var(--ios-text) !important;
+  font-size: clamp(44px, 8vw, 68px) !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.045em !important;
+}
+
+/* ----- Nozaki timer ----- */
+.nozaki-timer-card {
+  width: min(760px, 100%) !important;
+  margin: 0 auto !important;
+  padding: 22px !important;
+}
+
+.nozaki-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin-bottom: 18px !important;
+}
+
+.nozaki-header h2 {
+  margin: 4px 0 0 !important;
+  font-size: 28px !important;
+  letter-spacing: -.03em !important;
+}
+
+.nozaki-remodel-picker {
+  padding: 16px !important;
+  border-radius: 16px !important;
+  background: var(--ios-surface-2) !important;
+}
+
+.nozaki-remodel-picker > span {
+  display: block !important;
+  margin-bottom: 10px !important;
+  font-size: 13px !important;
+  color: var(--ios-secondary) !important;
+}
+
+.nozaki-remodel-picker small {
+  display: block !important;
+  margin-top: 10px !important;
+  color: var(--ios-secondary) !important;
+}
+
+.compact-segment {
+  width: 100% !important;
+}
+
+.nozaki-countdown {
+  margin: 14px 0 !important;
+  padding: 30px 18px 18px !important;
+  border-radius: 18px !important;
+  background: var(--ios-fill) !important;
+  text-align: center !important;
+}
+
+.nozaki-countdown > span {
+  display: block !important;
+  margin-bottom: 7px !important;
+  color: var(--ios-secondary) !important;
+  font-size: 14px !important;
+}
+
+.nozaki-countdown > strong {
+  display: block !important;
+  color: var(--ios-text) !important;
+  font-size: clamp(52px, 11vw, 78px) !important;
+  line-height: 1 !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.05em !important;
+}
+
+.nozaki-progress-track {
+  height: 5px !important;
+  margin-top: 22px !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  background: var(--ios-fill-strong) !important;
+}
+
+.nozaki-progress-track i {
+  display: block !important;
+  height: 100% !important;
+  border-radius: inherit !important;
+  background: var(--ios-blue) !important;
+  transition: width .35s linear;
+}
+
+.nozaki-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3,1fr) !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.nozaki-stats > div {
+  padding: 13px !important;
+  border-radius: 14px !important;
+  background: var(--ios-surface-2) !important;
+}
+
+.nozaki-stats small {
+  display: block !important;
+  color: var(--ios-secondary) !important;
+  margin-bottom: 4px !important;
+}
+
+.nozaki-stats strong {
+  color: var(--ios-text) !important;
+  font-size: 15px !important;
+}
+
+.ios-switch-row {
+  min-height: 54px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 10px 2px !important;
+}
+
+.ios-switch-row span { display: grid !important; gap: 2px !important; }
+.ios-switch-row small { color: var(--ios-secondary) !important; font-weight: 400 !important; }
+.ios-switch-row input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 50px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--ios-fill-strong) !important;
+  position: relative !important;
+  transition: .2s ease !important;
+}
+.ios-switch-row input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: .2s ease;
+}
+.ios-switch-row input[type="checkbox"]:checked { background: var(--ios-green) !important; }
+.ios-switch-row input[type="checkbox"]:checked::after { transform: translateX(20px); }
+
+.nozaki-actions {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  gap: 10px !important;
+  margin-top: 8px !important;
+}
+
+.nozaki-note {
+  margin: 14px 2px 0 !important;
+  color: var(--ios-secondary) !important;
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+/* ----- Buttons: one clear primary action ----- */
+button:not(.mobile-tabbar button):not(.desktop-tabbar button):not(.theme-switch button):not(.ios-segmented-control button),
+.file-button {
+  min-height: 44px;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+button:not(.ghost):not(.secondary):not(.favorite-toggle):not(.settings-menu-item):not(.daily-chart-item):not(.quick-preset-list button):not(.mobile-tabbar button):not(.desktop-tabbar button):not(.theme-switch button):not(.ios-segmented-control button) {
+  border-color: transparent !important;
+  color: #fff !important;
+  background: var(--ios-blue) !important;
+  background-image: none !important;
+}
+
+button.secondary,
+.file-button {
+  color: var(--ios-blue) !important;
+  border-color: transparent !important;
+  background: var(--ios-blue-soft) !important;
+  background-image: none !important;
+}
+
+button.ghost {
+  color: var(--ios-blue) !important;
+  border: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+button:disabled {
+  opacity: .42 !important;
+  cursor: default !important;
+}
+
+.status {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background-image: none !important;
+}
+.status.running { color: var(--ios-blue) !important; background: var(--ios-blue-soft) !important; }
+.status.done { color: var(--ios-green) !important; background: var(--ios-green-soft) !important; }
+.status.error { color: var(--ios-red) !important; background: rgba(255,59,48,.1) !important; }
+.status.idle { color: var(--ios-secondary) !important; background: var(--ios-fill) !important; }
+
+/* ----- Folded/secondary areas ----- */
+.fold-card {
+  margin: 0 0 14px !important;
+  overflow: hidden !important;
+}
+
+.fold-summary {
+  min-height: 58px !important;
+  padding: 14px 18px !important;
+  border: 0 !important;
+  background: var(--ios-surface) !important;
+  background-image: none !important;
+}
+
+.fold-summary strong { color: var(--ios-text) !important; }
+.fold-summary em { color: var(--ios-blue) !important; }
+.fold-content { padding: 4px 18px 18px !important; }
+
+.settings-hub-card {
+  padding: 20px !important;
+  margin-bottom: 14px !important;
+}
+
+.settings-hub-status { display: none !important; }
+.settings-hub-head p { max-width: 52ch !important; }
+.settings-menu-panel { border: 0 !important; background: transparent !important; padding: 0 !important; }
+.settings-menu-copy { display: none !important; }
+.settings-menu-grid { gap: 1px !important; border-radius: 14px !important; overflow: hidden !important; background: var(--ios-separator) !important; }
+.settings-menu-item {
+  min-height: 60px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: var(--ios-text) !important;
+  background: var(--ios-surface-2) !important;
+  background-image: none !important;
+  text-align: left !important;
+}
+.settings-menu-item small { color: var(--ios-secondary) !important; }
+.settings-menu-icon { color: var(--ios-blue) !important; filter: grayscale(1); }
+
+.diagnostic-tech-line {
+  padding: 8px 10px !important;
+  border-radius: 10px !important;
+  color: var(--ios-secondary) !important;
+  background: var(--ios-fill) !important;
+  font-size: 12px !important;
+}
+
+/* ----- Records / expedition details contrast normalization ----- */
+.records-card,
+.detail-search-fold,
+.guide-card,
+.preset-card,
+.monthly-card {
+  color: var(--ios-text) !important;
+}
+
+.records-card [class*="card"],
+.detail-search-fold [class*="card"],
+.guide-card [class*="card"],
+.preset-card [class*="card"],
+.monthly-card [class*="card"] {
+  color: var(--ios-text) !important;
+  background-image: none !important;
+}
+
+html[data-theme="light"] .records-card [class*="card"],
+html[data-theme="light"] .detail-search-fold [class*="card"],
+html[data-theme="light"] .guide-card [class*="card"],
+html[data-theme="light"] .preset-card [class*="card"],
+html[data-theme="light"] .monthly-card [class*="card"] {
+  background-color: var(--ios-surface-2) !important;
+}
+
+html[data-theme="dark"] .records-card [class*="card"],
+html[data-theme="dark"] .detail-search-fold [class*="card"],
+html[data-theme="dark"] .guide-card [class*="card"],
+html[data-theme="dark"] .preset-card [class*="card"],
+html[data-theme="dark"] .monthly-card [class*="card"] {
+  background-color: var(--ios-surface-2) !important;
+}
+
+html[data-theme="dark"] .records-card *,
+html[data-theme="dark"] .detail-search-fold *,
+html[data-theme="dark"] .guide-card *,
+html[data-theme="dark"] .preset-card *,
+html[data-theme="dark"] .monthly-card *,
+html[data-theme="dark"] .fleet-card * {
+  border-color: var(--ios-separator);
+}
+
+html[data-theme="dark"] .records-card strong,
+html[data-theme="dark"] .records-card h2,
+html[data-theme="dark"] .records-card h3,
+html[data-theme="dark"] .detail-search-fold strong,
+html[data-theme="dark"] .detail-search-fold h2,
+html[data-theme="dark"] .detail-search-fold h3,
+html[data-theme="dark"] .guide-card strong,
+html[data-theme="dark"] .preset-card strong,
+html[data-theme="dark"] .monthly-card strong,
+html[data-theme="dark"] .fleet-card strong {
+  color: var(--ios-text) !important;
+}
+
+html[data-theme="dark"] .records-card small,
+html[data-theme="dark"] .records-card p,
+html[data-theme="dark"] .detail-search-fold small,
+html[data-theme="dark"] .detail-search-fold p,
+html[data-theme="dark"] .guide-card small,
+html[data-theme="dark"] .preset-card small,
+html[data-theme="dark"] .monthly-card small {
+  color: var(--ios-secondary) !important;
+}
+
+/* ----- Mobile native-like bottom bar ----- */
+.mobile-tabbar.ios-bottom-tabbar {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: 100% !important;
+    padding: 12px 16px 108px !important;
+  }
+
+  .ios-app-header,
+  .hero.ios-app-header {
+    align-items: flex-start !important;
+    padding: 8px 2px 4px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .ios-brand h1 { font-size: 30px !important; }
+  .ios-subtitle { font-size: 13px !important; }
+  .ios-header-actions { flex-direction: column !important; align-items: stretch !important; }
+  .ios-compact-toggle { display: none !important; }
+  .theme-switch button { min-height: 34px !important; padding: 6px 10px !important; font-size: 12px !important; }
+
+  .desktop-tabbar.ios-tabbar { display: none !important; }
+
+  .mobile-tabbar.ios-bottom-tabbar {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    z-index: 100 !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 2px !important;
+    min-height: 70px !important;
+    margin: 0 !important;
+    padding: 6px !important;
+    border: 1px solid var(--ios-separator) !important;
+    border-radius: 22px !important;
+    background: rgba(255,255,255,.78) !important;
+    background-image: none !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    box-shadow: 0 6px 30px rgba(0,0,0,.10) !important;
+  }
+
+  html[data-theme="dark"] .mobile-tabbar.ios-bottom-tabbar {
+    background: rgba(28,28,30,.82) !important;
+    box-shadow: 0 6px 30px rgba(0,0,0,.34) !important;
+  }
+
+  .mobile-tabbar.ios-bottom-tabbar button {
+    min-width: 0 !important;
+    min-height: 58px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    padding: 4px 2px !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    color: var(--ios-secondary) !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-tabbar.ios-bottom-tabbar button b {
+    font-size: 22px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+  }
+
+  .mobile-tabbar.ios-bottom-tabbar button span {
+    color: inherit !important;
+    font-size: 10px !important;
+    line-height: 1.1 !important;
+    font-weight: 650 !important;
+  }
+
+  .mobile-tabbar.ios-bottom-tabbar button.active {
+    color: var(--ios-blue) !important;
+    background: var(--ios-blue-soft) !important;
+  }
+
+  .mobile-tabbar.ios-bottom-tabbar .timer-primary-tab.active {
+    color: #fff !important;
+    background: var(--ios-blue) !important;
+  }
+
+  .expedition-view-switch {
+    position: sticky !important;
+    top: 8px !important;
+    z-index: 35 !important;
+    margin: 0 auto 14px !important;
+    background: rgba(118,118,128,.14) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+  }
+
+  .dashboard-strip {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .status-command-card { grid-column: auto !important; }
+  .command-card { padding: 18px !important; }
+
+  .command-status-grid {
+    grid-template-columns: repeat(3,1fr) !important;
+  }
+  .command-status-grid span { padding: 12px 7px !important; }
+
+  .daily-total-grid.compact-resource-cards {
+    grid-template-columns: repeat(2,1fr) !important;
+  }
+
+  .timer-hub-card { padding: 14px !important; }
+  .timer-hub-head .helper-text { display: none !important; }
+  .timer-focus-control { grid-auto-flow: unset !important; grid-template-columns: repeat(4,1fr) !important; }
+  .timer-focus-control button { padding: 7px 5px !important; font-size: 12px !important; }
+
+  #fleet-timer-section.fleet-grid { grid-template-columns: 1fr !important; }
+  .fleet-card { padding: 18px !important; }
+  .fleet-card-head h2 { font-size: 27px !important; }
+
+  .fleet-card .label { padding: 14px !important; }
+  .fleet-card .label > .helper-text { display: none !important; }
+  .fleet-pinned-shortcuts { display: none !important; }
+
+  .fleet-reward-mini-v36 {
+    grid-template-columns: 1fr auto !important;
+    padding: 12px !important;
+  }
+  .fleet-reward-mini-v36 > small { grid-column: 1 / -1 !important; }
+
+  .timer-box { padding: 26px 12px !important; }
+  .timer-box strong { font-size: 54px !important; }
+
+  .mini-info { grid-template-columns: 1fr !important; gap: 1px !important; overflow: hidden !important; padding: 0 !important; }
+  .mini-info > div { padding: 12px 14px !important; background: var(--ios-surface-2) !important; }
+
+  .manual-timer-row {
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+  }
+
+  .button-row {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .button-row > button:first-child { grid-column: 1 / -1 !important; }
+
+  .nozaki-timer-card { padding: 18px !important; }
+  .nozaki-countdown { padding: 28px 14px 16px !important; }
+  .nozaki-countdown > strong { font-size: 58px !important; }
+  .nozaki-stats { grid-template-columns: 1fr 1fr 1fr !important; }
+  .nozaki-stats > div { padding: 11px 8px !important; }
+  .nozaki-stats strong { font-size: 13px !important; }
+  .nozaki-actions { grid-template-columns: 1fr !important; }
+
+  .settings-hub-card { padding: 16px !important; }
+  .settings-menu-grid { grid-template-columns: 1fr !important; }
+
+  .fold-content { padding: 2px 14px 16px !important; }
+  .fold-summary { padding: 13px 14px !important; }
+
+  .detail-search-fold,
+  .records-card,
+  .preset-card,
+  .monthly-card,
+  .guide-card,
+  .settings-card,
+  .reward-card,
+  .pwa-card,
+  .diagnostics-card,
+  .log-card {
+    border-radius: 18px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .app-shell { padding-left: 12px !important; padding-right: 12px !important; }
+  .ios-brand .eyebrow { display: none !important; }
+  .ios-brand h1 { font-size: 27px !important; }
+  .ios-subtitle { display: none !important; }
+  .theme-switch button { padding-inline: 8px !important; }
+  .mobile-tabbar.ios-bottom-tabbar { left: 8px !important; right: 8px !important; }
+  .mobile-tabbar.ios-bottom-tabbar button span { font-size: 9px !important; }
+  .timer-focus-control button { font-size: 11px !important; }
+  .nozaki-countdown > strong { font-size: 50px !important; }
+}
+
+/* v5.0 settings appearance row */
+.appearance-setting {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin: 16px 0 !important;
+  padding: 12px 14px !important;
+  border-radius: 14px !important;
+  background: var(--ios-surface-2) !important;
+}
+.appearance-setting > span {
+  display: grid !important;
+  gap: 2px !important;
+}
+.appearance-setting small {
+  color: var(--ios-secondary) !important;
+  font-weight: 400 !important;
+}
+.ios-app-header { justify-content: flex-start !important; }
+@media (max-width: 760px) {
+  .appearance-setting { align-items: stretch !important; flex-direction: column !important; }
+  .appearance-setting .theme-switch { width: 100% !important; }
+}
+
+/* v5.0 visual cleanup: remove legacy decorative gradients */
+.hero .eyebrow::after { content: none !important; display: none !important; }
+.app-shell [class*="card"] { background-image: none !important; }
+.daily-chart-bar { background: var(--ios-blue) !important; opacity: .72 !important; }
+.daily-chart-item.selected .daily-chart-bar { opacity: 1 !important; }
+.daily-chart-bar-wrap { background: var(--ios-fill) !important; }
+.daily-chart-item.selected { background: var(--ios-blue-soft) !important; }
+.stock-chart-controls,
+.stock-chart-frame,
+.stock-point-detail,
+.stock-summary-grid > div,
+.resource-stock-input-card,
+.resource-target-panel,
+.target-overview-card,
+.target-plan-grid > article {
+  background-image: none !important;
+}
+.stock-chart-controls { background: var(--ios-fill) !important; }
+.stock-chart-controls button { color: var(--ios-secondary) !important; background: transparent !important; background-image: none !important; }
+.stock-chart-controls button.active { color: var(--ios-blue) !important; background: var(--ios-surface) !important; box-shadow: 0 1px 2px rgba(0,0,0,.08) !important; }
+.stock-chart-frame { background: var(--ios-surface-2) !important; }
+.stock-grid-line { background: var(--ios-separator) !important; opacity: .55 !important; }
+.stock-point-detail,
+.stock-summary-grid > div,
+.target-overview-card,
+.target-plan-grid > article { background: var(--ios-surface-2) !important; color: var(--ios-text) !important; }
+.resource-stock-input-card,
+.resource-target-panel { background: var(--ios-surface) !important; border-color: var(--ios-separator) !important; }

@@ -61,7 +61,7 @@ function buildPushPayload(content) {
 }
 
 async function sendDiscord(webhookUrl, content) {
-  if (!webhookUrl) {
+  if (!webhookUrl || webhookUrl === "push-only") {
     return {
       ok: false,
       skipped: true,

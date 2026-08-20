@@ -44,6 +44,7 @@ const RESOURCE_STOCK_STORAGE_KEY = "kancolle-expedition-resource-stock-v1";
 const RESOURCE_TARGET_STORAGE_KEY = "kancolle-expedition-resource-target-v1";
 const HISTORY_CLEARED_AT_STORAGE_KEY = "kancolle-expedition-history-cleared-at-v1";
 const RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY = "kancolle-expedition-resource-stock-cleared-at-v1";
+const NOZAKI_TIMER_STORAGE_KEY = "kancolle-expedition-nozaki-timer-v1";
 
 type SortMode =
   | "ID順"
@@ -85,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "4.7.0";
+const DATA_VERSION = "5.0.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -242,8 +243,33 @@ type CollapsibleKey = "account" | "pwa" | "notifications" | "rewards" | "presets
 
 type CollapseState = Record<CollapsibleKey, boolean>;
 
-type MobileTab = "timers" | "assist" | "search" | "records" | "account";
+type MobileTab = "home" | "expeditions" | "timers" | "records" | "account";
+type ExpeditionSubTab = "search" | "assist";
+type TimerFocus = 2 | 3 | 4 | "nozaki";
 type ThemeMode = "dark" | "light";
+type NozakiRemodel = "nosaki" | "nosaki-kai";
+type NozakiTimerState = {
+  remodel: NozakiRemodel;
+  startAt: number | null;
+  endAt: number | null;
+  notifiedAt: number | null;
+  notify: boolean;
+  updatedAt: number;
+};
+
+const NOZAKI_TIMER_CONFIG: Record<NozakiRemodel, { label: string; durationMinutes: number; condPerCycle: number; cycles: number }> = {
+  nosaki: { label: "野埼", durationMinutes: 45, condPerCycle: 2, cycles: 3 },
+  "nosaki-kai": { label: "野埼改", durationMinutes: 30, condPerCycle: 3, cycles: 2 }
+};
+
+const initialNozakiTimer: NozakiTimerState = {
+  remodel: "nosaki-kai",
+  startAt: null,
+  endAt: null,
+  notifiedAt: null,
+  notify: true,
+  updatedAt: 0
+};
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -324,7 +350,8 @@ const backupStorageKeys = [
   RESOURCE_STOCK_STORAGE_KEY,
   RESOURCE_TARGET_STORAGE_KEY,
   HISTORY_CLEARED_AT_STORAGE_KEY,
-  RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY
+  RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY,
+  NOZAKI_TIMER_STORAGE_KEY
 ] as const;
 
 const initialFleets: FleetTimer[] = [2, 3, 4].map((fleetNo) => ({
@@ -1033,8 +1060,13 @@ function App() {
     return window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true;
   });
   const [updateReady, setUpdateReady] = useState<boolean>(false);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("timers");
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadFromStorage(THEME_STORAGE_KEY, "dark" as ThemeMode));
+  const [mobileTab, setMobileTab] = useState<MobileTab>("home");
+  const [expeditionSubTab, setExpeditionSubTab] = useState<ExpeditionSubTab>("search");
+  const [timerFocus, setTimerFocus] = useState<TimerFocus>(2);
+  const [nozakiTimer, setNozakiTimer] = useState<NozakiTimerState>(() =>
+    loadFromStorage(NOZAKI_TIMER_STORAGE_KEY, initialNozakiTimer)
+  );
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadFromStorage(THEME_STORAGE_KEY, "light" as ThemeMode));
   const [compactFleetCards, setCompactFleetCards] = useState<boolean>(() =>
     loadFromStorage("kancolle-expedition-compact-fleet-v1", false)
   );
@@ -1479,7 +1511,13 @@ function App() {
   useEffect(() => {
     saveToStorage(THEME_STORAGE_KEY, themeMode);
     document.documentElement.dataset.theme = themeMode;
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    themeMeta?.setAttribute("content", themeMode === "dark" ? "#000000" : "#F2F2F7");
   }, [themeMode]);
+
+  useEffect(() => {
+    saveToStorage(NOZAKI_TIMER_STORAGE_KEY, nozakiTimer);
+  }, [nozakiTimer]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1595,7 +1633,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, resourceTargetInputs, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
+  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, resourceTargetInputs, nozakiTimer, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1712,6 +1750,24 @@ function App() {
       })
     );
   }, [now, fleets]);
+
+  useEffect(() => {
+    if (!nozakiTimer.endAt || nozakiTimer.notifiedAt || now < nozakiTimer.endAt) return;
+
+    const config = NOZAKI_TIMER_CONFIG[nozakiTimer.remodel];
+    if (nozakiTimer.notify && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        new Notification(`${config.label}タイマー 完了`, {
+          body: `${config.durationMinutes}分経過しました。母港へ戻って給糧判定を確認してください。`,
+          icon: new URL("./icon-192.png", document.baseURI).toString()
+        });
+      } catch {
+        // 通知非対応環境では画面内表示だけで完了を知らせる。
+      }
+    }
+    setNozakiTimer((current) => ({ ...current, notifiedAt: now, updatedAt: Date.now() }));
+    addLog(`${config.label}タイマー完了`);
+  }, [now, nozakiTimer.endAt, nozakiTimer.notifiedAt, nozakiTimer.notify, nozakiTimer.remodel]);
 
   function addLog(message: string) {
     const stamped = `${new Intl.DateTimeFormat("ja-JP", {
@@ -2114,6 +2170,7 @@ function App() {
       history,
       resourceStockSnapshots,
       resourceTargetInputs,
+      nozakiTimer,
       historyClearedAt: historyClearedAtRef.current,
       resourceStockClearedAt: resourceStockClearedAtRef.current,
       monthlyCompletions,
@@ -2121,7 +2178,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "3.9.0",
+      appVersion: "5.0.0",
       ...overrides
     };
   }
@@ -2194,11 +2251,15 @@ function App() {
       (remoteSnapshot.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? [],
       resourceStockClearedAt
     );
+    const localNozaki = localSnapshot.nozakiTimer as NozakiTimerState | undefined;
+    const remoteNozaki = remoteSnapshot.nozakiTimer as NozakiTimerState | undefined;
+    const mergedNozaki = (remoteNozaki?.updatedAt ?? 0) > (localNozaki?.updatedAt ?? 0) ? remoteNozaki : localNozaki;
 
     return {
       ...localSnapshot,
       history: mergedHistory,
       resourceStockSnapshots: mergedStockSnapshots,
+      nozakiTimer: mergedNozaki as unknown as Record<string, unknown> | undefined,
       historyClearedAt,
       resourceStockClearedAt,
       savedAt: new Date().toISOString()
@@ -2365,6 +2426,10 @@ function App() {
     setResourceTargetInputs({
       ...getResourceTargetInputDefaults(),
       ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
+    });
+    setNozakiTimer({
+      ...initialNozakiTimer,
+      ...((snapshot?.nozakiTimer as NozakiTimerState | undefined) ?? nozakiTimer)
     });
     setMonthlyCompletions((snapshot?.monthlyCompletions as MonthlyCompletionMap | undefined) ?? monthlyCompletions);
     setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
@@ -2581,6 +2646,16 @@ function App() {
     }
   }
 
+  const nozakiConfig = NOZAKI_TIMER_CONFIG[nozakiTimer.remodel];
+  const nozakiRunning = Boolean(nozakiTimer.endAt && now < nozakiTimer.endAt);
+  const nozakiCompleted = Boolean(nozakiTimer.endAt && now >= nozakiTimer.endAt);
+  const nozakiRemaining = nozakiTimer.endAt ? formatRemaining(nozakiTimer.endAt - now) : formatRemaining(nozakiConfig.durationMinutes * 60 * 1000);
+  const nozakiElapsedMinutes = nozakiTimer.startAt ? Math.max(0, (now - nozakiTimer.startAt) / 60000) : 0;
+  const nozakiCompletedCycles = Math.min(nozakiConfig.cycles, Math.floor(nozakiElapsedMinutes / 15));
+  const nozakiProgress = nozakiTimer.startAt && nozakiTimer.endAt
+    ? Math.min(100, Math.max(0, ((now - nozakiTimer.startAt) / (nozakiTimer.endAt - nozakiTimer.startAt)) * 100))
+    : 0;
+
   const runningFleetCount = fleets.filter((fleet) => fleet.endAt !== null && now < fleet.endAt).length;
   const completedFleetCount = pendingReturnFleets.length;
   const almostDoneFleetCount = fleets.filter((fleet) => {
@@ -2607,6 +2682,49 @@ function App() {
     }, 0);
   }
 
+  function changeNozakiRemodel(remodel: NozakiRemodel) {
+    if (nozakiRunning) return;
+    const next = { ...nozakiTimer, remodel, startAt: null, endAt: null, notifiedAt: null, updatedAt: Date.now() };
+    setNozakiTimer(next);
+    saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
+  }
+
+  async function startNozakiTimer() {
+    const config = NOZAKI_TIMER_CONFIG[nozakiTimer.remodel];
+    const startAt = getSyncedNow();
+    const endAt = startAt + config.durationMinutes * 60 * 1000;
+    if (nozakiTimer.notify && typeof Notification !== "undefined" && Notification.permission === "default") {
+      try { await Notification.requestPermission(); } catch { /* noop */ }
+    }
+    const next = { ...nozakiTimer, startAt, endAt, notifiedAt: null, updatedAt: Date.now() };
+    setNozakiTimer(next);
+    saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
+
+    if (nozakiTimer.notify && authState.user) {
+      scheduleCloudNotification({
+        userId: authState.user.id,
+        fleetNo: 0,
+        expeditionId: "NOZAKI",
+        expeditionName: `${config.label}タイマー`,
+        endAt,
+        content: `🍙 ${config.label}タイマー完了\n${config.durationMinutes}分経過しました。母港へ戻って給糧判定を確認してください。`,
+        webhookUrl: settings.discordWebhookUrl.trim() || "push-only"
+      }).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "野埼タイマーの通知予約に失敗";
+        addLog(message);
+      });
+    }
+    addLog(`${config.label}タイマー開始（${config.durationMinutes}分）`);
+  }
+
+  function resetNozakiTimer() {
+    const next = { ...nozakiTimer, startAt: null, endAt: null, notifiedAt: null, updatedAt: Date.now() };
+    setNozakiTimer(next);
+    saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
+    if (authState.user) cancelCloudNotification(authState.user.id, 0).catch(() => undefined);
+    addLog(`${NOZAKI_TIMER_CONFIG[nozakiTimer.remodel].label}タイマーをリセット`);
+  }
+
   function jumpToRecords() {
     setSelectedDailyKey(getDayKey(now));
     switchAppTab("records", "records-section");
@@ -2614,13 +2732,15 @@ function App() {
 
   function jumpToExpeditionDetail(expeditionId: string) {
     setSelectedDetailId(expeditionId);
+    setExpeditionSubTab("search");
     setCollapsedPanels((current) => ({ ...current, details: false }));
-    switchAppTab("search", "detail-search-section");
+    switchAppTab("expeditions", "detail-search-section");
   }
 
   function jumpToAssist(targetId: "preset-section" | "strategy-section" = "preset-section") {
+    setExpeditionSubTab("assist");
     setCollapsedPanels((current) => ({ ...current, presets: false, strategy: false }));
-    switchAppTab("assist", targetId);
+    switchAppTab("expeditions", targetId);
   }
 
   function openSettingsHub() {
@@ -2686,40 +2806,29 @@ function App() {
 
 
   return (
-    <main className={`app-shell mobile-tab-${mobileTab} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
-      <header className="hero">
-        <div>
+    <main className={`app-shell mobile-tab-${mobileTab} expedition-subtab-${expeditionSubTab} timer-focus-${timerFocus} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
+      <header className="hero ios-app-header">
+        <div className="ios-brand">
           <p className="eyebrow">KanColle Expedition Support</p>
           <h1>艦これ遠征サポート</h1>
-          <p>
-            遠征タイマー・通知・遠征検索・記録をタブで切り替える司令室UI。現在の収録遠征は<strong>{totalExpeditionCount}件</strong>、お気に入りは<strong>{pinnedExpeditionIds.length}件</strong>。
-            <br />
-            遠征データ：<strong>{dataStatus === "external" ? "外部JSON" : dataStatus === "fallback" ? "内蔵フォールバック" : dataStatus === "error" ? "JSON読み込み失敗" : "読み込み中"}</strong>（{dataMessage}）
-          </p>
-        </div>
-        <div className="hero-clock">
-          <span>現在時刻</span>
-          <strong>{formatClock(now)}</strong>
-          <small>{timeSyncMessage}</small>
-        </div>
-        <div className="hero-actions">
-          <div className="theme-switch" role="group" aria-label="テーマ切替">
-            <button type="button" className={themeMode === "light" ? "active" : ""} onClick={() => setThemeMode("light")}>ライト</button>
-            <button type="button" className={themeMode === "dark" ? "active" : ""} onClick={() => setThemeMode("dark")}>ダーク</button>
-          </div>
-          <button type="button" className="ghost small" onClick={() => setCompactFleetCards((value) => !value)}>
-            {compactFleetCards ? "通常カード" : "簡易カード"}
-          </button>
+          <p className="ios-subtitle">遠征と資源管理を、ひとつの司令室に。</p>
         </div>
       </header>
 
-      <nav className="desktop-tabbar" aria-label="画面タブ">
-        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}><span>タイマー</span><small>司令室</small></button>
-        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}><span>遠征</span><small>検索・条件</small></button>
-        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}><span>攻略</span><small>候補・セット</small></button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><span>記録</span><small>資源・履歴</small></button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><span>設定</span><small>通知・同期</small></button>
+      <nav className="desktop-tabbar ios-tabbar" aria-label="画面タブ">
+        <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b aria-hidden="true">⌂</b><span>ホーム</span></button>
+        <button type="button" className={mobileTab === "expeditions" ? "active" : ""} onClick={() => switchAppTab("expeditions")}><b aria-hidden="true">↗</b><span>遠征</span></button>
+        <button type="button" className={`timer-primary-tab ${mobileTab === "timers" ? "active" : ""}`} onClick={() => switchAppTab("timers", "timer-hub-section")}><b aria-hidden="true">⚓︎</b><span>タイマー</span></button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b aria-hidden="true">⌁</b><span>記録</span></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b aria-hidden="true">⚙︎</b><span>設定</span></button>
       </nav>
+
+      {mobileTab === "expeditions" && (
+        <div className="ios-segmented-control expedition-view-switch" role="tablist" aria-label="遠征画面切替">
+          <button type="button" className={expeditionSubTab === "search" ? "active" : ""} onClick={() => setExpeditionSubTab("search")}>一覧・検索</button>
+          <button type="button" className={expeditionSubTab === "assist" ? "active" : ""} onClick={() => setExpeditionSubTab("assist")}>おすすめ・マンスリー</button>
+        </div>
+      )}
 
       <section className={`ops-overview ${pendingReturnFleets.length > 0 ? "has-returns" : "no-returns"}`}>
       {pendingReturnFleets.length > 0 && (
@@ -2783,6 +2892,27 @@ function App() {
           <p className="helper-text">{todayHistory.length}件記録 / 大成功{todayGreatCount}件</p>
         </article>
 
+        <article className="command-card stock-command-card">
+          <div className="section-head compact">
+            <div>
+              <p className="eyebrow">Stock</p>
+              <h3>所持資源</h3>
+            </div>
+            <button type="button" className="ghost small" onClick={jumpToRecords}>記録</button>
+          </div>
+          {latestStockSnapshot ? (
+            <>
+              <div className="home-stock-grid game-resource-grid">
+                <span><small>燃料</small><strong>{latestStockSnapshot.resources.fuel.toLocaleString("ja-JP")}</strong></span>
+                <span><small>鋼材</small><strong>{latestStockSnapshot.resources.steel.toLocaleString("ja-JP")}</strong></span>
+                <span><small>弾薬</small><strong>{latestStockSnapshot.resources.ammo.toLocaleString("ja-JP")}</strong></span>
+                <span><small>ボーキ</small><strong>{latestStockSnapshot.resources.bauxite.toLocaleString("ja-JP")}</strong></span>
+              </div>
+              <p className="helper-text">最終記録 {formatShortDateTime(latestStockSnapshot.recordedAt)}</p>
+            </>
+          ) : <p className="empty-text">まだ所持資源の記録がないよ。</p>}
+        </article>
+
         <article className="command-card quick-preset-command-card">
           <div className="section-head compact">
             <div>
@@ -2799,10 +2929,6 @@ function App() {
               </button>
             ))}
           </div>
-          <div className="command-chip-row">
-            <span>{cloudStatusLabel}</span>
-            <span>{notificationStatusLabel}</span>
-          </div>
         </article>
       </section>
       </section>
@@ -2817,6 +2943,14 @@ function App() {
           <div className="settings-hub-status">
             <span>{cloudStatusLabel}</span>
             <span>{notificationStatusLabel}</span>
+          </div>
+        </div>
+
+        <div className="appearance-setting">
+          <span><strong>外観</strong><small>画面テーマ</small></span>
+          <div className="theme-switch" role="group" aria-label="テーマ切替">
+            <button type="button" className={themeMode === "light" ? "active" : ""} onClick={() => setThemeMode("light")}>ライト</button>
+            <button type="button" className={themeMode === "dark" ? "active" : ""} onClick={() => setThemeMode("dark")}>ダーク</button>
           </div>
         </div>
 
@@ -3523,6 +3657,66 @@ function App() {
         </div>
       </section>
 
+      <section id="timer-hub-section" className="timer-hub-card" aria-label="タイマー切替">
+        <div className="section-head compact timer-hub-head">
+          <div>
+            <p className="eyebrow">Timers</p>
+            <h2>タイマー</h2>
+          </div>
+          <button type="button" className="ghost small" onClick={() => setCompactFleetCards((value) => !value)}>{compactFleetCards ? "標準表示" : "コンパクト"}</button>
+        </div>
+        <div className="ios-segmented-control timer-focus-control" role="tablist" aria-label="タイマー選択">
+          <button type="button" className={timerFocus === 2 ? "active" : ""} onClick={() => setTimerFocus(2)}>第2艦隊</button>
+          <button type="button" className={timerFocus === 3 ? "active" : ""} onClick={() => setTimerFocus(3)}>第3艦隊</button>
+          <button type="button" className={timerFocus === 4 ? "active" : ""} onClick={() => setTimerFocus(4)}>第4艦隊</button>
+          <button type="button" className={timerFocus === "nozaki" ? "active" : ""} onClick={() => setTimerFocus("nozaki")}>野埼</button>
+        </div>
+      </section>
+
+      <section className="nozaki-timer-card" aria-label="野埼タイマー">
+        <div className="nozaki-header">
+          <div>
+            <p className="eyebrow">Home-port Supply</p>
+            <h2>野埼タイマー</h2>
+          </div>
+          <span className={`status ${nozakiCompleted ? "done" : nozakiRunning ? "running" : "idle"}`}>
+            {nozakiCompleted ? "完了" : nozakiRunning ? "計測中" : "待機"}
+          </span>
+        </div>
+
+        <div className="nozaki-remodel-picker">
+          <span>改装状態</span>
+          <div className="ios-segmented-control compact-segment">
+            <button type="button" className={nozakiTimer.remodel === "nosaki" ? "active" : ""} onClick={() => changeNozakiRemodel("nosaki")} disabled={nozakiRunning}>野埼</button>
+            <button type="button" className={nozakiTimer.remodel === "nosaki-kai" ? "active" : ""} onClick={() => changeNozakiRemodel("nosaki-kai")} disabled={nozakiRunning}>野埼改</button>
+          </div>
+          <small>選択すると目標時間を自動設定：{nozakiConfig.durationMinutes}分</small>
+        </div>
+
+        <div className="nozaki-countdown">
+          <span>{nozakiCompleted ? "給糧判定の目安時間です" : nozakiRunning ? "残り時間" : "開始すると自動でカウントします"}</span>
+          <strong>{nozakiCompleted ? "00:00:00" : nozakiRemaining}</strong>
+          <div className="nozaki-progress-track" aria-hidden="true"><i style={{ width: `${nozakiProgress}%` }} /></div>
+        </div>
+
+        <div className="nozaki-stats">
+          <div><small>15分ごと</small><strong>cond +{nozakiConfig.condPerCycle}</strong></div>
+          <div><small>最大54目安</small><strong>{nozakiConfig.durationMinutes}分</strong></div>
+          <div><small>経過</small><strong>{nozakiCompletedCycles}/{nozakiConfig.cycles} cycle</strong></div>
+        </div>
+
+        <label className="ios-switch-row">
+          <span><strong>完了時に端末通知</strong><small>許可済み端末で通知します</small></span>
+          <input type="checkbox" checked={nozakiTimer.notify} onChange={(event) => setNozakiTimer((current) => ({ ...current, notify: event.target.checked, updatedAt: Date.now() }))} />
+        </label>
+
+        <div className="nozaki-actions">
+          <button type="button" onClick={startNozakiTimer}>{nozakiRunning ? "最初から計測" : nozakiCompleted ? "もう一度計測" : "タイマー開始"}</button>
+          <button type="button" className="secondary" onClick={resetNozakiTimer} disabled={!nozakiTimer.startAt && !nozakiTimer.endAt}>リセット</button>
+        </div>
+        <p className="nozaki-note">編成変更や、15分以上経過後に母港へ戻って判定が行われた場合はゲーム側のタイマーがリセットされます。</p>
+      </section>
+
       <section id="fleet-timer-section" className="fleet-grid">
         {fleets.map((fleet) => {
           const expedition = findExpedition(fleet.expeditionId);
@@ -3537,7 +3731,7 @@ function App() {
           const adjustedRewards = calculateAdjustedRewards(expedition, rewardSettings, undefined, fleet.fleetNo);
 
           return (
-            <article className={`fleet-card ${completed ? "completed" : almostDone ? "almost-done" : ""}`} key={fleet.fleetNo}>
+            <article data-fleet-no={fleet.fleetNo} className={`fleet-card ${completed ? "completed" : almostDone ? "almost-done" : ""}`} key={fleet.fleetNo}>
               <div className="fleet-card-head">
                 <div>
                   <p className="eyebrow">Fleet {fleet.fleetNo}</p>
@@ -4001,6 +4195,7 @@ function App() {
               <p className="eyebrow">Diagnostics</p>
               <h2>通知履歴・失敗診断</h2>
               <p>Supabaseに保存された通知予約の状態を確認できるよ。通知が来ない時は、pending / sent / error / cancelled と診断メモを見る。</p>
+              <p className="diagnostic-tech-line">時刻同期：{timeSyncMessage}</p>
             </div>
             <button type="button" className="secondary" onClick={refreshNotificationHistory} disabled={!authState.user || notificationHistoryBusy}>
               {notificationHistoryBusy ? "読込中..." : "履歴を更新"}
@@ -4015,7 +4210,7 @@ function App() {
                 <article className={`notification-history-item status-${row.status}`} key={row.id}>
                   <div className="notification-history-main">
                     <span className={`status ${row.status === "sent" ? "done" : row.status === "pending" ? "running" : row.status === "error" ? "error" : "idle"}`}>{row.status}</span>
-                    <strong>第{row.fleet_no}艦隊 {row.expedition_name}</strong>
+                    <strong>{row.fleet_no === 0 ? row.expedition_name : `第${row.fleet_no}艦隊 ${row.expedition_name}`}</strong>
                     <small>終了予定：{row.end_at ? new Date(row.end_at).toLocaleString("ja-JP") : "未設定"}</small>
                     <small>送信日時：{row.sent_at ? new Date(row.sent_at).toLocaleString("ja-JP") : "未送信"}</small>
                   </div>
@@ -4031,12 +4226,12 @@ function App() {
         </div>
       </details>
 
-      <nav className="mobile-tabbar" aria-label="スマホ用ナビゲーション">
-        <button type="button" className={mobileTab === "timers" ? "active" : ""} onClick={() => switchAppTab("timers")}><b>⏱</b><span>タイマー</span></button>
-        <button type="button" className={mobileTab === "search" ? "active" : ""} onClick={() => switchAppTab("search", "detail-search-section")}><b>🔎</b><span>遠征</span></button>
-        <button type="button" className={mobileTab === "assist" ? "active" : ""} onClick={() => switchAppTab("assist", "preset-section")}><b>🧭</b><span>攻略</span></button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b>📈</b><span>記録</span></button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b>⚙</b><span>設定</span></button>
+      <nav className="mobile-tabbar ios-bottom-tabbar" aria-label="スマホ用ナビゲーション">
+        <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b aria-hidden="true">⌂</b><span>ホーム</span></button>
+        <button type="button" className={mobileTab === "expeditions" ? "active" : ""} onClick={() => switchAppTab("expeditions")}><b aria-hidden="true">↗</b><span>遠征</span></button>
+        <button type="button" className={`timer-primary-tab ${mobileTab === "timers" ? "active" : ""}`} onClick={() => switchAppTab("timers", "timer-hub-section")}><b aria-hidden="true">⚓︎</b><span>タイマー</span></button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b aria-hidden="true">⌁</b><span>記録</span></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b aria-hidden="true">⚙︎</b><span>設定</span></button>
       </nav>
 
       <details
