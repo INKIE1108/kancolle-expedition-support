@@ -393,6 +393,22 @@ const resourceKeyMap: Record<Exclude<GuideMode, "バケツ" | "寝る前" | "授
 const dailyChartModes: DailyChartMode[] = ["合計", "燃料", "弾薬", "鋼材", "ボーキ"];
 const stockChartRanges: StockChartRange[] = ["1日", "1週間", "1か月", "全期間"];
 const stockYAxisTickCount = 4;
+const pageTitleMap: Record<MobileTab, string> = {
+  home: "ホーム",
+  expeditions: "遠征",
+  timers: "タイマー",
+  records: "記録",
+  account: "設定"
+};
+
+const pageSubtitleMap: Record<MobileTab, string> = {
+  home: "遠征司令室",
+  expeditions: "一覧・検索 / おすすめ・マンスリー",
+  timers: "第2〜第4艦隊・野埼",
+  records: "資材記録・推移",
+  account: "通知・同期・外観"
+};
+
 
 const dailyChartResourceKeyMap: Record<Exclude<DailyChartMode, "合計">, keyof ResourceRewards> = {
   燃料: "fuel",
@@ -2841,13 +2857,16 @@ function App() {
   }
 
 
+  const currentPageTitle = pageTitleMap[mobileTab];
+  const currentPageSubtitle = pageSubtitleMap[mobileTab];
+
   return (
     <main className={`app-shell mobile-tab-${mobileTab} expedition-subtab-${expeditionSubTab} timer-focus-${timerFocus} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero ios-app-header">
         <div className="ios-brand">
           <p className="eyebrow">KanColle Expedition Support</p>
-          <h1>艦これ遠征サポート</h1>
-          <p className="ios-subtitle">遠征司令室</p>
+          <h1>{currentPageTitle}</h1>
+          <p className="ios-subtitle">{currentPageSubtitle}</p>
         </div>
       </header>
 
@@ -3543,22 +3562,36 @@ function App() {
                 <button type="button" className="ghost small" onClick={clearResourceStockSnapshots} disabled={resourceStockSnapshots.length === 0}>推移削除</button>
               </div>
 
-              <div className="resource-stock-input-card">
+              <div className="resource-stock-input-card liquid-glass-panel">
                 <div className="resource-stock-input-head">
                   <div>
                     <strong>現在資源を入力</strong>
+                    <span className="resource-stock-head-note">各資源をそのまま入力して「現在資源を記録」を押すと、推移グラフへ追加されるよ。</span>
                   </div>
                   {latestStockSnapshot ? <small>最新 {formatShortDateTime(latestStockSnapshot.recordedAt)}</small> : <small>まだ未記録</small>}
                 </div>
                 <div className="resource-stock-input-grid game-resource-grid">
                   {resourceGameGridKeys.map((key) => (
-                    <label key={`stock-input-${key}`} data-resource={key}>
-                      <span>{resourceFullLabels[key]}</span>
-                      <input type="number" min={0} max={999999} value={resourceStockInputs[key]} onChange={(event) => updateResourceStockInput(key, event.target.value)} placeholder="現在値" inputMode="numeric" />
+                    <label key={`stock-input-${key}`} className="resource-stock-field" data-resource={key}>
+                      <span className="resource-stock-field-label">{resourceFullLabels[key]}</span>
+                      <span className="resource-stock-field-control">
+                        <input
+                          type="number"
+                          min={0}
+                          max={999999}
+                          value={resourceStockInputs[key]}
+                          onChange={(event) => updateResourceStockInput(key, event.target.value)}
+                          placeholder="0"
+                          inputMode="numeric"
+                          aria-label={`${resourceFullLabels[key]}の現在値`}
+                        />
+                      </span>
                     </label>
                   ))}
+                </div>
+                <div className="resource-stock-input-actions">
                   <button type="button" className="stock-record-button" onClick={recordResourceStockSnapshot}>現在資源を記録</button>
-                  <button type="button" className="secondary stock-fill-button" onClick={fillResourceStockInputsFromLatest} disabled={!latestStockSnapshot}>最新値を入力欄へ</button>
+                  <button type="button" className="secondary stock-fill-button" onClick={fillResourceStockInputsFromLatest} disabled={!latestStockSnapshot}>最新値を読み込む</button>
                 </div>
               </div>
 
