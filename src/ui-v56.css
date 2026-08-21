@@ -1,0 +1,1922 @@
+/* ========================================================================== */
+/* v5.5 — visual authority layer                                              */
+/* Purpose: calm color system, readable inputs, restrained glass, stable UI. */
+/* This file is imported AFTER style.css so older v1-v5.3 rules cannot win.  */
+/* ========================================================================== */
+
+:root,
+html[data-theme="light"] {
+  color-scheme: light;
+  --ui-canvas: #f4f5f7;
+  --ui-surface: #ffffff;
+  --ui-surface-raised: #fbfbfc;
+  --ui-surface-muted: #f7f8fa;
+  --ui-surface-hover: #f1f3f6;
+  --ui-surface-selected: #eef3f7;
+  --ui-text: #17191c;
+  --ui-text-secondary: #68707d;
+  --ui-text-tertiary: #969ca6;
+  --ui-border: #e1e4e8;
+  --ui-border-soft: #eceef1;
+  --ui-accent: #557d9f;
+  --ui-accent-hover: #486f91;
+  --ui-accent-soft: rgba(85, 125, 159, 0.09);
+  --ui-accent-ring: rgba(85, 125, 159, 0.20);
+  --ui-success: #4d9d72;
+  --ui-warning: #c58a3b;
+  --ui-danger: #c75a55;
+  --ui-purple: #8f79ad;
+  --ui-fuel: #55a9c7;
+  --ui-ammo: #58ae82;
+  --ui-steel: #9b83b7;
+  --ui-bauxite: #d3984c;
+  --ui-glass: rgba(255, 255, 255, 0.76);
+  --ui-glass-border: rgba(255, 255, 255, 0.72);
+  --ui-shadow-card: 0 4px 18px rgba(28, 35, 43, 0.035);
+  --ui-shadow-float: 0 10px 28px rgba(28, 35, 43, 0.075);
+
+  /* Map the legacy semantic variables to the new palette. */
+  --bg-primary: var(--ui-canvas);
+  --bg-secondary: var(--ui-surface);
+  --bg-tertiary: var(--ui-surface-muted);
+  --label-primary: var(--ui-text);
+  --label-secondary: var(--ui-text-secondary);
+  --label-tertiary: var(--ui-text-tertiary);
+  --separator: var(--ui-border);
+  --separator-soft: var(--ui-border-soft);
+  --fill-primary: #e8ebee;
+  --fill-secondary: #eef0f3;
+  --fill-tertiary: #f4f5f7;
+  --accent: var(--ui-accent);
+  --accent-soft: var(--ui-accent-soft);
+  --accent-focus: var(--ui-accent-ring);
+  --ios-bg: var(--ui-canvas);
+  --ios-surface: var(--ui-surface);
+  --ios-surface-2: var(--ui-surface-muted);
+  --ios-text: var(--ui-text);
+  --ios-secondary: var(--ui-text-secondary);
+  --ios-tertiary: var(--ui-text-tertiary);
+  --ios-separator: var(--ui-border);
+  --ios-blue: var(--ui-accent);
+  --ios-blue-soft: var(--ui-accent-soft);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ui-canvas: #101216;
+  --ui-surface: #1a1d22;
+  --ui-surface-raised: #20242a;
+  --ui-surface-muted: #22262c;
+  --ui-surface-hover: #292e35;
+  --ui-surface-selected: #273541;
+  --ui-text: #f3f4f6;
+  --ui-text-secondary: #aeb4bd;
+  --ui-text-tertiary: #7f8792;
+  --ui-border: #333840;
+  --ui-border-soft: #292e35;
+  --ui-accent: #82a9c8;
+  --ui-accent-hover: #91b5d1;
+  --ui-accent-soft: rgba(130, 169, 200, 0.13);
+  --ui-accent-ring: rgba(130, 169, 200, 0.24);
+  --ui-success: #6ab68a;
+  --ui-warning: #d6a15a;
+  --ui-danger: #dd7771;
+  --ui-purple: #ab96c4;
+  --ui-fuel: #6bb7d2;
+  --ui-ammo: #70bd93;
+  --ui-steel: #ae98c8;
+  --ui-bauxite: #daa762;
+  --ui-glass: rgba(27, 30, 35, 0.78);
+  --ui-glass-border: rgba(255, 255, 255, 0.08);
+  --ui-shadow-card: 0 5px 18px rgba(0, 0, 0, 0.14);
+  --ui-shadow-float: 0 12px 30px rgba(0, 0, 0, 0.24);
+
+  --bg-primary: var(--ui-canvas);
+  --bg-secondary: var(--ui-surface);
+  --bg-tertiary: var(--ui-surface-muted);
+  --label-primary: var(--ui-text);
+  --label-secondary: var(--ui-text-secondary);
+  --label-tertiary: var(--ui-text-tertiary);
+  --separator: var(--ui-border);
+  --separator-soft: var(--ui-border-soft);
+  --fill-primary: #343942;
+  --fill-secondary: #2c3138;
+  --fill-tertiary: #24292f;
+  --accent: var(--ui-accent);
+  --accent-soft: var(--ui-accent-soft);
+  --accent-focus: var(--ui-accent-ring);
+  --ios-bg: var(--ui-canvas);
+  --ios-surface: var(--ui-surface);
+  --ios-surface-2: var(--ui-surface-muted);
+  --ios-text: var(--ui-text);
+  --ios-secondary: var(--ui-text-secondary);
+  --ios-tertiary: var(--ui-text-tertiary);
+  --ios-separator: var(--ui-border);
+  --ios-blue: var(--ui-accent);
+  --ios-blue-soft: var(--ui-accent-soft);
+}
+
+html,
+body,
+#root,
+.app-shell {
+  background: var(--ui-canvas) !important;
+  color: var(--ui-text) !important;
+}
+
+body {
+  background-image: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Typography and hierarchy                                                   */
+/* -------------------------------------------------------------------------- */
+.ios-brand .eyebrow,
+.app-shell .eyebrow,
+.fold-summary small {
+  color: var(--ui-text-secondary) !important;
+  font-size: 10.5px !important;
+  font-weight: 650 !important;
+  letter-spacing: 0.07em !important;
+}
+
+.ios-brand h1,
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell strong {
+  color: var(--ui-text);
+}
+
+.ios-subtitle,
+.helper-text,
+.empty-text,
+.result-count,
+.app-shell small {
+  color: var(--ui-text-secondary) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Glass: deliberately limited to navigation and segmented controls           */
+/* -------------------------------------------------------------------------- */
+.app-shell > .desktop-tabbar.ios-tabbar,
+.mobile-tabbar.ios-bottom-tabbar,
+.expedition-view-switch,
+.timer-focus-control,
+.theme-switch,
+.daily-chart-toolbar,
+.stock-chart-controls {
+  position: relative !important;
+  overflow: hidden !important;
+  background: var(--ui-glass) !important;
+  border: 1px solid var(--ui-glass-border) !important;
+  box-shadow: var(--ui-shadow-float) !important;
+  backdrop-filter: blur(20px) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(145%) !important;
+}
+
+.app-shell > .desktop-tabbar.ios-tabbar::before,
+.mobile-tabbar.ios-bottom-tabbar::before,
+.expedition-view-switch::before,
+.timer-focus-control::before,
+.theme-switch::before,
+.daily-chart-toolbar::before,
+.stock-chart-controls::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.32), rgba(255,255,255,.07) 45%, transparent 85%);
+}
+
+html[data-theme="dark"] .app-shell > .desktop-tabbar.ios-tabbar::before,
+html[data-theme="dark"] .mobile-tabbar.ios-bottom-tabbar::before,
+html[data-theme="dark"] .expedition-view-switch::before,
+html[data-theme="dark"] .timer-focus-control::before,
+html[data-theme="dark"] .theme-switch::before,
+html[data-theme="dark"] .daily-chart-toolbar::before,
+html[data-theme="dark"] .stock-chart-controls::before {
+  background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 75%);
+}
+
+.app-shell > .desktop-tabbar.ios-tabbar > *,
+.mobile-tabbar.ios-bottom-tabbar > *,
+.expedition-view-switch > *,
+.timer-focus-control > *,
+.theme-switch > *,
+.daily-chart-toolbar > *,
+.stock-chart-controls > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Top navigation: less blue, cleaner icons                                   */
+/* -------------------------------------------------------------------------- */
+.app-shell > .desktop-tabbar.ios-tabbar {
+  padding: 5px !important;
+  border-radius: 18px !important;
+}
+
+.app-shell > .desktop-tabbar.ios-tabbar button,
+.mobile-tabbar.ios-bottom-tabbar button {
+  min-height: 44px !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  color: var(--ui-text-secondary) !important;
+  box-shadow: none !important;
+}
+
+.app-shell > .desktop-tabbar.ios-tabbar button.active,
+.app-shell > .desktop-tabbar.ios-tabbar .timer-primary-tab.active,
+.mobile-tabbar.ios-bottom-tabbar button.active,
+.mobile-tabbar.ios-bottom-tabbar .timer-primary-tab.active {
+  background: var(--ui-accent-soft) !important;
+  color: var(--ui-accent) !important;
+  box-shadow: inset 0 0 0 1px rgba(85, 125, 159, .10) !important;
+}
+
+.tab-icon {
+  display: inline-grid !important;
+  place-items: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  font-size: 0 !important;
+  font-weight: 400 !important;
+}
+
+.tab-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Solid content surfaces: no glass soup                                      */
+/* -------------------------------------------------------------------------- */
+.app-shell .command-card,
+.app-shell .return-check-card,
+.app-shell .nozaki-timer-card,
+.app-shell .fleet-card,
+.app-shell .detail-card,
+.app-shell .list-card,
+.app-shell .records-card,
+.app-shell .fold-card,
+.app-shell .preset-card,
+.app-shell .guide-card,
+.app-shell .monthly-card,
+.app-shell .account-card,
+.app-shell .pwa-card,
+.app-shell .settings-card,
+.app-shell .reward-card,
+.app-shell .diagnostics-card,
+.app-shell .log-card {
+  background: var(--ui-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  box-shadow: var(--ui-shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Flat nested surfaces */
+.app-shell .command-status-grid span,
+.app-shell .home-stock-grid span,
+.app-shell .quick-preset-list button,
+.app-shell .resource-grid,
+.app-shell .success-compare,
+.app-shell .resource-grid div,
+.app-shell .success-compare div,
+.app-shell .mini-info > div,
+.app-shell .fleet-reward-mini,
+.app-shell .manual-timer-row,
+.app-shell .next-actions,
+.app-shell .nozaki-stats > div,
+.app-shell .nozaki-remodel-picker,
+.app-shell .target-overview-card,
+.app-shell .target-plan-grid > article,
+.app-shell .stock-summary-grid > div,
+.app-shell .daily-breakdown-card,
+.app-shell .toggle-card {
+  background: var(--ui-surface-muted) !important;
+  background-image: none !important;
+  border-color: var(--ui-border-soft) !important;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Buttons: blue only when something is truly primary                         */
+/* -------------------------------------------------------------------------- */
+.app-shell button,
+.app-shell .file-button {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.app-shell button.secondary,
+.app-shell .file-button {
+  background: #eef0f3 !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+}
+
+html[data-theme="dark"] .app-shell button.secondary,
+html[data-theme="dark"] .app-shell .file-button {
+  background: #2b3037 !important;
+}
+
+.app-shell button.ghost,
+.app-shell .detail-link,
+.app-shell .command-card .ghost.small,
+.app-shell .records-card .ghost.small,
+.app-shell .resource-stock-panel .ghost.small {
+  background: transparent !important;
+  color: var(--ui-accent) !important;
+  border: 1px solid var(--ui-border) !important;
+}
+
+.app-shell button.ghost:hover:not(:disabled),
+.app-shell .detail-link:hover:not(:disabled) {
+  background: var(--ui-surface-hover) !important;
+}
+
+.app-shell .button-row > button:first-child,
+.app-shell .nozaki-actions > button:first-child,
+.app-shell .stock-record-button,
+.app-shell .custom-preset-form > button,
+.app-shell .pwa-actions > button:first-child {
+  background: var(--ui-accent) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.app-shell .button-row > button:first-child:hover:not(:disabled),
+.app-shell .nozaki-actions > button:first-child:hover:not(:disabled),
+.app-shell .stock-record-button:hover:not(:disabled),
+.app-shell .custom-preset-form > button:hover:not(:disabled),
+.app-shell .pwa-actions > button:first-child:hover:not(:disabled) {
+  background: var(--ui-accent-hover) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* HOME                                                                       */
+/* -------------------------------------------------------------------------- */
+.dashboard-strip {
+  gap: 14px !important;
+}
+
+.app-shell .command-card {
+  border-radius: 20px !important;
+}
+
+.app-shell .command-status-grid {
+  gap: 8px !important;
+}
+
+.app-shell .command-status-grid span {
+  border: 1px solid var(--ui-border-soft) !important;
+}
+
+/* Today's resources: NEVER blue blocks. Resource identity lives in the dot. */
+html[data-theme="light"] .app-shell .daily-total-grid.compact-resource-cards button,
+html[data-theme="dark"] .app-shell .daily-total-grid.compact-resource-cards button,
+.app-shell .daily-total-grid.compact-resource-cards button,
+.app-shell .daily-total-grid.compact-resource-cards button.active,
+.app-shell .mini-dashboard-resources button,
+.app-shell .mini-dashboard-resources button.active {
+  position: relative !important;
+  min-height: 72px !important;
+  padding: 13px 14px 11px 26px !important;
+  background: var(--ui-surface-muted) !important;
+  background-image: none !important;
+  color: var(--ui-text-secondary) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 13px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+
+.app-shell .daily-total-grid.compact-resource-cards button:hover:not(:disabled) {
+  background: var(--ui-surface-hover) !important;
+}
+
+.app-shell .daily-total-grid.compact-resource-cards button.active {
+  background: var(--ui-surface-selected) !important;
+  border-color: rgba(85,125,159,.22) !important;
+}
+
+.app-shell .daily-total-grid.compact-resource-cards button::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 12px !important;
+  top: 17px !important;
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 999px !important;
+  background: var(--ui-fuel) !important;
+}
+.app-shell .daily-total-grid.compact-resource-cards button:nth-child(2)::before { background: var(--ui-ammo) !important; }
+.app-shell .daily-total-grid.compact-resource-cards button:nth-child(3)::before { background: var(--ui-steel) !important; }
+.app-shell .daily-total-grid.compact-resource-cards button:nth-child(4)::before { background: var(--ui-bauxite) !important; }
+
+.app-shell .daily-total-grid.compact-resource-cards button strong {
+  display: block !important;
+  margin-top: 2px !important;
+  color: var(--ui-text) !important;
+  font-size: 23px !important;
+  font-weight: 670 !important;
+}
+
+/* Current stock: same visual language, no colored sheets. */
+.app-shell .home-stock-grid span {
+  position: relative !important;
+  min-height: 66px !important;
+  padding: 12px 13px 10px 25px !important;
+  background: var(--ui-surface-muted) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 13px !important;
+}
+
+.app-shell .home-stock-grid span::before {
+  left: 11px !important;
+  top: 17px !important;
+  width: 7px !important;
+  height: 7px !important;
+}
+
+.app-shell .home-stock-grid strong {
+  color: var(--ui-text) !important;
+}
+
+/* Presets use the desktop width without becoming another accent panel. */
+@media (min-width: 761px) {
+  .app-shell .quick-preset-command-card {
+    grid-column: 1 / -1 !important;
+  }
+  .app-shell .quick-preset-command-card .quick-preset-list {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+}
+
+.app-shell .quick-preset-list button {
+  min-height: 56px !important;
+  background: var(--ui-surface-muted) !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 12px !important;
+}
+
+.app-shell .quick-preset-list button:hover:not(:disabled) {
+  background: var(--ui-surface-hover) !important;
+}
+
+.app-shell .quick-preset-list button span { color: var(--ui-text) !important; }
+.app-shell .quick-preset-list button small { color: var(--ui-text-secondary) !important; }
+
+/* -------------------------------------------------------------------------- */
+/* EXPEDITIONS                                                                */
+/* -------------------------------------------------------------------------- */
+.app-shell .expedition-view-switch {
+  width: min(100%, 420px) !important;
+  padding: 3px !important;
+  border-radius: 14px !important;
+}
+
+.app-shell .expedition-view-switch button,
+.app-shell .ios-segmented-control button {
+  min-height: 38px !important;
+  background: transparent !important;
+  color: var(--ui-text-secondary) !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+}
+
+.app-shell .expedition-view-switch button.active,
+.app-shell .ios-segmented-control button.active {
+  background: rgba(255,255,255,.70) !important;
+  color: var(--ui-text) !important;
+  box-shadow: 0 1px 3px rgba(28,35,43,.08) !important;
+}
+
+html[data-theme="dark"] .app-shell .expedition-view-switch button.active,
+html[data-theme="dark"] .app-shell .ios-segmented-control button.active {
+  background: rgba(255,255,255,.075) !important;
+}
+
+/* Search controls should look like fields, not floating gray shapes. */
+.app-shell .search-row.search-row-v04 input,
+.app-shell .search-row.search-row-v04 select,
+.app-shell .fleet-card select,
+.app-shell .craft-slot-row select,
+.app-shell .craft-slot-row input {
+  min-height: 44px !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 11px !important;
+  box-shadow: none !important;
+}
+
+.app-shell .search-row.search-row-v04 input:focus,
+.app-shell .search-row.search-row-v04 select:focus,
+.app-shell input:focus,
+.app-shell select:focus {
+  border-color: rgba(85,125,159,.38) !important;
+  box-shadow: 0 0 0 3px var(--ui-accent-soft) !important;
+}
+
+/* Pinned expeditions: neutral grouped list; no blue panels or blue arrows. */
+html[data-theme="light"] .app-shell .pinned-list,
+html[data-theme="light"] .app-shell .pinned-list-editable,
+html[data-theme="dark"] .app-shell .pinned-list,
+html[data-theme="dark"] .app-shell .pinned-list-editable,
+.app-shell .pinned-list,
+.app-shell .pinned-list-editable {
+  display: block !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  background: var(--ui-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] .app-shell .pinned-edit-item,
+html[data-theme="dark"] .app-shell .pinned-edit-item,
+.app-shell .pinned-edit-item,
+.app-shell .pinned-edit-item:not(.selected),
+.app-shell .pinned-edit-item.selected {
+  position: relative !important;
+  margin: 0 !important;
+  background: var(--ui-surface) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ui-border-soft) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.app-shell .pinned-edit-item:last-child { border-bottom: 0 !important; }
+
+html[data-theme="light"] .app-shell .pinned-main,
+html[data-theme="dark"] .app-shell .pinned-main,
+.app-shell .pinned-main,
+.app-shell .pinned-edit-item .pinned-main,
+.app-shell .pinned-edit-item.selected .pinned-main {
+  min-height: 68px !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--ui-text) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .pinned-edit-item:hover,
+.app-shell .pinned-edit-item:hover .pinned-main {
+  background: var(--ui-surface-hover) !important;
+}
+
+.app-shell .pinned-edit-item.selected,
+.app-shell .pinned-edit-item.selected .pinned-main {
+  background: var(--ui-surface-selected) !important;
+}
+
+.app-shell .pinned-edit-item.selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ui-accent);
+  z-index: 2;
+}
+
+.app-shell .pinned-main span { color: var(--ui-text) !important; }
+.app-shell .pinned-main small { color: var(--ui-text-secondary) !important; }
+
+.app-shell .pin-order-actions {
+  background: transparent !important;
+  border-left: 1px solid var(--ui-border-soft) !important;
+}
+
+.app-shell .pin-order-actions button,
+.app-shell .pinned-edit-item .tiny,
+.app-shell .expedition-item > .pin-button {
+  min-width: 42px !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--ui-text-tertiary) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .pin-order-actions button:hover:not(:disabled),
+.app-shell .pinned-edit-item .tiny:hover:not(:disabled) {
+  background: var(--ui-surface-hover) !important;
+  color: var(--ui-accent) !important;
+}
+
+/* Normal expedition list follows the same language. */
+.app-shell .expedition-list {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 14px !important;
+}
+.app-shell .expedition-item {
+  background: transparent !important;
+  border-bottom: 1px solid var(--ui-border-soft) !important;
+}
+.app-shell .expedition-item:last-child { border-bottom: 0 !important; }
+.app-shell .expedition-main,
+.app-shell .expedition-item.selected .expedition-main {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
+.app-shell .expedition-item:hover .expedition-main { background: var(--ui-surface-hover) !important; }
+.app-shell .expedition-item.selected .expedition-main { background: var(--ui-surface-selected) !important; }
+.app-shell .expedition-main span { color: var(--ui-text) !important; }
+.app-shell .expedition-main small { color: var(--ui-text-secondary) !important; }
+
+/* Detail: replace pale-cyan sheets with neutral sections and separators. */
+.app-shell .detail-card {
+  background: var(--ui-surface) !important;
+}
+
+.app-shell .resource-grid,
+.app-shell .success-compare {
+  overflow: hidden !important;
+  background: var(--ui-surface-muted) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 14px !important;
+}
+
+.app-shell .resource-grid div,
+.app-shell .success-compare div {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
+.app-shell .resource-grid strong,
+.app-shell .success-compare strong { color: var(--ui-text) !important; }
+.app-shell .resource-grid small,
+.app-shell .success-compare small { color: var(--ui-text-secondary) !important; }
+
+.app-shell .detail-list > div,
+.app-shell .detail-card .detail-list > div,
+html[data-theme="light"] .app-shell .detail-card .detail-list > div,
+html[data-theme="dark"] .app-shell .detail-card .detail-list > div {
+  margin: 0 !important;
+  padding: 18px 2px !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ui-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.app-shell .detail-list > div:last-child { border-bottom: 0 !important; }
+
+.app-shell .detail-list dt { color: var(--ui-text-secondary) !important; }
+.app-shell .detail-list dd { color: var(--ui-text) !important; }
+
+.app-shell .prerequisite-list {
+  gap: 8px !important;
+}
+
+.app-shell .prerequisite-item,
+.app-shell .prerequisite-chain,
+.app-shell .route-requirement-list,
+.app-shell .condition-summary-grid span,
+.app-shell .composition-pattern,
+.app-shell .prerequisite-current,
+.app-shell .prerequisite-chain-list button,
+html[data-theme="light"] .app-shell .detail-card .prerequisite-item,
+html[data-theme="light"] .app-shell .detail-card .prerequisite-chain,
+html[data-theme="light"] .app-shell .detail-card .route-requirement-list,
+html[data-theme="light"] .app-shell .detail-card .condition-summary-grid span,
+html[data-theme="light"] .app-shell .detail-card .composition-pattern,
+html[data-theme="dark"] .app-shell .detail-card .prerequisite-item,
+html[data-theme="dark"] .app-shell .detail-card .prerequisite-chain,
+html[data-theme="dark"] .app-shell .detail-card .route-requirement-list,
+html[data-theme="dark"] .app-shell .detail-card .condition-summary-grid span,
+html[data-theme="dark"] .app-shell .detail-card .composition-pattern {
+  background: var(--ui-surface-muted) !important;
+  background-image: none !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  box-shadow: none !important;
+}
+
+.app-shell .prerequisite-item,
+.app-shell .composition-pattern,
+.app-shell .condition-summary-grid span {
+  border-radius: 12px !important;
+}
+
+.app-shell .prerequisite-chain,
+.app-shell .route-requirement-list {
+  border-radius: 14px !important;
+}
+
+.app-shell .prerequisite-item button,
+.app-shell .prerequisite-chain-list button {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+}
+
+.app-shell .prerequisite-item button:hover,
+.app-shell .prerequisite-chain-list button:hover {
+  background: var(--ui-surface-hover) !important;
+}
+
+.app-shell .prerequisite-chain-list button span,
+.app-shell .prerequisite-current span,
+.app-shell .composition-pattern strong,
+.app-shell .composition-pattern small {
+  color: var(--ui-accent) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* RECORDS                                                                    */
+/* -------------------------------------------------------------------------- */
+.app-shell .records-card {
+  background: var(--ui-surface) !important;
+}
+
+.app-shell .daily-chart-toolbar,
+.app-shell .stock-chart-controls {
+  width: fit-content !important;
+  max-width: 100% !important;
+  padding: 3px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(28,35,43,.05) !important;
+}
+
+.app-shell .daily-chart-toolbar button,
+.app-shell .stock-chart-controls button {
+  min-height: 34px !important;
+  background: transparent !important;
+  color: var(--ui-text-secondary) !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+}
+
+.app-shell .daily-chart-toolbar button.active,
+.app-shell .stock-chart-controls button.active {
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+  box-shadow: 0 1px 3px rgba(28,35,43,.08) !important;
+}
+
+/* No seven colored cards around the chart. */
+.app-shell .daily-chart {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .daily-chart-item,
+.app-shell .daily-chart-item.selected {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .daily-chart-bar-wrap {
+  background: #edf0f3 !important;
+  border: 0 !important;
+}
+html[data-theme="dark"] .app-shell .daily-chart-bar-wrap { background: #2b3037 !important; }
+
+.app-shell .daily-chart-bar {
+  background: var(--ui-accent) !important;
+  opacity: .64 !important;
+}
+.app-shell .daily-chart-item.selected .daily-chart-bar { opacity: .95 !important; }
+.app-shell .daily-chart-item.selected .daily-chart-bar-wrap {
+  background: var(--ui-accent-soft) !important;
+  box-shadow: inset 0 0 0 1px rgba(85,125,159,.14) !important;
+}
+.app-shell .daily-chart-item small,
+.app-shell .daily-chart-item strong { color: var(--ui-text-secondary) !important; }
+.app-shell .daily-chart-item.selected small,
+.app-shell .daily-chart-item.selected strong { color: var(--ui-accent) !important; }
+
+.app-shell .daily-breakdown-card {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+  padding: 12px 14px !important;
+  background: var(--ui-surface-muted) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 12px !important;
+}
+.app-shell .daily-breakdown-card p { grid-column: 1 / -1 !important; margin: 0 !important; color: var(--ui-text-secondary) !important; }
+
+/* History rows lose the blue wash. */
+.app-shell .history-list.compact-history {
+  display: grid !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+  background: var(--ui-surface-muted) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 12px !important;
+}
+.app-shell .history-list.compact-history > p {
+  margin: 0 !important;
+  padding: 9px 12px !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--ui-text-secondary) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ui-border-soft) !important;
+  border-radius: 0 !important;
+}
+.app-shell .history-list.compact-history > p:last-child { border-bottom: 0 !important; }
+.app-shell .history-list.compact-history > p span { color: var(--ui-accent) !important; }
+
+/* Resource stock section itself should not be a blue sheet. */
+.app-shell .resource-stock-panel {
+  margin-top: 24px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* CURRENT RESOURCE INPUT — root fix, not another cosmetic patch              */
+/* -------------------------------------------------------------------------- */
+.app-shell .resource-stock-input-card,
+html[data-theme="light"] .app-shell .resource-stock-input-card,
+html[data-theme="dark"] .app-shell .resource-stock-input-card {
+  overflow: visible !important;
+  padding: 0 0 14px !important;
+  background: var(--ui-surface-raised) !important;
+  background-image: none !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-shell .resource-stock-input-card::before,
+.app-shell .resource-stock-input-card::after {
+  content: none !important;
+  display: none !important;
+}
+
+.app-shell .resource-stock-input-head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+  padding: 15px 16px 12px !important;
+}
+
+.app-shell .resource-stock-input-head > div {
+  display: grid !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+}
+
+.app-shell .resource-stock-head-note {
+  display: block !important;
+  max-width: 620px !important;
+  color: var(--ui-text-secondary) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.app-shell .resource-stock-input-head > small {
+  flex: 0 0 auto !important;
+  color: var(--ui-text-secondary) !important;
+}
+
+/* Four compact rows in a 2x2 grid on desktop. */
+.app-shell .resource-stock-input-grid.game-resource-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-areas: none !important;
+  gap: 10px !important;
+  padding: 0 16px !important;
+  overflow: visible !important;
+}
+
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field,
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field[data-resource] {
+  display: grid !important;
+  grid-template-columns: minmax(82px, auto) minmax(120px, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+  grid-area: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 66px !important;
+  margin: 0 !important;
+  padding: 9px 10px 9px 13px !important;
+  background: var(--ui-surface) !important;
+  background-image: none !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 13px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field > .resource-stock-field-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--ui-text) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+/* Kill legacy pseudo-elements applied to generic game-resource-grid spans. */
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field > .resource-stock-field-label::before {
+  content: "" !important;
+  display: block !important;
+  position: static !important;
+  flex: 0 0 8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  margin: 0 7px 0 0 !important;
+  border-radius: 999px !important;
+  background: var(--ui-fuel) !important;
+  box-shadow: none !important;
+}
+.app-shell .resource-stock-input-grid.game-resource-grid > label[data-resource="ammo"] > .resource-stock-field-label::before { background: var(--ui-ammo) !important; }
+.app-shell .resource-stock-input-grid.game-resource-grid > label[data-resource="steel"] > .resource-stock-field-label::before { background: var(--ui-steel) !important; }
+.app-shell .resource-stock-input-grid.game-resource-grid > label[data-resource="bauxite"] > .resource-stock-field-label::before { background: var(--ui-bauxite) !important; }
+
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field > .resource-stock-field-control {
+  display: block !important;
+  justify-self: stretch !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: var(--ui-surface-muted) !important;
+  background-image: none !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field > .resource-stock-field-control::before,
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field > .resource-stock-field-control::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Explicitly beat every historical 46% / right-shift rule. */
+html[data-theme="light"] .app-shell .resource-stock-input-grid.game-resource-grid .resource-stock-field-control input[type="number"],
+html[data-theme="dark"] .app-shell .resource-stock-input-grid.game-resource-grid .resource-stock-field-control input[type="number"],
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field > .resource-stock-field-control > input,
+.app-shell .resource-stock-input-grid.game-resource-grid .resource-stock-field-control input[type="number"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  transform: none !important;
+  translate: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--ui-text) !important;
+  -webkit-text-fill-color: var(--ui-text) !important;
+  text-align: right !important;
+  text-indent: 0 !important;
+  font-size: 22px !important;
+  font-weight: 650 !important;
+  line-height: 44px !important;
+  letter-spacing: -0.02em !important;
+  font-variant-numeric: tabular-nums !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  appearance: textfield !important;
+  -moz-appearance: textfield !important;
+}
+
+.app-shell .resource-stock-input-grid.game-resource-grid .resource-stock-field-control input[type="number"]::-webkit-inner-spin-button,
+.app-shell .resource-stock-input-grid.game-resource-grid .resource-stock-field-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field:focus-within {
+  border-color: rgba(85,125,159,.30) !important;
+}
+.app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field:focus-within > .resource-stock-field-control {
+  border-color: rgba(85,125,159,.36) !important;
+  box-shadow: 0 0 0 3px var(--ui-accent-soft) !important;
+}
+
+.app-shell .resource-stock-input-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  padding: 12px 16px 0 !important;
+}
+
+.app-shell .resource-stock-input-actions .stock-record-button,
+.app-shell .resource-stock-input-actions .stock-fill-button {
+  width: 100% !important;
+  min-height: 46px !important;
+  margin: 0 !important;
+  border-radius: 11px !important;
+}
+
+.app-shell .resource-stock-input-actions .stock-record-button {
+  background: var(--ui-accent) !important;
+  color: #fff !important;
+}
+.app-shell .resource-stock-input-actions .stock-fill-button {
+  background: #eef0f3 !important;
+  color: var(--ui-text) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+}
+html[data-theme="dark"] .app-shell .resource-stock-input-actions .stock-fill-button { background: #2b3037 !important; }
+
+/* Stock chart */
+.app-shell .stock-line-chart,
+.app-shell .stock-chart-frame,
+.app-shell .stock-plot-area svg {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.app-shell .stock-grid-line { stroke: var(--ui-border) !important; opacity: .62 !important; }
+.app-shell .stock-grid-line.vertical { opacity: .35 !important; }
+.app-shell .stock-chart-frame svg polyline { stroke: var(--ui-accent) !important; stroke-width: 1.15 !important; }
+.app-shell .stock-chart-frame svg circle { fill: var(--ui-surface) !important; stroke: var(--ui-accent) !important; }
+.app-shell .stock-chart-frame svg circle.selected { fill: var(--ui-accent) !important; stroke: var(--ui-surface) !important; }
+
+/* Target inputs — same compact language as current stock. */
+.app-shell .resource-target-panel {
+  background: var(--ui-surface-raised) !important;
+  border: 1px solid var(--ui-border) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.app-shell .resource-target-grid.game-resource-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 0 16px 16px !important;
+}
+.app-shell .resource-target-grid.game-resource-grid label {
+  min-height: 62px !important;
+  padding: 9px 12px !important;
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 12px !important;
+}
+.app-shell .resource-target-grid.game-resource-grid input {
+  width: min(52%, 210px) !important;
+  min-width: 110px !important;
+  min-height: 42px !important;
+  padding: 0 10px !important;
+  background: var(--ui-surface-muted) !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 9px !important;
+  color: var(--ui-text) !important;
+  text-align: right !important;
+  font-size: 19px !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* SETTINGS                                                                   */
+/* -------------------------------------------------------------------------- */
+#settings-hub-section.settings-hub-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .appearance-setting,
+.app-shell .settings-menu-grid {
+  background: var(--ui-surface) !important;
+  border: 1px solid var(--ui-border) !important;
+  box-shadow: var(--ui-shadow-card) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-shell .settings-menu-item {
+  background: transparent !important;
+  color: var(--ui-text) !important;
+  border-bottom: 1px solid var(--ui-border-soft) !important;
+}
+.app-shell .settings-menu-item:last-child { border-bottom: 0 !important; }
+.app-shell .settings-menu-item:hover:not(:disabled) { background: var(--ui-surface-hover) !important; }
+.app-shell .settings-menu-icon { background: var(--ui-surface-muted) !important; color: var(--ui-text-secondary) !important; }
+.app-shell .settings-menu-item strong { color: var(--ui-text) !important; }
+.app-shell .settings-menu-item small { color: var(--ui-text-secondary) !important; }
+
+.app-shell.mobile-tab-account > details.fold-card > .fold-summary {
+  background: transparent !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TIMER                                                                      */
+/* -------------------------------------------------------------------------- */
+#timer-hub-section.timer-hub-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .timer-focus-control {
+  padding: 3px !important;
+  border-radius: 12px !important;
+}
+
+.app-shell .timer-box,
+.app-shell .nozaki-countdown {
+  background: transparent !important;
+}
+
+.app-shell .status.running,
+.app-shell .status.info {
+  color: var(--ui-accent) !important;
+  background: var(--ui-accent-soft) !important;
+}
+.app-shell .status.done { color: var(--ui-success) !important; background: rgba(77,157,114,.10) !important; }
+
+/* -------------------------------------------------------------------------- */
+/* Responsive                                                                 */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .app-shell .daily-total-grid.compact-resource-cards,
+  .app-shell .home-stock-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell .resource-stock-input-grid.game-resource-grid,
+  .app-shell .resource-target-grid.game-resource-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field,
+  .app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field[data-resource] {
+    grid-template-columns: minmax(78px, auto) minmax(0, 1fr) !important;
+  }
+
+  .app-shell .resource-stock-input-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell .resource-stock-input-head {
+    flex-direction: column !important;
+    gap: 5px !important;
+  }
+
+  .app-shell .resource-stock-input-head > small {
+    align-self: flex-start !important;
+  }
+
+  .app-shell .quick-preset-command-card .quick-preset-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell .daily-chart-toolbar,
+  .app-shell .stock-chart-controls {
+    width: 100% !important;
+  }
+
+  .app-shell .stock-chart-controls > div {
+    width: 100% !important;
+  }
+
+  .app-shell .stock-chart-controls button {
+    flex: 1 1 auto !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field,
+  .app-shell .resource-stock-input-grid.game-resource-grid > label.resource-stock-field[data-resource] {
+    min-height: 62px !important;
+    padding: 8px 9px 8px 11px !important;
+    gap: 8px !important;
+  }
+
+  .app-shell .resource-stock-input-grid.game-resource-grid .resource-stock-field-control input[type="number"] {
+    font-size: 20px !important;
+    padding-inline: 10px !important;
+  }
+
+  .app-shell .daily-total-grid.compact-resource-cards button {
+    min-height: 68px !important;
+  }
+}
+
+/* Accessibility: retain obvious keyboard focus without neon-blue UI. */
+.app-shell button:focus-visible,
+.app-shell input:focus-visible,
+.app-shell select:focus-visible,
+.app-shell [role="button"]:focus-visible {
+  outline: 2px solid var(--ui-accent) !important;
+  outline-offset: 2px !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Final targeted fixes discovered during cascade audit                       */
+/* -------------------------------------------------------------------------- */
+
+/* Favorite is a secondary affordance, not a blue primary button. */
+html[data-theme="light"] .app-shell .favorite-toggle,
+html[data-theme="dark"] .app-shell .favorite-toggle,
+.app-shell .favorite-toggle,
+.app-shell .favorite-toggle.active {
+  background: rgba(211, 152, 76, 0.10) !important;
+  background-image: none !important;
+  color: #b57d35 !important;
+  border: 1px solid rgba(211, 152, 76, 0.22) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] .app-shell .favorite-toggle,
+html[data-theme="dark"] .app-shell .favorite-toggle.active {
+  color: #d9aa68 !important;
+  background: rgba(217, 170, 104, 0.12) !important;
+  border-color: rgba(217,170,104,.22) !important;
+}
+
+/* The expedition sub-navigation needs a visible container boundary. */
+.app-shell .expedition-view-switch {
+  border-color: rgba(85,125,159,.16) !important;
+  box-shadow: 0 5px 18px rgba(28,35,43,.06), inset 0 0 0 1px rgba(255,255,255,.28) !important;
+}
+html[data-theme="dark"] .app-shell .expedition-view-switch {
+  border-color: var(--ui-border) !important;
+  box-shadow: 0 7px 20px rgba(0,0,0,.18) !important;
+}
+
+/* Small outline actions should stay neutral even when legacy light-theme rules exist. */
+html[data-theme="light"] .app-shell button.ghost.small,
+html[data-theme="dark"] .app-shell button.ghost.small {
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--ui-accent) !important;
+  border: 1px solid var(--ui-border) !important;
+  box-shadow: none !important;
+}
+
+/* Ensure chart labels inherit the calm text palette. */
+html[data-theme="light"] .app-shell .daily-chart-item,
+html[data-theme="dark"] .app-shell .daily-chart-item {
+  color: var(--ui-text-secondary) !important;
+}
+
+/* Inputs must never clip six-digit resource values. */
+.app-shell .resource-stock-field-control {
+  contain: none !important;
+}
+.app-shell .resource-stock-field-control input[type="number"] {
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+/* Semantic resource labels: stable even if card order changes later. */
+.app-shell .daily-total-grid.compact-resource-cards .resource-summary-button > span {
+  display: block !important;
+  color: var(--ui-text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+}
+.app-shell .daily-total-grid.compact-resource-cards .resource-summary-button[data-resource="fuel"]::before { background: var(--ui-fuel) !important; }
+.app-shell .daily-total-grid.compact-resource-cards .resource-summary-button[data-resource="ammo"]::before { background: var(--ui-ammo) !important; }
+.app-shell .daily-total-grid.compact-resource-cards .resource-summary-button[data-resource="steel"]::before { background: var(--ui-steel) !important; }
+.app-shell .daily-total-grid.compact-resource-cards .resource-summary-button[data-resource="bauxite"]::before { background: var(--ui-bauxite) !important; }
+
+.app-shell .home-stock-grid .resource-stock-tile[data-resource="fuel"]::before { background: var(--ui-fuel) !important; }
+.app-shell .home-stock-grid .resource-stock-tile[data-resource="ammo"]::before { background: var(--ui-ammo) !important; }
+.app-shell .home-stock-grid .resource-stock-tile[data-resource="steel"]::before { background: var(--ui-steel) !important; }
+.app-shell .home-stock-grid .resource-stock-tile[data-resource="bauxite"]::before { background: var(--ui-bauxite) !important; }
+
+/* ========================================================================== */
+/* v5.6 — layout precision & interaction cleanup                              */
+/* Fixes edge clipping, chart geometry, target inputs, duplicate page chrome, */
+/* and settings navigation while preserving the calmer v5.5 visual system.   */
+/* ========================================================================== */
+
+/* ----- Records section alignment: section headings always share one inset. */
+.app-shell .resource-stock-panel {
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell .resource-stock-panel > .section-head {
+  margin-bottom: 12px !important;
+  padding-inline: 2px !important;
+}
+
+.app-shell .resource-stock-panel > .section-head > div,
+.app-shell .resource-target-panel > .section-head > div {
+  min-width: 0 !important;
+}
+
+.app-shell .resource-stock-panel > .section-head .eyebrow,
+.app-shell .resource-stock-panel > .section-head h3,
+.app-shell .resource-target-panel > .section-head .eyebrow,
+.app-shell .resource-target-panel > .section-head h3,
+.app-shell .resource-target-panel > .section-head .helper-text {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+/* ----- Stock chart controls: two clearly separated decisions. */
+.app-shell .stock-chart-controls {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, .78fr) !important;
+  align-items: end !important;
+  gap: 10px 14px !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 12px 0 8px !important;
+  padding: 10px !important;
+  border-radius: 14px !important;
+}
+
+.app-shell .stock-control-group {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+.app-shell .stock-control-label {
+  display: block !important;
+  padding-inline: 3px !important;
+  color: var(--ui-text-secondary) !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  font-weight: 650 !important;
+  letter-spacing: .02em !important;
+}
+
+.app-shell .stock-control-buttons {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+  padding: 2px !important;
+  border-radius: 10px !important;
+  background: rgba(118, 118, 128, .08) !important;
+}
+
+.app-shell .stock-control-group:nth-child(2) .stock-control-buttons {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+.app-shell .stock-chart-controls button {
+  min-width: 0 !important;
+  min-height: 34px !important;
+  padding: 5px 7px !important;
+  white-space: nowrap !important;
+}
+
+/* ----- Stock chart: reserve safe edges and keep point markers perfectly round. */
+.app-shell .stock-line-chart.axis-chart {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 10px 0 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell .stock-chart-frame {
+  grid-template-columns: 54px minmax(0, 1fr) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell .stock-plot-area {
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell .stock-plot-area > svg {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+.app-shell .stock-chart-frame svg polyline {
+  fill: none !important;
+  stroke: var(--ui-accent) !important;
+  stroke-width: 2.15px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: none !important;
+}
+
+.app-shell .stock-grid-line {
+  stroke-width: 1px !important;
+}
+
+/* SVG no longer owns the interactive dots; HTML buttons do, so they stay round. */
+.app-shell .stock-plot-markers {
+  position: absolute !important;
+  z-index: 3 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 200px !important;
+  pointer-events: none !important;
+}
+
+.app-shell .stock-point-marker,
+html[data-theme="light"] .app-shell .stock-point-marker,
+html[data-theme="dark"] .app-shell .stock-point-marker {
+  position: absolute !important;
+  display: block !important;
+  width: 10px !important;
+  height: 10px !important;
+  min-width: 10px !important;
+  min-height: 10px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  border: 2px solid var(--ui-accent) !important;
+  border-radius: 999px !important;
+  background: var(--ui-surface) !important;
+  background-image: none !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-surface) 78%, transparent) !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.app-shell .stock-point-marker.selected {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  background: var(--ui-accent) !important;
+  border-color: var(--ui-surface) !important;
+  box-shadow: 0 0 0 2px var(--ui-accent) !important;
+}
+
+.app-shell .stock-x-axis {
+  left: 0 !important;
+  right: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell .stock-x-axis span {
+  max-width: 72px !important;
+  overflow: visible !important;
+}
+
+/* ----- Target planner: fix clipping and mirror current-stock input language. */
+.app-shell .resource-target-panel,
+html[data-theme="light"] .app-shell .resource-target-panel,
+html[data-theme="dark"] .app-shell .resource-target-panel {
+  width: 100% !important;
+  min-width: 0 !important;
+  margin-top: 24px !important;
+  padding: 18px !important;
+  overflow: visible !important;
+  border-radius: 16px !important;
+  background: var(--ui-surface-raised) !important;
+  background-image: none !important;
+  box-sizing: border-box !important;
+}
+
+.app-shell .resource-target-panel::before,
+.app-shell .resource-target-panel::after {
+  content: none !important;
+  display: none !important;
+}
+
+.app-shell .resource-target-panel > .section-head {
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+}
+
+.app-shell .resource-target-input-grid.game-resource-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-areas: none !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell .resource-target-input-grid.game-resource-grid > label.resource-target-field,
+.app-shell .resource-target-input-grid.game-resource-grid > label.resource-target-field[data-resource] {
+  display: grid !important;
+  grid-template-columns: minmax(82px, auto) minmax(120px, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+  grid-area: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 64px !important;
+  margin: 0 !important;
+  padding: 9px 10px 9px 13px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 13px !important;
+  background: var(--ui-surface) !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+.app-shell .resource-target-field-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  color: var(--ui-text) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell .resource-target-field-label::before {
+  content: "" !important;
+  display: block !important;
+  position: static !important;
+  flex: 0 0 8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  margin-right: 7px !important;
+  border-radius: 999px !important;
+  background: var(--ui-fuel) !important;
+  box-shadow: none !important;
+}
+.app-shell .resource-target-field[data-resource="ammo"] .resource-target-field-label::before { background: var(--ui-ammo) !important; }
+.app-shell .resource-target-field[data-resource="steel"] .resource-target-field-label::before { background: var(--ui-steel) !important; }
+.app-shell .resource-target-field[data-resource="bauxite"] .resource-target-field-label::before { background: var(--ui-bauxite) !important; }
+
+.app-shell .resource-target-field-control {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 10px !important;
+  background: var(--ui-surface-muted) !important;
+}
+
+html[data-theme="light"] .app-shell .resource-target-field-control input[type="number"],
+html[data-theme="dark"] .app-shell .resource-target-field-control input[type="number"],
+.app-shell .resource-target-field-control > input[type="number"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ui-text) !important;
+  -webkit-text-fill-color: var(--ui-text) !important;
+  text-align: right !important;
+  font-size: 21px !important;
+  font-weight: 650 !important;
+  line-height: 44px !important;
+  letter-spacing: -.02em !important;
+  font-variant-numeric: tabular-nums !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  appearance: textfield !important;
+  -moz-appearance: textfield !important;
+}
+
+.app-shell .resource-target-field-control input[type="number"]::-webkit-inner-spin-button,
+.app-shell .resource-target-field-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+.app-shell .resource-target-field:focus-within {
+  border-color: rgba(85,125,159,.30) !important;
+}
+.app-shell .resource-target-field:focus-within .resource-target-field-control {
+  border-color: rgba(85,125,159,.36) !important;
+  box-shadow: 0 0 0 3px var(--ui-accent-soft) !important;
+}
+
+.app-shell .target-overview-card {
+  margin-top: 14px !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 12px !important;
+}
+
+.app-shell .target-plan-grid {
+  margin-top: 10px !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: var(--ui-surface) !important;
+}
+
+.app-shell .target-plan-grid > article {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ui-border-soft) !important;
+  border-radius: 0 !important;
+}
+.app-shell .target-plan-grid > article:last-child { border-bottom: 0 !important; }
+
+/* ----- Timer: page title lives in the app header; local bar only holds actions. */
+#timer-hub-section.timer-hub-card {
+  padding-top: 0 !important;
+}
+
+.app-shell .timer-hub-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  min-height: 38px !important;
+  margin-bottom: 8px !important;
+}
+
+/* ----- Settings: one hub OR one subview, never duplicated content stacks. */
+.app-shell .settings-subview-bar {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account.settings-view-hub > #settings-hub-section {
+  display: block !important;
+}
+
+.app-shell.mobile-tab-account.settings-view-hub > #account-cloud-section,
+.app-shell.mobile-tab-account.settings-view-hub > #pwa-section,
+.app-shell.mobile-tab-account.settings-view-hub > #notification-section,
+.app-shell.mobile-tab-account.settings-view-hub > #reward-section,
+.app-shell.mobile-tab-account.settings-view-hub > #diagnostics-section,
+.app-shell.mobile-tab-account.settings-view-hub > #log-section {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #settings-hub-section {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account:not(.settings-view-hub) > .settings-subview-bar {
+  display: grid !important;
+  grid-template-columns: auto 1fr auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 48px !important;
+  margin: -2px 0 6px !important;
+  padding: 0 2px !important;
+}
+
+.app-shell .settings-subview-bar::after {
+  content: "";
+  width: 62px;
+}
+
+.app-shell .settings-subview-bar > strong {
+  justify-self: center !important;
+  color: var(--ui-text) !important;
+  font-size: 15px !important;
+  font-weight: 650 !important;
+}
+
+.app-shell .settings-back-button,
+html[data-theme="light"] .app-shell .settings-back-button,
+html[data-theme="dark"] .app-shell .settings-back-button {
+  min-width: 62px !important;
+  min-height: 40px !important;
+  padding: 5px 8px !important;
+  background: transparent !important;
+  color: var(--ui-accent) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+}
+
+.app-shell .settings-back-button span {
+  font-size: 24px !important;
+  line-height: .7 !important;
+  vertical-align: -2px !important;
+}
+
+.app-shell.mobile-tab-account > #account-cloud-section,
+.app-shell.mobile-tab-account > #pwa-section,
+.app-shell.mobile-tab-account > #notification-section,
+.app-shell.mobile-tab-account > #reward-section,
+.app-shell.mobile-tab-account > #diagnostics-section,
+.app-shell.mobile-tab-account > #log-section {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account.settings-view-account > #account-cloud-section,
+.app-shell.mobile-tab-account.settings-view-pwa > #pwa-section,
+.app-shell.mobile-tab-account.settings-view-notifications > #notification-section,
+.app-shell.mobile-tab-account.settings-view-rewards > #reward-section,
+.app-shell.mobile-tab-account.settings-view-diagnostics > #diagnostics-section,
+.app-shell.mobile-tab-account.settings-view-log > #log-section {
+  display: block !important;
+}
+
+/* Subview title is provided by the back bar; remove the old accordion header. */
+.app-shell.mobile-tab-account:not(.settings-view-hub) > details.fold-card > .fold-summary {
+  display: none !important;
+}
+
+.app-shell.mobile-tab-account:not(.settings-view-hub) > details.fold-card {
+  margin-top: 0 !important;
+  overflow: visible !important;
+}
+
+.app-shell.mobile-tab-account:not(.settings-view-hub) > details.fold-card > .fold-content {
+  padding: 18px !important;
+}
+
+/* Account & cloud sync was linked from the hub but lacked its own visible panel. */
+.app-shell .account-sync-content {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.app-shell .account-login-form,
+.app-shell .account-session-card {
+  display: grid !important;
+  gap: 12px !important;
+  padding: 14px !important;
+  border: 1px solid var(--ui-border-soft) !important;
+  border-radius: 13px !important;
+  background: var(--ui-surface-muted) !important;
+}
+
+.app-shell .account-login-form label {
+  display: grid !important;
+  gap: 6px !important;
+  color: var(--ui-text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.app-shell .account-login-form input {
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 10px !important;
+  background: var(--ui-surface) !important;
+  color: var(--ui-text) !important;
+}
+
+.app-shell .account-session-card > div:first-child {
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.app-shell .account-cloud-actions {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+.app-shell .account-login-form .account-cloud-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+/* ----- Expedition details: let separators create hierarchy, not cyan sheets. */
+.app-shell .detail-card .prerequisite-card,
+.app-shell .detail-card .condition-card,
+.app-shell .detail-card .composition-card {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.app-shell .detail-card .prerequisite-list,
+.app-shell .detail-card .condition-summary-grid,
+.app-shell .detail-card .composition-pattern-list {
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.app-shell .detail-card .prerequisite-item,
+.app-shell .detail-card .prerequisite-chain,
+.app-shell .detail-card .route-requirement-list,
+.app-shell .detail-card .condition-summary-grid span,
+.app-shell .detail-card .composition-pattern {
+  background: var(--ui-surface-muted) !important;
+  border-color: var(--ui-border-soft) !important;
+}
+
+/* Pinned reorder buttons are quiet utility controls, visually separate from disclosure. */
+.app-shell .pin-order-actions {
+  width: 42px !important;
+  border-left: 1px solid var(--ui-border-soft) !important;
+  background: var(--ui-surface-raised) !important;
+}
+.app-shell .pin-order-actions button {
+  color: var(--ui-text-tertiary) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.app-shell .pin-order-actions button:hover:not(:disabled) {
+  color: var(--ui-accent) !important;
+  background: var(--ui-surface-hover) !important;
+}
+
+/* ----- Responsive precision fixes. */
+@media (max-width: 760px) {
+  .app-shell .stock-chart-controls {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .app-shell .stock-chart-frame {
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .app-shell .stock-plot-markers {
+    height: 180px !important;
+  }
+
+  .app-shell .resource-target-panel {
+    padding: 15px !important;
+  }
+
+  .app-shell .resource-target-input-grid.game-resource-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell .resource-target-input-grid.game-resource-grid > label.resource-target-field,
+  .app-shell .resource-target-input-grid.game-resource-grid > label.resource-target-field[data-resource] {
+    grid-template-columns: minmax(78px, auto) minmax(0, 1fr) !important;
+  }
+
+  .app-shell .account-cloud-actions,
+  .app-shell .account-login-form .account-cloud-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .app-shell .stock-control-buttons {
+    gap: 2px !important;
+  }
+  .app-shell .stock-chart-controls button {
+    padding-inline: 4px !important;
+    font-size: 11px !important;
+  }
+  .app-shell .resource-target-field-control > input[type="number"] {
+    font-size: 20px !important;
+    padding-inline: 10px !important;
+  }
+}
+
+/* Keep settings hierarchy below global navigation in the flex-based shell. */
+.app-shell > .settings-subview-bar { order: 2 !important; }
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #account-cloud-section,
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #pwa-section,
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #notification-section,
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #reward-section,
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #diagnostics-section,
+.app-shell.mobile-tab-account:not(.settings-view-hub) > #log-section { order: 3 !important; }
+html[data-theme="light"] .app-shell .stock-point-marker.selected,
+html[data-theme="dark"] .app-shell .stock-point-marker.selected,
+.app-shell .stock-point-marker.selected {
+  width: 13px !important;
+  height: 13px !important;
+  min-width: 13px !important;
+  min-height: 13px !important;
+  background: var(--ui-accent) !important;
+  border-color: var(--ui-surface) !important;
+  box-shadow: 0 0 0 2px var(--ui-accent) !important;
+}

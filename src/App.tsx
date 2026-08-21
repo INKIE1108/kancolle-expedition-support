@@ -86,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "5.5.0";
+const DATA_VERSION = "5.6.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -244,6 +244,7 @@ type CollapsibleKey = "account" | "pwa" | "notifications" | "rewards" | "presets
 type CollapseState = Record<CollapsibleKey, boolean>;
 
 type MobileTab = "home" | "expeditions" | "timers" | "records" | "account";
+type SettingsView = "hub" | "account" | "pwa" | "notifications" | "rewards" | "diagnostics" | "log";
 
 
 function TabIcon({ tab }: { tab: MobileTab }) {
@@ -436,6 +437,15 @@ const pageSubtitleMap: Record<MobileTab, string> = {
   timers: "第2〜第4艦隊・野埼",
   records: "資材記録・推移",
   account: "通知・同期・外観"
+};
+
+const settingsViewLabels: Record<Exclude<SettingsView, "hub">, string> = {
+  account: "アカウント・同期",
+  pwa: "スマホ・PWA",
+  notifications: "通知・Push",
+  rewards: "報酬補正",
+  diagnostics: "通知履歴・診断",
+  log: "ログ"
 };
 
 
@@ -1116,6 +1126,7 @@ function App() {
   });
   const [updateReady, setUpdateReady] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("home");
+  const [settingsView, setSettingsView] = useState<SettingsView>("hub");
   const [expeditionSubTab, setExpeditionSubTab] = useState<ExpeditionSubTab>("search");
   const [timerFocus, setTimerFocus] = useState<TimerFocus>(2);
   const [nozakiTimer, setNozakiTimer] = useState<NozakiTimerState>(() =>
@@ -1408,6 +1419,11 @@ function App() {
       if (lastIndex <= 2) return true;
       return index === 0 || index === Math.round(lastIndex / 2) || index === lastIndex;
     });
+  const getStockChartX = (index: number) => {
+    if (stockChartDisplaySeries.length <= 1) return 50;
+    const edgePadding = 3;
+    return edgePadding + (index / (stockChartDisplaySeries.length - 1)) * (100 - edgePadding * 2);
+  };
   const targetResources: ResourceRewards = {
     fuel: parseResourceStockInput(resourceTargetInputs.fuel),
     ammo: parseResourceStockInput(resourceTargetInputs.ammo),
@@ -2259,7 +2275,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.5.0",
+      appVersion: "5.6.0",
       ...overrides
     };
   }
@@ -2826,6 +2842,7 @@ function App() {
 
   function openSettingsHub() {
     setMobileTab("account");
+    setSettingsView("hub");
     setCollapsedPanels((current) => ({
       ...current,
       account: true,
@@ -2840,8 +2857,9 @@ function App() {
     }, 0);
   }
 
-  function jumpToSettingsPanel(panel: CollapsibleKey, targetId: string) {
+  function jumpToSettingsPanel(panel: Exclude<SettingsView, "hub">, targetId: string) {
     setMobileTab("account");
+    setSettingsView(panel);
     setCollapsedPanels((current) => ({ ...current, [panel]: false }));
     window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2849,7 +2867,7 @@ function App() {
   }
 
   function jumpToAccount(targetId: string = "account-cloud-section") {
-    const panelByTarget: Partial<Record<string, CollapsibleKey>> = {
+    const panelByTarget: Partial<Record<string, Exclude<SettingsView, "hub">>> = {
       "account-cloud-section": "account",
       "pwa-section": "pwa",
       "notification-section": "notifications",
@@ -2887,10 +2905,12 @@ function App() {
 
 
   const currentPageTitle = pageTitleMap[mobileTab];
-  const currentPageSubtitle = pageSubtitleMap[mobileTab];
+  const currentPageSubtitle = mobileTab === "account" && settingsView !== "hub"
+    ? settingsViewLabels[settingsView]
+    : pageSubtitleMap[mobileTab];
 
   return (
-    <main className={`app-shell mobile-tab-${mobileTab} expedition-subtab-${expeditionSubTab} timer-focus-${timerFocus} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
+    <main className={`app-shell mobile-tab-${mobileTab} settings-view-${settingsView} expedition-subtab-${expeditionSubTab} timer-focus-${timerFocus} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
       <header className="hero ios-app-header">
         <div className="ios-brand">
           <p className="eyebrow">KanColle Expedition Support</p>
@@ -3016,19 +3036,16 @@ function App() {
       </section>
       </section>
 
-      <section id="settings-hub-section" className="settings-hub-card" aria-label="設定メニュー">
-        <div className="settings-hub-head">
-          <div>
-            <p className="eyebrow">Settings</p>
-            <h2>設定</h2>
-            <p>通知・同期・外観</p>
-          </div>
-          <div className="settings-hub-status">
-            <span>{cloudStatusLabel}</span>
-            <span>{notificationStatusLabel}</span>
-          </div>
+      {mobileTab === "account" && settingsView !== "hub" && (
+        <div className="settings-subview-bar" aria-label="設定内ナビゲーション">
+          <button type="button" className="settings-back-button" onClick={openSettingsHub}>
+            <span aria-hidden="true">‹</span> 設定
+          </button>
+          <strong>{settingsViewLabels[settingsView]}</strong>
         </div>
+      )}
 
+      <section id="settings-hub-section" className="settings-hub-card" aria-label="設定メニュー">
         <div className="appearance-setting">
           <span><strong>外観</strong><small>画面テーマ</small></span>
           <div className="theme-switch" role="group" aria-label="テーマ切替">
@@ -3075,6 +3092,48 @@ function App() {
           </div>
         </div>
       </section>
+
+      <details
+        id="account-cloud-section"
+        className="account-card fold-card"
+        open={!collapsedPanels.account}
+        onToggle={(event) => handlePanelToggle("account", event.currentTarget.open)}
+      >
+        <summary className="fold-summary">
+          <span><small>Account</small><strong>アカウント・同期</strong></span>
+          <em>{collapsedPanels.account ? "開く" : "閉じる"}</em>
+        </summary>
+        <div className="fold-content account-sync-content">
+          <div className="section-head compact">
+            <div>
+              <p className="eyebrow">Cloud Sync</p>
+              <h2>アカウント・同期</h2>
+              <p className="helper-text">ログインすると設定・履歴・所持資源などをクラウドへ保存し、別端末と同期できるよ。</p>
+            </div>
+            <span className={`status ${authState.user ? "done" : "idle"}`}>{authState.user ? "ログイン中" : "未ログイン"}</span>
+          </div>
+          {authState.user ? (
+            <div className="account-session-card">
+              <div><small>ログイン中</small><strong>{authState.user.email ?? "アカウント"}</strong></div>
+              <div className="account-cloud-actions">
+                <button type="button" onClick={saveCloud} disabled={cloudSyncBusy}>クラウドへ保存</button>
+                <button type="button" className="secondary" onClick={loadCloud} disabled={cloudSyncBusy}>クラウドから読込</button>
+                <button type="button" className="ghost" onClick={signOut} disabled={cloudSyncBusy}>ログアウト</button>
+              </div>
+            </div>
+          ) : (
+            <div className="account-login-form">
+              <label><span>メールアドレス</span><input type="email" autoComplete="email" value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} placeholder="name@example.com" /></label>
+              <label><span>パスワード</span><input type="password" autoComplete="current-password" value={authPassword} onChange={(event) => setAuthPassword(event.target.value)} placeholder="パスワード" /></label>
+              <div className="account-cloud-actions">
+                <button type="button" onClick={signIn} disabled={cloudSyncBusy}>ログイン</button>
+                <button type="button" className="secondary" onClick={signUp} disabled={cloudSyncBusy}>アカウント作成</button>
+              </div>
+            </div>
+          )}
+          <p className="helper-text">{cloudSyncMessage || (isSupabaseConfigured ? "クラウド同期はログイン後に利用できます。" : "Supabase環境変数が未設定です。")}</p>
+        </div>
+      </details>
 
       <details
         id="pwa-section"
@@ -3625,15 +3684,21 @@ function App() {
               </div>
 
               <div className="stock-chart-controls" aria-label="所持資源グラフ切替">
-                <div>
-                  {dailyChartModes.map((mode) => (
-                    <button type="button" key={`stock-mode-${mode}`} className={stockChartMode === mode ? "active" : ""} onClick={() => setStockChartMode(mode)}>{mode}</button>
-                  ))}
+                <div className="stock-control-group">
+                  <span className="stock-control-label">表示する資源</span>
+                  <div className="stock-control-buttons">
+                    {dailyChartModes.map((mode) => (
+                      <button type="button" key={`stock-mode-${mode}`} className={stockChartMode === mode ? "active" : ""} onClick={() => setStockChartMode(mode)}>{mode}</button>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  {stockChartRanges.map((range) => (
-                    <button type="button" key={`stock-range-${range}`} className={stockChartRange === range ? "active" : ""} onClick={() => setStockChartRange(range)}>{range}</button>
-                  ))}
+                <div className="stock-control-group">
+                  <span className="stock-control-label">表示期間</span>
+                  <div className="stock-control-buttons">
+                    {stockChartRanges.map((range) => (
+                      <button type="button" key={`stock-range-${range}`} className={stockChartRange === range ? "active" : ""} onClick={() => setStockChartRange(range)}>{range}</button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -3651,45 +3716,46 @@ function App() {
                       <svg viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label={`${stockChartRange}の${stockChartMode}推移`}>
                         {[0, 1, 2, 3].map((lineIndex) => {
                           const y = 6 + lineIndex * 14;
-                          return <line key={`grid-y-${lineIndex}`} className="stock-grid-line" x1="0" x2="100" y1={y} y2={y} />;
+                          return <line key={`grid-y-${lineIndex}`} className="stock-grid-line" vectorEffect="non-scaling-stroke" x1="3" x2="97" y1={y} y2={y} />;
                         })}
                         {stockXAxisTicks.map(({ index }) => {
-                          const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
-                          return <line key={`grid-x-${index}`} className="stock-grid-line vertical" x1={x} x2={x} y1="6" y2="48" />;
+                          const x = getStockChartX(index);
+                          return <line key={`grid-x-${index}`} className="stock-grid-line vertical" vectorEffect="non-scaling-stroke" x1={x} x2={x} y1="6" y2="48" />;
                         })}
                         <polyline
+                          vectorEffect="non-scaling-stroke"
                           points={stockChartDisplaySeries.map((snapshot, index) => {
-                            const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                            const x = getStockChartX(index);
                             const value = getResourceStockValue(snapshot.resources, stockChartMode);
                             const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
                             return `${x.toFixed(2)},${y.toFixed(2)}`;
                           }).join(" ")}
                         />
+                      </svg>
+                      <div className="stock-plot-markers" aria-label="記録点">
                         {stockChartDisplaySeries.map((snapshot, index) => {
-                          const x = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
+                          const x = getStockChartX(index);
                           const value = getResourceStockValue(snapshot.resources, stockChartMode);
                           const y = 48 - ((value - stockChartMin) / stockChartRangeValue) * 42;
                           return (
-                            <circle
-                              key={snapshot.id}
-                              className={selectedStockSnapshot?.id === snapshot.id ? "selected" : ""}
-                              cx={x}
-                              cy={y}
-                              r={selectedStockSnapshot?.id === snapshot.id ? "2" : "1.45"}
-                              role="button"
-                              tabIndex={0}
+                            <button
+                              type="button"
+                              key={`marker-${snapshot.id}`}
+                              className={`stock-point-marker ${selectedStockSnapshot?.id === snapshot.id ? "selected" : ""}`}
+                              style={{ left: `${x}%`, top: `${(y / 52) * 100}%` }}
                               onClick={() => setSelectedStockSnapshotId(snapshot.id)}
-                              onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") setSelectedStockSnapshotId(snapshot.id); }}
-                            >
-                              <title>{formatStockSnapshotLabel(snapshot.recordedAt, stockChartRange)}：{value.toLocaleString("ja-JP")}</title>
-                            </circle>
+                              aria-label={`${formatStockSnapshotLabel(snapshot.recordedAt, stockChartRange)} ${value.toLocaleString("ja-JP")}`}
+                              title={`${formatStockSnapshotLabel(snapshot.recordedAt, stockChartRange)}：${value.toLocaleString("ja-JP")}`}
+                            />
                           );
                         })}
-                      </svg>
+                      </div>
                       <div className="stock-x-axis" aria-hidden="true">
                         {stockXAxisTicks.map(({ snapshot, index }) => {
-                          const left = stockChartDisplaySeries.length === 1 ? 50 : (index / (stockChartDisplaySeries.length - 1)) * 100;
-                          return <span key={`stock-x-${snapshot.id}`} style={{ left: `${left}%` }}>{formatStockAxisDate(snapshot.recordedAt, stockChartRange)}</span>;
+                          const left = getStockChartX(index);
+                          const lastIndex = stockChartDisplaySeries.length - 1;
+                          const transform = index === 0 ? "translateX(0)" : index === lastIndex ? "translateX(-100%)" : "translateX(-50%)";
+                          return <span key={`stock-x-${snapshot.id}`} style={{ left: `${left}%`, transform }}>{formatStockAxisDate(snapshot.recordedAt, stockChartRange)}</span>;
                         })}
                       </div>
                     </div>
@@ -3722,9 +3788,11 @@ function App() {
                 </div>
                 <div className="resource-target-input-grid game-resource-grid">
                   {resourceGameGridKeys.map((key) => (
-                    <label key={`target-input-${key}`} data-resource={key}>
-                      <span>{resourceFullLabels[key]}</span>
-                      <input type="number" min={0} max={999999} value={resourceTargetInputs[key]} onChange={(event) => updateResourceTargetInput(key, event.target.value)} placeholder="目標値" inputMode="numeric" />
+                    <label key={`target-input-${key}`} className="resource-target-field" data-resource={key}>
+                      <span className="resource-target-field-label">{resourceFullLabels[key]}</span>
+                      <span className="resource-target-field-control">
+                        <input type="number" min={0} max={999999} value={resourceTargetInputs[key]} onChange={(event) => updateResourceTargetInput(key, event.target.value)} placeholder="目標値" inputMode="numeric" aria-label={`${resourceFullLabels[key]}の目標値`} />
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -3732,7 +3800,7 @@ function App() {
                   <div>
                     <small>合計目標まで</small>
                     <strong>{targetTotalRemaining <= 0 ? "達成済み" : targetTotalDays === null ? "ペース不足" : `約${targetTotalDays}日`}</strong>
-                    <span>現在 {targetTotalCurrent.toLocaleString("ja-JP")} / 目標 {targetTotalGoal.toLocaleString("ja-JP")} / 平均 {formatSignedNumber(targetTotalDailyAverage)}/日</span>
+                    <span>{targetTotalRemaining <= 0 ? `目標より ${formatSignedNumber(-targetTotalRemaining)}` : `残り ${formatSignedNumber(targetTotalRemaining)}`} / 現在 {targetTotalCurrent.toLocaleString("ja-JP")} / 目標 {targetTotalGoal.toLocaleString("ja-JP")} / 平均 {formatSignedNumber(targetTotalDailyAverage)}/日</span>
                   </div>
                 </div>
                 <div className="target-plan-grid">
@@ -3741,7 +3809,7 @@ function App() {
                       <span>{row.label}</span>
                       <strong>{row.remaining <= 0 ? "達成済み" : row.days === null ? "ペース不足" : `約${row.days}日`}</strong>
                       <small>現在 {row.currentValue.toLocaleString("ja-JP")} / 目標 {row.targetValue.toLocaleString("ja-JP")}</small>
-                      <em>残り {formatSignedNumber(row.remaining)} / 平均 {formatSignedNumber(row.dailyAverage)}/日</em>
+                      <em>{row.remaining <= 0 ? `目標より ${formatSignedNumber(-row.remaining)}` : `残り ${formatSignedNumber(row.remaining)}`} / 平均 {formatSignedNumber(row.dailyAverage)}/日</em>
                     </article>
                   ))}
                 </div>
@@ -3752,11 +3820,7 @@ function App() {
       </section>
 
       <section id="timer-hub-section" className="timer-hub-card" aria-label="タイマー切替">
-        <div className="section-head compact timer-hub-head">
-          <div>
-            <p className="eyebrow">Timers</p>
-            <h2>タイマー</h2>
-          </div>
+        <div className="timer-hub-actions">
           <button type="button" className="ghost small" onClick={() => setCompactFleetCards((value) => !value)}>{compactFleetCards ? "標準表示" : "コンパクト"}</button>
         </div>
         <div className="ios-segmented-control timer-focus-control" role="tablist" aria-label="タイマー選択">
