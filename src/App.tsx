@@ -86,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "5.1.0";
+const DATA_VERSION = "5.3.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -975,6 +975,16 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 function isPushSupported(): boolean {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+function SettingsGlyph({ kind }: { kind: "cloud" | "phone" | "bell" | "sliders" | "activity" | "list" }) {
+  const common = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  if (kind === "cloud") return <svg {...common}><path d="M7 18h10.5a4.5 4.5 0 0 0 .8-8.93A6.5 6.5 0 0 0 6.1 7.4 4.3 4.3 0 0 0 7 18Z" /></svg>;
+  if (kind === "phone") return <svg {...common}><rect x="7" y="2.5" width="10" height="19" rx="2.4" /><path d="M10 5h4" /><path d="M11.5 18.5h1" /></svg>;
+  if (kind === "bell") return <svg {...common}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 8.5h18C21 15 18 15 18 8Z" /><path d="M10 20h4" /></svg>;
+  if (kind === "sliders") return <svg {...common}><path d="M4 7h10" /><path d="M18 7h2" /><circle cx="16" cy="7" r="2" /><path d="M4 17h2" /><path d="M10 17h10" /><circle cx="8" cy="17" r="2" /></svg>;
+  if (kind === "activity") return <svg {...common}><path d="M3 12h4l2.2-5 4.2 10 2.1-5H21" /></svg>;
+  return <svg {...common}><path d="M8 6h12" /><path d="M8 12h12" /><path d="M8 18h12" /><circle cx="4" cy="6" r=".8" fill="currentColor" stroke="none" /><circle cx="4" cy="12" r=".8" fill="currentColor" stroke="none" /><circle cx="4" cy="18" r=".8" fill="currentColor" stroke="none" /></svg>;
 }
 
 function App() {
@@ -2204,7 +2214,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.1.0",
+      appVersion: "5.3.0",
       ...overrides
     };
   }
@@ -2981,37 +2991,36 @@ function App() {
 
         <div className="settings-menu-panel">
           <div className="settings-menu-copy">
-            <h3>設定メニュー</h3>
-            <p>必要な設定へすぐ移動できます。詳細な編集フォームは下にまとまっています。</p>
+            <h3>アカウント・通知</h3>
           </div>
           <div className="settings-menu-grid">
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("account", "account-cloud-section")}>
-              <span className="settings-menu-icon">☁</span>
+              <span className="settings-menu-icon"><SettingsGlyph kind="cloud" /></span>
               <span><strong>アカウント・同期</strong><small>ログイン・クラウド保存</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("pwa", "pwa-section")}>
-              <span className="settings-menu-icon">📱</span>
+              <span className="settings-menu-icon"><SettingsGlyph kind="phone" /></span>
               <span><strong>スマホ・PWA</strong><small>インストール・バックアップ</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("notifications", "notification-section")}>
-              <span className="settings-menu-icon">🔔</span>
+              <span className="settings-menu-icon"><SettingsGlyph kind="bell" /></span>
               <span><strong>通知・Push</strong><small>Discord・スマホ通知</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("rewards", "reward-section")}>
-              <span className="settings-menu-icon">⚙</span>
+              <span className="settings-menu-icon"><SettingsGlyph kind="sliders" /></span>
               <span><strong>報酬補正</strong><small>大成功・大発・鬼怒改二</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("diagnostics", "diagnostics-section")}>
-              <span className="settings-menu-icon">🩺</span>
+              <span className="settings-menu-icon"><SettingsGlyph kind="activity" /></span>
               <span><strong>通知履歴・診断</strong><small>失敗原因・送信状態</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("log", "log-section")}>
-              <span className="settings-menu-icon">📝</span>
+              <span className="settings-menu-icon"><SettingsGlyph kind="list" /></span>
               <span><strong>ログ</strong><small>操作履歴・デバッグメモ</small></span>
               <em>›</em>
             </button>

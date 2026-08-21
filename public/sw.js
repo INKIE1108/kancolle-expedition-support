@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kancolle-expedition-support-v5.1.0';
+const CACHE_NAME = 'kancolle-expedition-support-v5.3.0';
 
 function scopeUrl(path) {
   return new URL(path, self.registration.scope).toString();

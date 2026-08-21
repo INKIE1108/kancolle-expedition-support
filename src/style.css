@@ -9907,3 +9907,565 @@ html[data-theme="dark"] .daily-chart-item small {
   color: var(--label-secondary) !important;
   opacity: 1 !important;
 }
+
+/* ========================================================================== */
+/* v5.3 — final iOS/iPadOS hierarchy & neutral-surface tuning                 */
+/* ========================================================================== */
+
+/* 1) Global navigation is always above page-local navigation/content. */
+.hero.ios-app-header { order: 0 !important; }
+.app-shell > .desktop-tabbar.ios-tabbar { order: 1 !important; }
+.app-shell > .ops-overview,
+.app-shell > .expedition-view-switch,
+.app-shell > #timer-hub-section,
+.app-shell > #settings-hub-section { order: 2 !important; }
+.app-shell > .nozaki-timer-card,
+.app-shell > #fleet-timer-section { order: 3 !important; }
+
+.app-shell.mobile-tab-timers > .desktop-tabbar.ios-tabbar { order: 1 !important; }
+.app-shell.mobile-tab-timers > #timer-hub-section { order: 2 !important; }
+.app-shell.mobile-tab-timers > .nozaki-timer-card,
+.app-shell.mobile-tab-timers > #fleet-timer-section { order: 3 !important; }
+
+/* 2) Timer page title/local navigation: no extra dashboard card. */
+#timer-hub-section.timer-hub-card {
+  padding: 10px 4px 6px !important;
+  margin: 2px 0 2px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+#timer-hub-section .timer-hub-head {
+  margin-bottom: 10px !important;
+  padding-inline: 2px !important;
+}
+#timer-hub-section .timer-hub-head h2 {
+  margin-top: 2px !important;
+}
+#timer-hub-section .timer-hub-head .ghost.small {
+  min-height: 36px !important;
+  padding-inline: 10px !important;
+  background: transparent !important;
+  color: var(--accent) !important;
+}
+#timer-hub-section .timer-focus-control {
+  width: 100% !important;
+  min-height: 36px !important;
+  padding: 2px !important;
+  border-radius: 10px !important;
+  background: var(--segmented-bg) !important;
+}
+#timer-hub-section .timer-focus-control button {
+  min-height: 32px !important;
+  border-radius: 8px !important;
+  color: var(--label-secondary) !important;
+  background: transparent !important;
+}
+#timer-hub-section .timer-focus-control button.active {
+  color: var(--segmented-selected-label) !important;
+  background: var(--segmented-selected) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08) !important;
+}
+
+/* 3) Keep System Blue to action/selection/state, not information surfaces. */
+.command-card,
+.return-check-card,
+.nozaki-timer-card,
+.fleet-card,
+.detail-card,
+.list-card,
+.records-card,
+.fold-card,
+.preset-card,
+.guide-card,
+.monthly-card,
+.daily-summary,
+.resource-stock-input-card,
+.resource-target-panel {
+  background: var(--bg-secondary) !important;
+  background-image: none !important;
+}
+
+/* 4) Today resources: neutral cards + tiny resource dot only. */
+.daily-total-grid.compact-resource-cards {
+  gap: 8px !important;
+}
+.daily-total-grid.compact-resource-cards button {
+  min-height: 68px !important;
+  padding: 12px 12px 10px 26px !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  background: var(--bg-tertiary) !important;
+  color: var(--label-secondary) !important;
+  box-shadow: none !important;
+}
+.daily-total-grid.compact-resource-cards button strong {
+  margin-top: 2px !important;
+  color: var(--label-primary) !important;
+  font-size: 22px !important;
+  font-weight: 650 !important;
+}
+.daily-total-grid.compact-resource-cards button.active {
+  background: var(--accent-soft) !important;
+  color: var(--label-primary) !important;
+}
+.daily-total-grid.compact-resource-cards button::before {
+  width: 6px !important;
+  height: 6px !important;
+  left: 12px !important;
+  top: 17px !important;
+}
+
+/* 5/6) Expedition rows: one grouped surface, separators instead of blue cards. */
+.pinned-box,
+.pinned-list,
+.expedition-list,
+.pinned-list-editable {
+  box-shadow: none !important;
+}
+.pinned-list,
+.expedition-list,
+.pinned-list-editable {
+  padding: 0 !important;
+  gap: 0 !important;
+  background: var(--bg-secondary) !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+.pinned-edit-item,
+.expedition-item {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: .5px solid var(--separator) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.pinned-edit-item:last-child,
+.expedition-item:last-child { border-bottom: 0 !important; }
+.pinned-main,
+.expedition-main {
+  min-height: 70px !important;
+  padding: 12px 34px 12px 14px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--label-primary) !important;
+  box-shadow: none !important;
+}
+.pinned-main:hover,
+.expedition-main:hover {
+  background: var(--fill-tertiary) !important;
+}
+.expedition-item.selected .expedition-main,
+.pinned-edit-item.selected .pinned-main {
+  background: var(--accent-soft) !important;
+  color: var(--label-primary) !important;
+}
+.pinned-main::after,
+.expedition-main::after {
+  color: var(--label-tertiary) !important;
+}
+
+/* 7) Sort controls are neutral until interaction. */
+.pin-order-actions {
+  border-left: .5px solid var(--separator) !important;
+  background: transparent !important;
+}
+.pin-order-actions button,
+.pinned-edit-item .tiny,
+.expedition-item > .pin-button {
+  background: var(--fill-secondary) !important;
+  color: var(--label-secondary) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.pin-order-actions button:hover:not(:disabled),
+.pinned-edit-item .tiny:hover:not(:disabled),
+.expedition-item > .pin-button:hover:not(:disabled) {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+}
+.expedition-item > .pin-button.active,
+.pin-button.active {
+  background: transparent !important;
+  color: var(--favorite) !important;
+}
+
+/* 8) Favorite timer shortcuts: neutral pills; only current item is accented. */
+.fleet-pinned-shortcuts {
+  gap: 6px !important;
+}
+.fleet-pinned-shortcuts button {
+  min-height: 34px !important;
+  padding: 5px 10px !important;
+  border: 0 !important;
+  background: var(--fill-secondary) !important;
+  color: var(--label-secondary) !important;
+  box-shadow: none !important;
+}
+.fleet-pinned-shortcuts button.active {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+}
+
+/* 9/10) Records daily chart: slim bar chart, not seven blue graphics/cards. */
+.records-summary,
+.daily-summary {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.daily-chart {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  align-items: end !important;
+  gap: clamp(6px, 1.2vw, 14px) !important;
+  min-height: 164px !important;
+  margin: 14px 0 10px !important;
+  padding: 10px 4px 2px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.daily-chart-item {
+  grid-template-rows: 104px auto auto !important;
+  gap: 4px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--label-secondary) !important;
+  box-shadow: none !important;
+}
+.daily-chart-item.selected {
+  background: transparent !important;
+}
+.daily-chart-bar-wrap {
+  width: min(18px, 44%) !important;
+  height: 100px !important;
+  margin: 0 auto !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  background: var(--fill-secondary) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+.daily-chart-bar {
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  min-height: 3px !important;
+  border-radius: 5px 5px 2px 2px !important;
+  background: var(--accent) !important;
+  opacity: .66 !important;
+}
+.daily-chart-item.selected .daily-chart-bar {
+  opacity: 1 !important;
+}
+.daily-chart-item:hover .daily-chart-bar-wrap,
+.daily-chart-item.selected .daily-chart-bar-wrap {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.daily-chart-item small {
+  color: var(--label-secondary) !important;
+  font-size: 12px !important;
+}
+.daily-chart-item strong {
+  color: var(--label-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 550 !important;
+}
+.daily-chart-item.selected small,
+.daily-chart-item.selected strong {
+  color: var(--accent) !important;
+}
+.daily-chart-toolbar {
+  width: fit-content !important;
+  max-width: 100% !important;
+  background: var(--segmented-bg) !important;
+  border: 0 !important;
+}
+.daily-chart-toolbar button.active {
+  background: var(--segmented-selected) !important;
+  color: var(--segmented-selected-label) !important;
+}
+.daily-breakdown-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-top: .5px solid var(--separator) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 11) Stock trend: chart itself is the visual focus. */
+.resource-stock-panel,
+.stock-chart-frame,
+.stock-line-chart {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.stock-chart-frame {
+  padding: 8px 0 0 !important;
+}
+.stock-grid-line {
+  stroke: var(--separator-soft) !important;
+  opacity: .55 !important;
+}
+.stock-grid-line.vertical { opacity: .28 !important; }
+.stock-y-axis,
+.stock-x-axis,
+.stock-x-axis span {
+  color: var(--label-secondary) !important;
+  font-size: 12px !important;
+}
+.stock-point-detail {
+  margin-top: 10px !important;
+  padding: 10px 0 !important;
+  border: 0 !important;
+  border-top: .5px solid var(--separator) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.stock-summary-grid {
+  margin-top: 8px !important;
+  border-radius: 14px !important;
+  background: var(--bg-tertiary) !important;
+}
+
+/* 12–19) Settings.app-style grouped navigation. */
+#settings-hub-section.settings-hub-card {
+  padding: 4px 0 2px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.settings-hub-head {
+  padding-inline: 4px !important;
+  margin-bottom: 14px !important;
+}
+.settings-hub-head > div:first-child > p:last-child {
+  color: var(--label-secondary) !important;
+}
+.appearance-setting {
+  min-height: 58px !important;
+  margin: 0 0 20px !important;
+  padding: 10px 14px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--bg-secondary) !important;
+  box-shadow: none !important;
+}
+.settings-menu-panel {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.settings-menu-copy {
+  padding: 0 12px 7px !important;
+}
+.settings-menu-copy h3 {
+  margin: 0 !important;
+  color: var(--label-secondary) !important;
+  font-size: 13px !important;
+  line-height: 1.3 !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+}
+.settings-menu-grid {
+  display: block !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background: var(--bg-secondary) !important;
+  box-shadow: none !important;
+}
+.settings-menu-item {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) 20px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-height: 62px !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  border: 0 !important;
+  border-bottom: .5px solid var(--separator) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--label-primary) !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  text-align: left !important;
+}
+.settings-menu-item:last-child { border-bottom: 0 !important; }
+.settings-menu-item:hover:not(:disabled) {
+  background: var(--fill-tertiary) !important;
+}
+.settings-menu-icon {
+  display: grid !important;
+  place-items: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+  background: var(--fill-tertiary) !important;
+  color: var(--label-secondary) !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+.settings-menu-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+.settings-menu-item > span:nth-child(2) {
+  display: grid !important;
+  gap: 1px !important;
+}
+.settings-menu-item strong {
+  color: var(--label-primary) !important;
+  font-size: 15.5px !important;
+  line-height: 1.35 !important;
+  font-weight: 600 !important;
+}
+.settings-menu-item small {
+  color: var(--label-secondary) !important;
+  font-size: 12.5px !important;
+  line-height: 1.35 !important;
+  font-weight: 400 !important;
+}
+.settings-menu-item em {
+  color: var(--label-tertiary) !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  font-style: normal !important;
+  font-weight: 300 !important;
+}
+.settings-menu-item:disabled {
+  color: var(--label-disabled) !important;
+  opacity: .55 !important;
+}
+
+/* Detailed Settings sections keep Grouped-Settings spacing, not dashboard gaps. */
+.app-shell.mobile-tab-account > details.fold-card,
+.app-shell.mobile-tab-account > .account-card,
+.app-shell.mobile-tab-account > .pwa-card,
+.app-shell.mobile-tab-account > .settings-card,
+.app-shell.mobile-tab-account > .reward-card,
+.app-shell.mobile-tab-account > .diagnostics-card,
+.app-shell.mobile-tab-account > .log-card {
+  margin-top: 18px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--bg-secondary) !important;
+  box-shadow: none !important;
+}
+
+/* 20/21) Dark appearance uses only black + neutral charcoal hierarchy. */
+html[data-theme="dark"] .hero.ios-app-header {
+  background: var(--bg-primary) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] .settings-menu-grid,
+html[data-theme="dark"] .appearance-setting,
+html[data-theme="dark"] .settings-menu-panel {
+  background-color: var(--bg-secondary) !important;
+  background-image: none !important;
+}
+html[data-theme="dark"] .settings-menu-panel { background: transparent !important; }
+
+/* 22) Segmented Controls stay neutral; blue is unnecessary here. */
+.ios-segmented-control,
+.theme-switch,
+.daily-chart-toolbar,
+.stock-chart-controls {
+  background: var(--segmented-bg) !important;
+  border: 0 !important;
+}
+.ios-segmented-control button,
+.theme-switch button,
+.daily-chart-toolbar button,
+.stock-chart-controls button {
+  background: transparent !important;
+  color: var(--label-secondary) !important;
+}
+.ios-segmented-control button.active,
+.theme-switch button.active,
+.daily-chart-toolbar button.active,
+.stock-chart-controls button.active {
+  background: var(--segmented-selected) !important;
+  color: var(--segmented-selected-label) !important;
+}
+
+/* 23) Only the global nav keeps a subtle blue active tint. */
+.desktop-tabbar.ios-tabbar button.active,
+.desktop-tabbar.ios-tabbar .timer-primary-tab.active,
+.mobile-tabbar.ios-bottom-tabbar button.active,
+.mobile-tabbar.ios-bottom-tabbar .timer-primary-tab.active {
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+}
+
+/* 24) Preserve primary/secondary/tertiary hierarchy on timer controls. */
+.button-row > button:first-child,
+.nozaki-actions > button:first-child {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+.button-row > button.secondary,
+.nozaki-actions > button.secondary {
+  background: var(--fill-secondary) !important;
+  color: var(--label-primary) !important;
+}
+.button-row > button.ghost,
+.button-row > button:last-child:not(:first-child) {
+  background: transparent !important;
+}
+
+/* 25) Accent color remains welcome on compact status badges. */
+.status.running,
+.status.info {
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+}
+
+/* Small transitions only. */
+.desktop-tabbar button,
+.mobile-tabbar button,
+.ios-segmented-control button,
+.settings-menu-item,
+.expedition-main,
+.pinned-main,
+.fleet-pinned-shortcuts button,
+button {
+  transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease, transform 160ms ease !important;
+}
+
+@media (max-width: 760px) {
+  #timer-hub-section.timer-hub-card {
+    padding-inline: 0 !important;
+  }
+  .daily-chart {
+    gap: 5px !important;
+  }
+  .daily-chart-bar-wrap {
+    width: min(14px, 48%) !important;
+    height: 86px !important;
+  }
+  .settings-menu-item {
+    min-height: 60px !important;
+  }
+}
