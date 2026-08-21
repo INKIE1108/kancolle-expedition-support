@@ -86,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "5.4.0";
+const DATA_VERSION = "5.5.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -244,6 +244,35 @@ type CollapsibleKey = "account" | "pwa" | "notifications" | "rewards" | "presets
 type CollapseState = Record<CollapsibleKey, boolean>;
 
 type MobileTab = "home" | "expeditions" | "timers" | "records" | "account";
+
+
+function TabIcon({ tab }: { tab: MobileTab }) {
+  const common = {
+    width: 20,
+    height: 20,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true
+  };
+
+  if (tab === "home") {
+    return <svg {...common}><path d="M3.5 10.5 12 3.8l8.5 6.7"/><path d="M5.5 9.7v10.1h13V9.7"/><path d="M9.3 19.8v-6.2h5.4v6.2"/></svg>;
+  }
+  if (tab === "expeditions") {
+    return <svg {...common}><path d="M5 18.5 18.8 5.2"/><path d="M10.8 5.2h8v8"/><path d="M5 8.4v10.1h10.1"/></svg>;
+  }
+  if (tab === "timers") {
+    return <svg {...common}><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 1.8"/><path d="M9.5 3h5"/></svg>;
+  }
+  if (tab === "records") {
+    return <svg {...common}><path d="M4 19.5V5.5"/><path d="M4 19.5h16"/><path d="m7 15 3.4-3.6 3 2.2L19 7.5"/></svg>;
+  }
+  return <svg {...common}><path d="M4.5 7.5h15"/><path d="M4.5 16.5h15"/><circle cx="9" cy="7.5" r="2"/><circle cx="15" cy="16.5" r="2"/></svg>;
+}
 type ExpeditionSubTab = "search" | "assist";
 type TimerFocus = 2 | 3 | 4 | "nozaki";
 type ThemeMode = "dark" | "light";
@@ -2230,7 +2259,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.4.0",
+      appVersion: "5.5.0",
       ...overrides
     };
   }
@@ -2871,11 +2900,11 @@ function App() {
       </header>
 
       <nav className="desktop-tabbar ios-tabbar" aria-label="画面タブ">
-        <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b aria-hidden="true">⌂</b><span>ホーム</span></button>
-        <button type="button" className={mobileTab === "expeditions" ? "active" : ""} onClick={() => switchAppTab("expeditions")}><b aria-hidden="true">↗</b><span>遠征</span></button>
-        <button type="button" className={`timer-primary-tab ${mobileTab === "timers" ? "active" : ""}`} onClick={() => switchAppTab("timers", "timer-hub-section")}><b aria-hidden="true">⚓︎</b><span>タイマー</span></button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b aria-hidden="true">⌁</b><span>記録</span></button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b aria-hidden="true">⚙︎</b><span>設定</span></button>
+        <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b className="tab-icon"><TabIcon tab="home" /></b><span>ホーム</span></button>
+        <button type="button" className={mobileTab === "expeditions" ? "active" : ""} onClick={() => switchAppTab("expeditions")}><b className="tab-icon"><TabIcon tab="expeditions" /></b><span>遠征</span></button>
+        <button type="button" className={`timer-primary-tab ${mobileTab === "timers" ? "active" : ""}`} onClick={() => switchAppTab("timers", "timer-hub-section")}><b className="tab-icon"><TabIcon tab="timers" /></b><span>タイマー</span></button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b className="tab-icon"><TabIcon tab="records" /></b><span>記録</span></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b className="tab-icon"><TabIcon tab="account" /></b><span>設定</span></button>
       </nav>
 
       {mobileTab === "expeditions" && (
@@ -2938,10 +2967,10 @@ function App() {
             <button type="button" className="ghost small" onClick={jumpToRecords}>詳細</button>
           </div>
           <div className="daily-total-grid compact-resource-cards mini-dashboard-resources">
-            <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
-            <button type="button" className={dailyChartMode === "弾薬" ? "active" : ""} onClick={() => setDailyChartMode("弾薬")}>弾薬<strong>{todayTotal.ammo}</strong></button>
-            <button type="button" className={dailyChartMode === "鋼材" ? "active" : ""} onClick={() => setDailyChartMode("鋼材")}>鋼材<strong>{todayTotal.steel}</strong></button>
-            <button type="button" className={dailyChartMode === "ボーキ" ? "active" : ""} onClick={() => setDailyChartMode("ボーキ")}>ボーキ<strong>{todayTotal.bauxite}</strong></button>
+            <button type="button" data-resource="fuel" className={`resource-summary-button ${dailyChartMode === "燃料" ? "active" : ""}`} onClick={() => setDailyChartMode("燃料")}><span>燃料</span><strong>{todayTotal.fuel}</strong></button>
+            <button type="button" data-resource="ammo" className={`resource-summary-button ${dailyChartMode === "弾薬" ? "active" : ""}`} onClick={() => setDailyChartMode("弾薬")}><span>弾薬</span><strong>{todayTotal.ammo}</strong></button>
+            <button type="button" data-resource="steel" className={`resource-summary-button ${dailyChartMode === "鋼材" ? "active" : ""}`} onClick={() => setDailyChartMode("鋼材")}><span>鋼材</span><strong>{todayTotal.steel}</strong></button>
+            <button type="button" data-resource="bauxite" className={`resource-summary-button ${dailyChartMode === "ボーキ" ? "active" : ""}`} onClick={() => setDailyChartMode("ボーキ")}><span>ボーキ</span><strong>{todayTotal.bauxite}</strong></button>
           </div>
           <p className="helper-text">{todayHistory.length}件記録 / 大成功{todayGreatCount}件</p>
         </article>
@@ -2957,10 +2986,10 @@ function App() {
           {latestStockSnapshot ? (
             <>
               <div className="home-stock-grid game-resource-grid">
-                <span><small>燃料</small><strong>{latestStockSnapshot.resources.fuel.toLocaleString("ja-JP")}</strong></span>
-                <span><small>鋼材</small><strong>{latestStockSnapshot.resources.steel.toLocaleString("ja-JP")}</strong></span>
-                <span><small>弾薬</small><strong>{latestStockSnapshot.resources.ammo.toLocaleString("ja-JP")}</strong></span>
-                <span><small>ボーキ</small><strong>{latestStockSnapshot.resources.bauxite.toLocaleString("ja-JP")}</strong></span>
+                <span className="resource-stock-tile" data-resource="fuel"><small>燃料</small><strong>{latestStockSnapshot.resources.fuel.toLocaleString("ja-JP")}</strong></span>
+                <span className="resource-stock-tile" data-resource="steel"><small>鋼材</small><strong>{latestStockSnapshot.resources.steel.toLocaleString("ja-JP")}</strong></span>
+                <span className="resource-stock-tile" data-resource="ammo"><small>弾薬</small><strong>{latestStockSnapshot.resources.ammo.toLocaleString("ja-JP")}</strong></span>
+                <span className="resource-stock-tile" data-resource="bauxite"><small>ボーキ</small><strong>{latestStockSnapshot.resources.bauxite.toLocaleString("ja-JP")}</strong></span>
               </div>
               <p className="helper-text">最終記録 {formatShortDateTime(latestStockSnapshot.recordedAt)}</p>
             </>
@@ -3402,10 +3431,10 @@ function App() {
               <button type="button" className="ghost small" onClick={clearHistory} disabled={history.length === 0}>履歴削除</button>
             </div>
             <div className="daily-total-grid compact-resource-cards">
-              <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
-              <button type="button" className={dailyChartMode === "弾薬" ? "active" : ""} onClick={() => setDailyChartMode("弾薬")}>弾薬<strong>{todayTotal.ammo}</strong></button>
-              <button type="button" className={dailyChartMode === "鋼材" ? "active" : ""} onClick={() => setDailyChartMode("鋼材")}>鋼材<strong>{todayTotal.steel}</strong></button>
-              <button type="button" className={dailyChartMode === "ボーキ" ? "active" : ""} onClick={() => setDailyChartMode("ボーキ")}>ボーキ<strong>{todayTotal.bauxite}</strong></button>
+              <button type="button" data-resource="fuel" className={`resource-summary-button ${dailyChartMode === "燃料" ? "active" : ""}`} onClick={() => setDailyChartMode("燃料")}><span>燃料</span><strong>{todayTotal.fuel}</strong></button>
+              <button type="button" data-resource="ammo" className={`resource-summary-button ${dailyChartMode === "弾薬" ? "active" : ""}`} onClick={() => setDailyChartMode("弾薬")}><span>弾薬</span><strong>{todayTotal.ammo}</strong></button>
+              <button type="button" data-resource="steel" className={`resource-summary-button ${dailyChartMode === "鋼材" ? "active" : ""}`} onClick={() => setDailyChartMode("鋼材")}><span>鋼材</span><strong>{todayTotal.steel}</strong></button>
+              <button type="button" data-resource="bauxite" className={`resource-summary-button ${dailyChartMode === "ボーキ" ? "active" : ""}`} onClick={() => setDailyChartMode("ボーキ")}><span>ボーキ</span><strong>{todayTotal.bauxite}</strong></button>
             </div>
             <div className="daily-chart-toolbar" aria-label="日別グラフ表示切替">
               {dailyChartModes.map((mode) => (
@@ -3487,10 +3516,10 @@ function App() {
               <button type="button" className="ghost small" onClick={clearHistory} disabled={history.length === 0}>履歴削除</button>
             </div>
             <div className="daily-total-grid compact-resource-cards">
-              <button type="button" className={dailyChartMode === "燃料" ? "active" : ""} onClick={() => setDailyChartMode("燃料")}>燃料<strong>{todayTotal.fuel}</strong></button>
-              <button type="button" className={dailyChartMode === "弾薬" ? "active" : ""} onClick={() => setDailyChartMode("弾薬")}>弾薬<strong>{todayTotal.ammo}</strong></button>
-              <button type="button" className={dailyChartMode === "鋼材" ? "active" : ""} onClick={() => setDailyChartMode("鋼材")}>鋼材<strong>{todayTotal.steel}</strong></button>
-              <button type="button" className={dailyChartMode === "ボーキ" ? "active" : ""} onClick={() => setDailyChartMode("ボーキ")}>ボーキ<strong>{todayTotal.bauxite}</strong></button>
+              <button type="button" data-resource="fuel" className={`resource-summary-button ${dailyChartMode === "燃料" ? "active" : ""}`} onClick={() => setDailyChartMode("燃料")}><span>燃料</span><strong>{todayTotal.fuel}</strong></button>
+              <button type="button" data-resource="ammo" className={`resource-summary-button ${dailyChartMode === "弾薬" ? "active" : ""}`} onClick={() => setDailyChartMode("弾薬")}><span>弾薬</span><strong>{todayTotal.ammo}</strong></button>
+              <button type="button" data-resource="steel" className={`resource-summary-button ${dailyChartMode === "鋼材" ? "active" : ""}`} onClick={() => setDailyChartMode("鋼材")}><span>鋼材</span><strong>{todayTotal.steel}</strong></button>
+              <button type="button" data-resource="bauxite" className={`resource-summary-button ${dailyChartMode === "ボーキ" ? "active" : ""}`} onClick={() => setDailyChartMode("ボーキ")}><span>ボーキ</span><strong>{todayTotal.bauxite}</strong></button>
             </div>
             <div className="daily-chart-toolbar" aria-label="日別グラフ表示切替">
               {dailyChartModes.map((mode) => (
@@ -4291,11 +4320,11 @@ function App() {
       </details>
 
       <nav className="mobile-tabbar ios-bottom-tabbar" aria-label="スマホ用ナビゲーション">
-        <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b aria-hidden="true">⌂</b><span>ホーム</span></button>
-        <button type="button" className={mobileTab === "expeditions" ? "active" : ""} onClick={() => switchAppTab("expeditions")}><b aria-hidden="true">↗</b><span>遠征</span></button>
-        <button type="button" className={`timer-primary-tab ${mobileTab === "timers" ? "active" : ""}`} onClick={() => switchAppTab("timers", "timer-hub-section")}><b aria-hidden="true">⚓︎</b><span>タイマー</span></button>
-        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b aria-hidden="true">⌁</b><span>記録</span></button>
-        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b aria-hidden="true">⚙︎</b><span>設定</span></button>
+        <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b className="tab-icon"><TabIcon tab="home" /></b><span>ホーム</span></button>
+        <button type="button" className={mobileTab === "expeditions" ? "active" : ""} onClick={() => switchAppTab("expeditions")}><b className="tab-icon"><TabIcon tab="expeditions" /></b><span>遠征</span></button>
+        <button type="button" className={`timer-primary-tab ${mobileTab === "timers" ? "active" : ""}`} onClick={() => switchAppTab("timers", "timer-hub-section")}><b className="tab-icon"><TabIcon tab="timers" /></b><span>タイマー</span></button>
+        <button type="button" className={mobileTab === "records" ? "active" : ""} onClick={() => switchAppTab("records", "records-section")}><b className="tab-icon"><TabIcon tab="records" /></b><span>記録</span></button>
+        <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b className="tab-icon"><TabIcon tab="account" /></b><span>設定</span></button>
       </nav>
 
       <details
