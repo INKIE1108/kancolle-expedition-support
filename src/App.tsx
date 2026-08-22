@@ -86,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "5.6.0";
+const DATA_VERSION = "5.6.1";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -2275,7 +2275,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.6.0",
+      appVersion: "5.6.1",
       ...overrides
     };
   }
