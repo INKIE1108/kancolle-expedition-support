@@ -86,7 +86,7 @@ type PrerequisiteTrailItem = {
   note?: string;
 };
 
-const DATA_VERSION = "5.6.1";
+const DATA_VERSION = "5.6.2";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -2058,7 +2058,8 @@ function App() {
     const returnDismissKey = getReturnDismissKey(fleet);
     if (fleet.recordedAt || recordingFleetNos.includes(fleet.fleetNo) || dismissedReturnKeys.includes(returnDismissKey)) return;
 
-    const recordedAt = Date.now();
+    const recordedAt = getSyncedNow();
+    const earlyReturn = Boolean(fleet.endAt && recordedAt < fleet.endAt);
     setRecordingFleetNos((current) => (current.includes(fleet.fleetNo) ? current : [...current, fleet.fleetNo]));
     setDismissedReturnKeys((current) => (current.includes(returnDismissKey) ? current : [...current, returnDismissKey]));
 
@@ -2089,14 +2090,16 @@ function App() {
       setMonthlyCompletions(nextMonthlyCompletions);
     }
 
-    updateFleet(fleet.fleetNo, { recordedAt });
+    updateFleet(fleet.fleetNo, earlyReturn ? { endAt: recordedAt, recordedAt } : { recordedAt });
 
     if (authState.user) {
+      // 1分前帰投などで記録した場合、元の終了時刻に予約済みの通知が後から飛ばないようキャンセル。
+      cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(() => undefined);
       clearActiveTimer(authState.user.id, fleet.fleetNo, expedition.id).catch(() => undefined);
       saveImportantCloudChange({ history: nextHistory, monthlyCompletions: nextMonthlyCompletions });
     }
 
-    addLog(`帰投記録: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
+    addLog(`${earlyReturn ? "1分前帰投記録" : "帰投記録"}: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
 
     window.setTimeout(() => {
       setRecordingFleetNos((current) => current.filter((fleetNo) => fleetNo !== fleet.fleetNo));
@@ -2275,7 +2278,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.6.1",
+      appVersion: "5.6.2",
       ...overrides
     };
   }
@@ -3881,8 +3884,14 @@ function App() {
           const running = fleet.endAt !== null && now < fleet.endAt;
           const completed = fleet.endAt !== null && now >= fleet.endAt;
           const remainingMs = fleet.endAt ? fleet.endAt - now : 0;
+          const earlyReturnWindow = running && remainingMs <= 60 * 1000;
           const almostDone = running && remainingMs <= 5 * 60 * 1000;
           const remaining = fleet.endAt ? formatRemaining(remainingMs) : "--:--:--";
+          const fleetProgress = fleet.recordedAt
+            ? 100
+            : fleet.startAt && fleet.endAt && fleet.endAt > fleet.startAt
+              ? clampNumber(((now - fleet.startAt) / (fleet.endAt - fleet.startAt)) * 100, 0, 100)
+              : 0;
           const fleetModifier = getFleetRewardModifier(rewardSettings, fleet.fleetNo);
           const fleetBonusBreakdown = getRewardBonusBreakdown(rewardSettings, fleet.fleetNo);
           const rate = getAdjustedResourceRate(expedition, rewardSettings, fleet.fleetNo);
@@ -3896,7 +3905,7 @@ function App() {
                   <h2>第{fleet.fleetNo}艦隊</h2>
                 </div>
                 <span className={`status ${running ? "running" : completed ? "done" : "idle"}`}>
-                  {running ? (almostDone ? "残り5分" : "遠征中") : completed ? "完了" : "待機"}
+                  {running ? (earlyReturnWindow ? "帰投可能" : almostDone ? "残り5分" : "遠征中") : completed ? "完了" : "待機"}
                 </span>
               </div>
 
@@ -3999,6 +4008,10 @@ function App() {
               <div className="timer-box">
                 <span>残り時間</span>
                 <strong>{remaining}</strong>
+                <div className="fleet-progress-track" aria-label={`遠征進捗 ${Math.round(fleetProgress)}%`}>
+                  <i style={{ width: `${fleetProgress}%` }} />
+                </div>
+                <small className="fleet-progress-label">{running || completed ? `進捗 ${Math.round(fleetProgress)}%` : "開始すると進捗を表示"}</small>
               </div>
 
               <dl className="mini-info">
@@ -4015,6 +4028,23 @@ function App() {
                   <dd>{formatResources(rate)} / h</dd>
                 </div>
               </dl>
+
+              {earlyReturnWindow && !fleet.recordedAt && (
+                <div className="early-return-card">
+                  <div>
+                    <strong>帰投可能（残り1分以内）</strong>
+                    <p>艦これでは終了予定の約1分前に帰投します。母港で結果を確認できたら、そのまま記録してタイマーを終了できます。</p>
+                  </div>
+                  <div className="early-return-actions">
+                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>
+                      成功で帰投記録
+                    </button>
+                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>
+                      大成功で帰投記録
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {completed && (
                 <div className="next-actions">

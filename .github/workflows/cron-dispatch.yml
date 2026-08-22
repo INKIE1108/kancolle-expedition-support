@@ -3,17 +3,38 @@ name: Dispatch Kancolle Notifications
 on:
   workflow_dispatch:
   schedule:
-  - cron: "2-59/5 * * * *"
+    - cron: "2-59/5 * * * *"
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Call cron-dispatch
         env:
           APP_URL: ${{ vars.KANCOLLE_APP_URL || 'https://kancolle-expedition-support.vercel.app' }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        shell: bash
         run: |
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::warning::CRON_SECRET is not configured in GitHub Actions. Notification dispatch is skipped to avoid repeated failure emails."
+            echo "Set the same CRON_SECRET in GitHub repository Secrets and in Vercel Environment Variables."
+            exit 0
+          fi
+
           echo "Run URL=${APP_URL}"
-          curl --fail -X POST "${APP_URL}/api/cron-dispatch" \
-            -H "Authorization: Bearer ${CRON_SECRET}"
+          body_file="$(mktemp)"
+          status="$(curl --silent --show-error \
+            --output "${body_file}" \
+            --write-out "%{http_code}" \
+            -X POST "${APP_URL}/api/cron-dispatch" \
+            -H "Authorization: Bearer ${CRON_SECRET}" || true)"
+
+          echo "HTTP ${status}"
+          cat "${body_file}" || true
+          echo
+
+          if ! [[ "${status}" =~ ^2 ]]; then
+            echo "::error::cron-dispatch returned HTTP ${status}. Check CRON_SECRET, Vercel environment variables, and the API URL."
+            exit 1
+          fi

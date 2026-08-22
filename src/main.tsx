@@ -4,6 +4,7 @@ import App from "./App";
 import "./style.css";
 import "./ui-v56.css";
 import "./ui-v561.css";
+import "./ui-v562.css";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

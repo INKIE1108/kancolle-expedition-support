@@ -1,0 +1,93 @@
+/* ========================================================================== */
+/* v5.6.2 — expedition progress + one-minute return window                    */
+/* ========================================================================== */
+
+.fleet-progress-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ui-fill, rgba(118, 118, 128, 0.14));
+}
+
+.fleet-progress-track > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ui-accent, #557d9f);
+  transition: width 500ms linear;
+}
+
+.fleet-progress-label {
+  display: block;
+  margin-top: 7px;
+  color: var(--ui-text-secondary, #6d747c) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  text-align: right;
+}
+
+.early-return-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--ui-accent, #557d9f) 20%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ui-accent, #557d9f) 7%, var(--ui-surface, #fff));
+}
+
+.early-return-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.early-return-card strong {
+  color: var(--ui-text, #16181b);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.early-return-card p {
+  margin: 0;
+  color: var(--ui-text-secondary, #6d747c);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.early-return-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.early-return-actions button {
+  min-height: 44px !important;
+}
+
+.early-return-actions button:first-child {
+  background: var(--ui-success-soft, rgba(52, 199, 89, .11)) !important;
+  color: var(--ui-success, #248a3d) !important;
+}
+
+.early-return-actions button:last-child {
+  background: var(--ui-purple-soft, rgba(175, 82, 222, .10)) !important;
+  color: var(--ui-purple, #8944ab) !important;
+}
+
+.status.running.early-return,
+.fleet-card.almost-done .status.running {
+  font-weight: 650;
+}
+
+@media (max-width: 560px) {
+  .early-return-actions {
+    grid-template-columns: 1fr;
+  }
+  .fleet-progress-label {
+    font-size: 11px !important;
+  }
+}
