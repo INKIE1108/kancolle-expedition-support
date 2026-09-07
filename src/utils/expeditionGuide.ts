@@ -137,9 +137,19 @@ export function concreteFormation(value: string) {
   return { requirement: requirements.join(' ＋ '), example: examples.join(' ＋ ') };
 }
 
+export function isMonthlyCompleted(expedition: Expedition | undefined, completed: string[]): boolean {
+  return Boolean(expedition?.purposeTags.includes('マンスリー') && completed.includes(expedition.id));
+}
+
+export function sanitizeMonthlyChecks(checks: Record<string, string[]>, list: Expedition[]) {
+  const monthlyIds = new Set(list.filter(e => e.purposeTags.includes('マンスリー')).map(e => e.id));
+  return Object.fromEntries(Object.entries(checks).map(([period, ids]) =>
+    [period, [...new Set(ids.filter(id => monthlyIds.has(id)))]]));
+}
+
 // Legacy manual checks have no individual timestamps. Preserve the latest calendar-month
 // checks in the period containing their snapshot; reconstruct dated records accurately.
-export function migrateMonthlyChecks(old: Record<string, string[]>, history: { expeditionId: string; completedAt: number }[], savedAt = Date.now()) {
+export function migrateMonthlyChecks(old: Record<string, string[]>, history: { expeditionId: string; completedAt: number }[], list: Expedition[], savedAt = Date.now()) {
   const migrated: Record<string, string[]> = {};
   for (const record of history) {
     const key = monthlyPeriodKey(record.completedAt);
@@ -149,5 +159,5 @@ export function migrateMonthlyChecks(old: Record<string, string[]>, history: { e
   const calendar = `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, '0')}`;
   const period = monthlyPeriodKey(savedAt);
   migrated[period] = [...new Set([...(migrated[period] ?? []), ...(old[calendar] ?? [])])];
-  return migrated;
+  return sanitizeMonthlyChecks(migrated, list);
 }
