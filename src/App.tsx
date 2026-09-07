@@ -83,7 +83,7 @@ type ExpeditionHistory = {
 type MonthlyCompletionMap = Record<string, string[]>;
 
 
-const DATA_VERSION = "5.7.0";
+const DATA_VERSION = "5.8.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -983,6 +983,13 @@ function App() {
     loadFromStorage(HISTORY_STORAGE_KEY, [])
   );
   const [selectedDetailId, setSelectedDetailId] = useState<string>(fallbackExpeditions[0]?.id ?? "");
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [showAllPinned, setShowAllPinned] = useState(false);
+  const [editingPins, setEditingPins] = useState(false);
+  const [showListDetails, setShowListDetails] = useState(false);
+  const detailTriggerRef = useRef<HTMLElement | null>(null);
+  const listPositionRef = useRef({ page: 0, list: 0 });
+  const detailOriginRef = useRef<"search" | "assist">("search");
   const [tagFilter, setTagFilter] = useState<string>("すべて");
   const [keyword, setKeyword] = useState<string>("");
   const [sortMode, setSortMode] = useState<SortMode>(() => loadFromStorage(SORT_STORAGE_KEY, "ID順" as SortMode));
@@ -1039,6 +1046,13 @@ function App() {
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authPassword, setAuthPassword] = useState<string>("");
   const [cloudReadyUser, setCloudReadyUser] = useState<string | null>(null);
+  const [syncPhase, setSyncPhase] = useState<"pending" | "syncing" | "saved" | "error">("pending");
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  const cloudUserRef = useRef<string | null>(null);
+  cloudUserRef.current = authState.user?.id ?? null;
+  const syncOperationRef = useRef(0);
+  const cloudDirtyRef = useRef(false);
+  const cloudWriteQueueRef = useRef<Promise<unknown>>(Promise.resolve());
   const [cloudSyncBusy, setCloudSyncBusy] = useState<boolean>(false);
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
   const [pushMessage, setPushMessage] = useState<string>("");
@@ -1050,7 +1064,6 @@ function App() {
   const [notificationHistoryBusy, setNotificationHistoryBusy] = useState<boolean>(false);
   const [notificationHistoryMessage, setNotificationHistoryMessage] = useState<string>("");
   const vapidPublicKey = (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ?? "";
-  const lastAutoLoadedUserRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
   const cloudRefreshTimerRef = useRef<number | null>(null);
   const skipNextAutoSaveRef = useRef<boolean>(false);
@@ -1253,7 +1266,7 @@ function App() {
   );
   const currentMonthKey = monthlyPeriodKey(now);
   const monthlyExpeditions = useMemo(() => expeditions.filter(isMonthlyExpedition), [expeditions]);
-  const currentMonthlyDoneIds = monthlyCompletions[currentMonthKey] ?? [];
+  const currentMonthlyDoneIds = useMemo(() => monthlyCompletions[currentMonthKey] ?? [], [monthlyCompletions, currentMonthKey]);
   const monthlyDoneCount = monthlyExpeditions.filter((expedition) => currentMonthlyDoneIds.includes(expedition.id)).length;
   const todayHistory = history.filter((item) => isSameDay(item.completedAt, now));
   const todayTotal = todayHistory.reduce<ResourceRewards>(
@@ -1509,13 +1522,15 @@ function App() {
 
   useEffect(() => {
     const userId = authState.user?.id;
-    if (!userId || lastAutoLoadedUserRef.current === userId) return;
-    lastAutoLoadedUserRef.current = userId;
+    syncOperationRef.current++;
+    setLastSyncAt(null);
+    setSyncPhase("pending");
+    cloudDirtyRef.current = userId ? loadFromStorage(`kancolle-cloud-pending-${userId}`, false) : false;
     setCloudReadyUser(null);
-
-    applyCloudSnapshot(userId, false, { silent: false, reason: "ログイン時の自動読込" }).then(() => setCloudReadyUser(userId)).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "クラウド自動読込に失敗";
-      setCloudSyncMessage(message);
+    if (!userId) return;
+    applyCloudSnapshot(userId, false, { silent: false, reason: "ログイン時の自動読込" }).catch((error: unknown) => {
+      if (cloudUserRef.current !== userId) return;
+      setCloudSyncMessage(error instanceof Error ? error.message : "クラウド自動読込に失敗");
     });
   }, [authState.user?.id]);
 
@@ -1575,9 +1590,11 @@ function App() {
         scheduleCloudRefresh(userId, "画面復帰時の最新化");
       }
     };
+    window.addEventListener("online", refresh);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
     return () => {
+      window.removeEventListener("online", refresh);
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", refresh);
     };
@@ -1592,6 +1609,10 @@ function App() {
       return;
     }
 
+    markCloudDirty(true);
+    syncOperationRef.current++;
+    setSyncPhase("pending");
+    if (!isOnline) return;
     if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = window.setTimeout(() => {
       const snapshot = createCloudSnapshot();
@@ -2191,7 +2212,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.7.0",
+      appVersion: "5.8.0",
       ...overrides
     };
   }
@@ -2279,18 +2300,48 @@ function App() {
     };
   }
 
+  function markCloudDirty(dirty: boolean) {
+    cloudDirtyRef.current = dirty;
+    if (cloudUserRef.current) saveToStorage(`kancolle-cloud-pending-${cloudUserRef.current}`, dirty);
+  }
+
   async function saveCloudSnapshotSafely(userId: string, localSnapshot: CloudSnapshot): Promise<CloudSnapshot> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const remoteSnapshot = await loadCloudSnapshot(userId);
-      const mergedSnapshot = createMergedSnapshotForSave(localSnapshot, remoteSnapshot);
-      // Monotonic revision also distinguishes two writes within one millisecond.
-      mergedSnapshot.savedAt = new Date(Math.max(Date.now(), getCloudSavedAtMs(remoteSnapshot) + 1)).toISOString();
-      if (await saveCloudSnapshot(userId, mergedSnapshot, remoteSnapshot)) {
-        latestCloudSavedAtRef.current = getCloudSavedAtMs(mergedSnapshot);
-        return mergedSnapshot;
+    const operation = ++syncOperationRef.current;
+    setSyncPhase("syncing");
+    const save = async () => {
+      if (cloudUserRef.current !== userId) throw new Error("ログイン状態が変更されました");
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const remoteSnapshot = await loadCloudSnapshot(userId);
+        if (cloudUserRef.current !== userId) throw new Error("ログイン状態が変更されました");
+        const mergedSnapshot = createMergedSnapshotForSave(localSnapshot, remoteSnapshot);
+        mergedSnapshot.savedAt = new Date(Math.max(Date.now(), getCloudSavedAtMs(remoteSnapshot) + 1)).toISOString();
+        if (await saveCloudSnapshot(userId, mergedSnapshot, remoteSnapshot)) {
+          if (cloudUserRef.current === userId) {
+            latestCloudSavedAtRef.current = getCloudSavedAtMs(mergedSnapshot);
+            setLastSyncAt(Date.now());
+            if (syncOperationRef.current === operation) {
+              markCloudDirty(false);
+              setSyncPhase("saved");
+              setCloudSyncMessage("変更をクラウドへ保存したよ");
+            }
+          }
+          return mergedSnapshot;
+        }
       }
+      throw new Error("別端末で更新されました。再度クラウド保存してください。");
+    };
+    // Serialize this device's writes so an earlier request cannot finish last.
+    const result = cloudWriteQueueRef.current.catch(() => undefined).then(save);
+    cloudWriteQueueRef.current = result;
+    try { return await result; }
+    catch (error) {
+      if (cloudUserRef.current === userId && syncOperationRef.current === operation) {
+        markCloudDirty(true);
+        setSyncPhase("error");
+        setCloudSyncMessage(error instanceof Error ? error.message : "クラウド保存に失敗しました");
+      }
+      throw error;
     }
-    throw new Error("別端末で更新されました。再度クラウド保存してください。");
   }
 
   function saveImportantCloudChange(overrides: Partial<CloudSnapshot> = {}) {
@@ -2299,8 +2350,9 @@ function App() {
     const snapshot = createCloudSnapshot(overrides);
     saveCloudSnapshotSafely(userId, snapshot)
       .then((savedSnapshot) => {
-        if (savedSnapshot.history) setHistory(savedSnapshot.history as ExpeditionHistory[]);
-        if (savedSnapshot.resourceStockSnapshots) setResourceStockSnapshots(savedSnapshot.resourceStockSnapshots as ResourceStockSnapshot[]);
+        if (cloudUserRef.current !== userId) return;
+        if (savedSnapshot.history) setHistory(current => mergeExpeditionHistories(current, savedSnapshot.history as ExpeditionHistory[], historyClearedAtRef.current));
+        if (savedSnapshot.resourceStockSnapshots) setResourceStockSnapshots(current => mergeResourceStockSnapshots(current, savedSnapshot.resourceStockSnapshots as ResourceStockSnapshot[], resourceStockClearedAtRef.current));
         addLog("記録系データを即時クラウド保存");
       })
       .catch((error: unknown) => {
@@ -2388,75 +2440,98 @@ function App() {
     const ok = !ask || window.confirm("クラウド保存データを読み込みます。遠征履歴と所持資源推移は端末間でマージします。続行しますか？");
     if (!ok) return false;
 
-    const snapshot = await loadCloudSnapshot(userId);
-    const activeRows = await loadActiveTimers(userId).catch(() => []);
-    if (!snapshot && activeRows.length === 0) {
-      if (!options.silent) setCloudSyncMessage("クラウド保存データはまだないよ");
-      return false;
-    }
-
-    const remoteSavedAt = getCloudSavedAtMs(snapshot);
-    latestCloudSavedAtRef.current = Math.max(latestCloudSavedAtRef.current, remoteSavedAt);
-
-    const snapshotFleets = (snapshot?.fleets as FleetTimer[] | undefined) ?? initialFleets;
-    const baseFleets = snapshotFleets.map((snapshotFleet) => {
-      const localFleet = fleets.find((item) => item.fleetNo === snapshotFleet.fleetNo);
-      const localRunning = localFleet?.endAt !== null && typeof localFleet?.endAt === "number" && localFleet.endAt > getSyncedNow();
-      // v3.2: クラウドスナップショットは実行中タイマーを持たないため、
-      // ローカル実行中タイマーを空状態で上書きしない。
-      return localRunning ? localFleet : snapshotFleet;
-    });
-    const nextFleets = mergeActiveTimerRows(baseFleets, activeRows);
-
-    const nextHistoryClearedAt = getEffectiveClearedAt(historyClearedAtRef.current, snapshot?.historyClearedAt);
-    const nextResourceStockClearedAt = getEffectiveClearedAt(resourceStockClearedAtRef.current, snapshot?.resourceStockClearedAt);
-    historyClearedAtRef.current = nextHistoryClearedAt;
-    resourceStockClearedAtRef.current = nextResourceStockClearedAt;
-    saveToStorage(HISTORY_CLEARED_AT_STORAGE_KEY, nextHistoryClearedAt);
-    saveToStorage(RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY, nextResourceStockClearedAt);
-
-    const nextHistory = mergeExpeditionHistories(
-      history,
-      (snapshot?.history as ExpeditionHistory[] | undefined) ?? [],
-      nextHistoryClearedAt
-    );
-    const nextResourceStockSnapshots = mergeResourceStockSnapshots(
-      resourceStockSnapshots,
-      (snapshot?.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? [],
-      nextResourceStockClearedAt
-    );
-
-    skipNextAutoSaveRef.current = true;
-    setFleets(nextFleets);
-    setSettings({ ...initialSettings, ...((snapshot?.settings as AppSettings | undefined) ?? {}), discordNotifyMode: "direct", serverNotificationMode: "supabase" });
-    const snapshotRewardSettings = ((snapshot?.rewardSettings ?? {}) as Partial<RewardModifierSettings>);
-    setRewardSettings({
-      ...initialRewardModifierSettings,
-      ...snapshotRewardSettings,
-      perFleet: {
-        ...initialRewardModifierSettings.perFleet,
-        ...(snapshotRewardSettings.perFleet ?? {})
+    // A reconnect must send unsaved local edits before pulling an older snapshot.
+    if (cloudDirtyRef.current) {
+      await saveCloudSnapshotSafely(userId, createCloudSnapshot());
+      if (cloudUserRef.current === userId) {
+        setCloudReadyUser(userId);
+        setCloudSyncMessage("未同期の変更をクラウドへ保存したよ");
       }
-    });
-    setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
-    setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
-    setHistory(nextHistory);
-    setResourceStockSnapshots(nextResourceStockSnapshots);
-    setResourceTargetInputs({
-      ...getResourceTargetInputDefaults(),
-      ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
-    });
-    setNozakiTimer(current => mergeNozaki(current, snapshot?.nozakiTimer as NozakiTimerState | undefined));
-    if (snapshot?.monthlyCompletions) setMonthlyCompletions(snapshot.monthlyPeriodVersion === 2 ? snapshot.monthlyCompletions : migrateMonthlyChecks(snapshot.monthlyCompletions, (snapshot.history ?? []) as ExpeditionHistory[], getCloudSavedAtMs(snapshot) || Date.now()));
-    setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
-    setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
-    setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
-
-    if (!options.silent) {
-      setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
+      return true;
     }
-    addLog(options.reason ? `クラウド同期: ${options.reason}` : "クラウド読込完了");
-    return true;
+    const operation = ++syncOperationRef.current;
+    setSyncPhase("syncing");
+    try {
+      const snapshot = await loadCloudSnapshot(userId);
+      const activeRows = await loadActiveTimers(userId);
+      if (cloudUserRef.current !== userId || syncOperationRef.current !== operation) return false;
+      setCloudReadyUser(userId);
+      setLastSyncAt(Date.now());
+      setSyncPhase(snapshot || activeRows.length ? "saved" : "pending");
+      if (!snapshot && activeRows.length === 0) {
+        if (!options.silent) setCloudSyncMessage("クラウド保存データはまだないよ");
+        return false;
+      }
+
+      const remoteSavedAt = getCloudSavedAtMs(snapshot);
+      latestCloudSavedAtRef.current = Math.max(latestCloudSavedAtRef.current, remoteSavedAt);
+
+      const snapshotFleets = (snapshot?.fleets as FleetTimer[] | undefined) ?? initialFleets;
+      const baseFleets = snapshotFleets.map((snapshotFleet) => {
+        const localFleet = fleets.find((item) => item.fleetNo === snapshotFleet.fleetNo);
+        const localRunning = localFleet?.endAt !== null && typeof localFleet?.endAt === "number" && localFleet.endAt > getSyncedNow();
+        // v3.2: クラウドスナップショットは実行中タイマーを持たないため、
+        // ローカル実行中タイマーを空状態で上書きしない。
+        return localRunning ? localFleet : snapshotFleet;
+      });
+      const nextFleets = mergeActiveTimerRows(baseFleets, activeRows);
+
+      const nextHistoryClearedAt = getEffectiveClearedAt(historyClearedAtRef.current, snapshot?.historyClearedAt);
+      const nextResourceStockClearedAt = getEffectiveClearedAt(resourceStockClearedAtRef.current, snapshot?.resourceStockClearedAt);
+      historyClearedAtRef.current = nextHistoryClearedAt;
+      resourceStockClearedAtRef.current = nextResourceStockClearedAt;
+      saveToStorage(HISTORY_CLEARED_AT_STORAGE_KEY, nextHistoryClearedAt);
+      saveToStorage(RESOURCE_STOCK_CLEARED_AT_STORAGE_KEY, nextResourceStockClearedAt);
+
+      const nextHistory = mergeExpeditionHistories(
+        history,
+        (snapshot?.history as ExpeditionHistory[] | undefined) ?? [],
+        nextHistoryClearedAt
+      );
+      const nextResourceStockSnapshots = mergeResourceStockSnapshots(
+        resourceStockSnapshots,
+        (snapshot?.resourceStockSnapshots as ResourceStockSnapshot[] | undefined) ?? [],
+        nextResourceStockClearedAt
+      );
+
+      skipNextAutoSaveRef.current = true;
+      setFleets(nextFleets);
+      setSettings({ ...initialSettings, ...((snapshot?.settings as AppSettings | undefined) ?? {}), discordNotifyMode: "direct", serverNotificationMode: "supabase" });
+      const snapshotRewardSettings = ((snapshot?.rewardSettings ?? {}) as Partial<RewardModifierSettings>);
+      setRewardSettings({
+        ...initialRewardModifierSettings,
+        ...snapshotRewardSettings,
+        perFleet: {
+          ...initialRewardModifierSettings.perFleet,
+          ...(snapshotRewardSettings.perFleet ?? {})
+        }
+      });
+      setPinnedExpeditionIds(snapshot?.pinnedExpeditionIds ?? pinnedExpeditionIds);
+      setCustomPresets((snapshot?.customPresets as ExpeditionPreset[] | undefined) ?? customPresets);
+      setHistory(nextHistory);
+      setResourceStockSnapshots(nextResourceStockSnapshots);
+      setResourceTargetInputs({
+        ...getResourceTargetInputDefaults(),
+        ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
+      });
+      setNozakiTimer(current => mergeNozaki(current, snapshot?.nozakiTimer as NozakiTimerState | undefined));
+      if (snapshot?.monthlyCompletions) setMonthlyCompletions(snapshot.monthlyPeriodVersion === 2 ? snapshot.monthlyCompletions : migrateMonthlyChecks(snapshot.monthlyCompletions, (snapshot.history ?? []) as ExpeditionHistory[], getCloudSavedAtMs(snapshot) || Date.now()));
+      setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
+      setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
+      setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
+
+      {
+        setCloudSyncMessage(snapshot ? `クラウドから読み込んだよ（${new Date(snapshot.savedAt).toLocaleString("ja-JP")}保存）` : "実行中タイマーをクラウドから読み込んだよ");
+      }
+      addLog(options.reason ? `クラウド同期: ${options.reason}` : "クラウド読込完了");
+      return true;
+    } catch (error) {
+      if (cloudUserRef.current === userId && syncOperationRef.current === operation) {
+        setSyncPhase("error");
+        setCloudSyncMessage(error instanceof Error ? error.message : "クラウド読込に失敗しました");
+      }
+      throw error;
+    }
   }
 
   const applyCloudSnapshotRef = useRef(applyCloudSnapshot);
@@ -2519,7 +2594,6 @@ function App() {
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
-    lastAutoLoadedUserRef.current = null;
     setCloudReadyUser(null);
     setCloudSyncMessage("ログアウトしたよ");
     addLog("ログアウト");
@@ -2534,11 +2608,14 @@ function App() {
     try {
       const savedSnapshot = await saveCloudSnapshotSafely(authState.user.id, createCloudSnapshot());
       await saveActiveTimers(authState.user.id, fleets);
-      if (savedSnapshot.history) setHistory(savedSnapshot.history as ExpeditionHistory[]);
-      if (savedSnapshot.resourceStockSnapshots) setResourceStockSnapshots(savedSnapshot.resourceStockSnapshots as ResourceStockSnapshot[]);
+      if (cloudUserRef.current !== authState.user.id) return;
+      setCloudReadyUser(authState.user.id);
+      if (savedSnapshot.history) setHistory(current => mergeExpeditionHistories(current, savedSnapshot.history as ExpeditionHistory[], historyClearedAtRef.current));
+      if (savedSnapshot.resourceStockSnapshots) setResourceStockSnapshots(current => mergeResourceStockSnapshots(current, savedSnapshot.resourceStockSnapshots as ResourceStockSnapshot[], resourceStockClearedAtRef.current));
       setCloudSyncMessage("クラウドへ保存したよ");
       addLog("クラウド保存完了");
     } catch (error) {
+      setSyncPhase("error");
       setCloudSyncMessage(error instanceof Error ? error.message : "クラウド保存に失敗");
     } finally {
       setCloudSyncBusy(false);
@@ -2688,7 +2765,8 @@ function App() {
     .sort((a, b) => (a.endAt ?? 0) - (b.endAt ?? 0))[0];
   const nextFleetExpedition = nextFleet ? findExpedition(nextFleet.expeditionId) : null;
   const quickPresets = allPresets.slice(0, 3);
-  const cloudStatusLabel = authState.user ? "クラウド同期OK" : "ローカル保存";
+  const cloudStatusLabel = !authState.user ? "端末に保存" : !isOnline ? "オフライン・端末に保存"
+    : ({ pending: "未同期・保存待ち", syncing: "クラウド同期中", saved: "クラウド同期済み", error: "同期失敗・再試行が必要" })[syncPhase];
   const notificationStatusLabel = deviceStatus?.permission === "granted" ? "スマホ通知OK" : "通知設定確認";
 
   function switchAppTab(tab: MobileTab, targetId?: string) {
@@ -2766,10 +2844,28 @@ function App() {
   }
 
   function jumpToExpeditionDetail(expeditionId: string) {
+    if (!detailOpen || expeditionSubTab === "assist") {
+      detailOriginRef.current = expeditionSubTab;
+      detailTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      listPositionRef.current = { page: window.scrollY, list: document.querySelector(".expedition-list")?.scrollTop ?? 0 };
+    }
+    setDetailOpen(true);
     setSelectedDetailId(expeditionId);
     setExpeditionSubTab("search");
     setCollapsedPanels((current) => ({ ...current, details: false }));
     switchAppTab("expeditions", "detail-search-section");
+    window.setTimeout(() => document.querySelector<HTMLElement>(".detail-card h2")?.focus({ preventScroll: true }), 0);
+  }
+
+  function returnToExpeditionList() {
+    setDetailOpen(false);
+    setExpeditionSubTab(detailOriginRef.current);
+    window.requestAnimationFrame(() => {
+      const list = document.querySelector(".expedition-list");
+      if (list) list.scrollTop = listPositionRef.current.list;
+      detailTriggerRef.current?.focus({ preventScroll: true });
+      window.scrollTo({ top: listPositionRef.current.page, behavior: "instant" });
+    });
   }
 
   function jumpToAssist(targetId: "preset-section" | "strategy-section" = "preset-section") {
@@ -2856,6 +2952,11 @@ function App() {
           <p className="ios-subtitle">{currentPageSubtitle}</p>
         </div>
       </header>
+      <div className={`sync-feedback sync-${syncPhase}`} role="status">
+        <strong>{cloudStatusLabel}</strong>
+        {authState.user && lastSyncAt && <small>最終成功 {formatDateTime(lastSyncAt)}</small>}
+        {authState.user && (syncPhase === "error" || syncPhase === "pending") && <button type="button" disabled={!isOnline || cloudSyncBusy} onClick={() => scheduleCloudRefresh(authState.user!.id, "同期の再試行")}>再試行</button>}
+      </div>
 
       <nav className="desktop-tabbar ios-tabbar" aria-label="画面タブ">
         <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b className="tab-icon"><TabIcon tab="home" /></b><span>ホーム</span></button>
@@ -2867,7 +2968,7 @@ function App() {
 
       {mobileTab === "expeditions" && (
         <div className="ios-segmented-control expedition-view-switch" role="tablist" aria-label="遠征画面切替">
-          <button type="button" className={expeditionSubTab === "search" ? "active" : ""} onClick={() => setExpeditionSubTab("search")}>一覧・検索</button>
+          <button type="button" className={expeditionSubTab === "search" ? "active" : ""} onClick={() => { setDetailOpen(false); setExpeditionSubTab("search"); }}>一覧・検索</button>
           <button type="button" className={expeditionSubTab === "assist" ? "active" : ""} onClick={() => setExpeditionSubTab("assist")}>おすすめ・マンスリー</button>
         </div>
       )}
@@ -3069,7 +3170,7 @@ function App() {
               </div>
             </div>
           )}
-          <p className="helper-text">{cloudSyncMessage || (isSupabaseConfigured ? "クラウド同期はログイン後に利用できます。" : "Supabase環境変数が未設定です。")}</p>
+          <p className="sync-message">{cloudSyncMessage || (isSupabaseConfigured ? "クラウド同期はログイン後に利用できます。" : "Supabase環境変数が未設定です。")}</p>
         </div>
       </details>
 
@@ -3140,6 +3241,7 @@ function App() {
         </div>
         <p className="helper-text">遠征開始時に、終了予定時刻・Discord通知先・スマホ通知先をクラウドへ保存する。実際の送信はcron-dispatchが定期実行された時に行うよ。</p>
         <p className="helper-text">{pushMessage || (vapidPublicKey ? "スマホ通知は、ホーム画面に追加したPWAや対応ブラウザで通知許可すると使えるよ。" : "スマホ通知を使うにはVAPIDキーの設定が必要です。")}</p>
+        <p className="notification-timing-note">通知は約5分ごとに配信を確認します。終了から通常0〜5分程度、混雑や再送時はさらに遅れる場合があります。画面の残り時間と通知の到着時刻は一致しないことがあります。</p>
         <NotificationDevicePanel
           supabase={supabase}
           userId={userId}
@@ -4050,7 +4152,7 @@ function App() {
 
       <details
         id="detail-search-section"
-        className="detail-search-fold fold-card"
+        className={`detail-search-fold fold-card ${detailOpen ? "show-expedition-detail" : "show-expedition-list"}`}
         open={!collapsedPanels.details}
         onToggle={(event) => handlePanelToggle("details", event.currentTarget.open)}
       >
@@ -4060,10 +4162,11 @@ function App() {
         </summary>
         <section className="two-column fold-content">
         <article className="detail-card">
+          <button type="button" className="back-to-list" onClick={returnToExpeditionList}>← {detailOriginRef.current === "assist" ? "おすすめに戻る" : "一覧に戻る"}</button>
           <div className="section-head">
             <div>
               <p className="eyebrow">Expedition Detail</p>
-              <h2>{selectedDetail.id}: {selectedDetail.name}</h2>
+              <h2 tabIndex={-1}>{selectedDetail.id}: {selectedDetail.name}</h2>
             </div>
             <div className="detail-actions">
               <span>{minutesToLabel(selectedDetail.durationMinutes)}</span>
@@ -4207,67 +4310,70 @@ function App() {
               <h2>遠征一覧 <small>全{totalExpeditionCount}件</small></h2>
             </div>
           </div>
-          <section className="pinned-box">
-            <div className="section-head compact">
-              <div>
-                <p className="eyebrow">Pinned</p>
-                <h3>よく使う遠征</h3>
-              </div>
-              <small>{pinnedExpeditions.length}件</small>
-            </div>
-            {pinnedExpeditions.length === 0 ? (
-              <p className="empty-text">☆ボタンでよく使う遠征をピン留めできるよ。</p>
-            ) : (
-              <div className="pinned-list pinned-list-editable">
-                {pinnedExpeditions.map((expedition, index) => (
-                  <div className={`pinned-edit-item ${selectedDetailId === expedition.id ? "selected" : ""}`} key={`quick-${expedition.id}`}>
-                    <button
-                      className="pinned-main"
-                      type="button"
-                      onClick={() => setSelectedDetailId(expedition.id)}
-                    >
-                      <span>{expedition.id}: {expedition.name}</span>
-                      <small>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.slice(0, 3).join("・")}</small>
-                    </button>
-                    <div className="pin-order-actions">
-                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, -1)} disabled={index === 0}>↑</button>
-                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, 1)} disabled={index === pinnedExpeditions.length - 1}>↓</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
           <div className="search-row search-row-v04">
             <input
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="遠征名・IDで検索"
+              placeholder="遠征名・IDで検索" aria-label="遠征名・IDで検索"
             />
-            <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
+            <select aria-label="遠征の絞り込み" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
               <option>すべて</option>
               <option>ピン留め</option>
               {expeditionTags.map((tag) => (
                 <option key={tag}>{tag}</option>
               ))}
             </select>
-            <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+            <select aria-label="遠征の並び順" value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
               {sortModes.map((mode) => (
                 <option key={mode}>{mode}</option>
               ))}
             </select>
           </div>
+          <section className="pinned-box">
+            <div className="section-head compact">
+              <div>
+                <p className="eyebrow">Pinned</p>
+                <h3>よく使う遠征</h3>
+              </div>
+              <div className="pinned-toolbar"><small>{pinnedExpeditions.length}件</small><button type="button" aria-pressed={editingPins} onClick={() => setEditingPins(v => !v)}>{editingPins ? "並べ替え完了" : "並べ替え"}</button></div>
+            </div>
+            {pinnedExpeditions.length === 0 ? (
+              <p className="empty-text">☆ボタンでよく使う遠征をピン留めできるよ。</p>
+            ) : (
+              <div className="pinned-list pinned-list-editable">
+                {(showAllPinned || editingPins ? pinnedExpeditions : pinnedExpeditions.slice(0, 3)).map((expedition, index) => (
+                  <div className={`pinned-edit-item ${editingPins ? "editing" : "browse"} ${selectedDetailId === expedition.id ? "selected" : ""}`} key={`quick-${expedition.id}`}>
+                    <button
+                      className="pinned-main"
+                      type="button"
+                      onClick={() => jumpToExpeditionDetail(expedition.id)}
+                    >
+                      <span>{expedition.id}: {expedition.name}</span>
+                      <small>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.slice(0, 3).join("・")}</small>
+                    </button>
+                    <CombatBadge expedition={expedition} />
+                    {editingPins && <div className="pin-order-actions">
+                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, -1)} disabled={index === 0} aria-label={`${expedition.name}を上へ`}>↑</button>
+                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, 1)} disabled={index === pinnedExpeditions.length - 1} aria-label={`${expedition.name}を下へ`}>↓</button>
+                    </div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {pinnedExpeditions.length > 3 && !editingPins && <button type="button" className="show-more" aria-expanded={showAllPinned} onClick={() => setShowAllPinned(v => !v)}>{showAllPinned ? "3件にたたむ" : `すべて表示（${pinnedExpeditions.length}件）`}</button>}
+          </section>
+
+          <label className="list-density-toggle"><input type="checkbox" checked={showListDetails} onChange={e => setShowListDetails(e.target.checked)} />タグ・時給も表示</label>
           <p className="result-count">表示中：{filteredExpeditions.length}件 / 全{totalExpeditionCount}件</p>
           <div className="expedition-list">
             {filteredExpeditions.map((expedition) => {
               const rate = getAdjustedResourceRate(expedition, rewardSettings);
               return (
                 <div className={`expedition-item ${selectedDetailId === expedition.id ? "selected" : ""} ${isMonthlyDone(expedition.id) ? "monthly-done" : ""}`} key={expedition.id}>
-                  <button className="expedition-main" onClick={() => setSelectedDetailId(expedition.id)}>
+                  <button className="expedition-main" onClick={() => jumpToExpeditionDetail(expedition.id)}>
                     <span>{isMonthlyDone(expedition.id) ? "済 " : ""}{expedition.id}: {expedition.name}</span>
-                    <small>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.join("・")}</small>
-                    <small>時給目安：{formatResources(rate)} / h</small>
+                    <small>{minutesToLabel(expedition.durationMinutes)} ・ {expedition.purposeTags.filter(tag => ["燃料", "弾薬", "鋼材", "ボーキ", "ネジ", "バケツ", "伊良湖"].includes(tag)).slice(0, 3).join("・")}</small>
+                    {showListDetails && <small>{expedition.purposeTags.join("・")}<br />時給目安：{formatResources(rate)} / h</small>}
                     <CombatBadge expedition={expedition} />
                   </button>
                   <button

@@ -43,26 +43,73 @@ export const riskLabels = {
 
 export type MonthlyGoal = 'balanced' | 'screws' | 'bauxite' | 'fuel' | 'items';
 
-export function recommendMonthly(list: Expedition[], completed: string[], goal: MonthlyGoal, avoidHeavy: boolean) {
+export type MonthlyStrategy = 'reward' | 'efficiency' | 'safe';
+
+// Stop at completed monthly prerequisites; deduplicate branches and cycles.
+export function outstandingMonthlyParents(expedition: Expedition, list: Expedition[], completed: string[]) {
+  const seen = new Set([expedition.id, ...completed]);
+  const result: Expedition[] = [];
+  const visit = (e: Expedition) => {
+    for (const parent of monthlyParents(e, list)) {
+      if (seen.has(parent.id)) continue;
+      seen.add(parent.id);
+      visit(parent);
+      result.push(parent);
+    }
+  };
+  visit(expedition);
+  return result;
+}
+
+export function routeCombatRisk(expedition: Expedition, list: Expedition[], completed: string[]) {
+  const seen = new Set([expedition.id]);
+  const route = [expedition];
+  for (let i = 0; i < route.length; i++) {
+    for (const p of route[i].prerequisites ?? []) {
+      const parent = list.find(e => e.id === p.expeditionId);
+      if (!parent || seen.has(parent.id)) continue;
+      seen.add(parent.id);
+      if (parent.purposeTags.includes('マンスリー') && completed.includes(parent.id)) continue;
+      route.push(parent);
+    }
+  }
+  return route.filter(e => e.combatType === 'I' || e.combatType === 'II');
+}
+
+// Item ranges describe possible rewards, not drop probabilities or expected values.
+function itemMaximum(expedition: Expedition, name: string) {
+  const match = expedition.itemReward.match(new RegExp(name + '[^0-9/]*([0-9]+)(?:[〜～~－-]([0-9]+))?'));
+  return match ? Number(match[2] ?? match[1]) : 0;
+}
+
+export function recommendMonthly(list: Expedition[], completed: string[], goal: MonthlyGoal, avoidHeavy: boolean,
+  options: { strategy?: MonthlyStrategy; readyOnly?: boolean } = {}) {
   const done = new Set(completed);
-  const candidates = list.filter(e => e.purposeTags.includes('マンスリー') && !done.has(e.id)
-    && (!avoidHeavy || e.combatType !== 'II'));
-  return candidates.map(expedition => {
-    const screws = expedition.itemReward.includes('改修資材');
-    const special = expedition.itemReward.includes('伊良湖');
+  return list.filter(e => e.purposeTags.includes('マンスリー') && !done.has(e.id)).map(expedition => {
+    const screws = itemMaximum(expedition, '改修資材');
+    const special = itemMaximum(expedition, '伊良湖');
+    const buckets = itemMaximum(expedition, '高速修復材');
     const total = Object.values(expedition.rewards).reduce((a, b) => a + b, 0);
-    const missing = monthlyParents(expedition, list).filter(e => !done.has(e.id));
-    const score = goal === 'screws' ? (screws ? 10000 : 0) + total
+    const missing = outstandingMonthlyParents(expedition, list, completed);
+    const risks = routeCombatRisk(expedition, list, completed);
+    const risk = Math.max(0, ...risks.map(e => e.combatType === 'II' ? 2 : 1));
+    const routeMinutes = expedition.durationMinutes + missing.reduce((sum, e) => sum + e.durationMinutes, 0);
+    const score = goal === 'screws' ? screws * 10000 + total
       : goal === 'fuel' ? expedition.rewards.fuel
       : goal === 'bauxite' ? expedition.rewards.bauxite
-      : goal === 'items' ? (special ? 12000 : screws ? 10000 : expedition.itemReward.includes('高速修復材') ? 5000 : 0) + total
-      : (screws ? 2000 : 0) + (special ? 1200 : 0) + total;
-    return { expedition, missing, score,
+      : goal === 'items' ? special * 12000 + screws * 10000 + buckets * 5000 + total
+      : screws * 2000 + special * 1200 + total;
+    const eligible = goal === 'screws' ? screws > 0 : goal === 'items' ? special + screws + buckets > 0 : score > 0;
+    return { expedition, missing, risks, risk, routeMinutes, score, eligible,
+      efficiency: score / Math.max(1, routeMinutes) * 60,
       reason: goal === 'fuel' ? `燃料 ${expedition.rewards.fuel}（成功時）`
         : goal === 'bauxite' ? `ボーキ ${expedition.rewards.bauxite}（成功時）`
-        : special && goal === 'items' ? '伊良湖を狙える（確率入手）'
-        : screws ? '大成功で改修資材を獲得' : `基本資源の合計 ${total}` };
-  }).sort((a, b) => b.score - a.score || a.expedition.durationMinutes - b.expedition.durationMinutes).slice(0, 5);
+        : special && goal === 'items' ? `伊良湖 最大${special}個（確率入手）`
+        : screws ? `改修資材 最大${screws}個（大成功を目指そう）` : `基本資源の合計 ${total}` };
+  }).filter(r => r.eligible && (!avoidHeavy || r.risk < 2) && (!options.readyOnly || r.missing.length === 0))
+    .sort((a, b) => (options.strategy === 'safe' ? a.risk - b.risk : 0)
+      || (options.strategy === 'efficiency' ? b.efficiency - a.efficiency : b.score - a.score)
+      || a.routeMinutes - b.routeMinutes).slice(0, 5);
 }
 
 const names: Record<string, string> = {
