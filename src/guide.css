@@ -1,0 +1,30 @@
+.unlock-route, .monthly-recommendations { padding: 16px; margin-block: 16px; border: 1px solid #cbd5e1; border-radius: 16px; }
+.unlock-route h3, .monthly-recommendations h3 { margin: 0 0 8px; }
+.unlock-route p, .monthly-recommendations p { font-size: 13px; line-height: 1.6; }
+.route-target { font-weight: 700; padding: 10px; background: #e6f1ff; color: #163c67; border-radius: 8px; }
+.route-layer, .monthly-links > div { margin-top: 12px; }
+.route-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.route-chips button { min-height: 36px; width: auto; padding: 7px 10px; font-size: 13px; text-align: left; white-space: normal; background: #edf3fa; color: #234367; border: 1px solid #c8d7e8; border-radius: 9px; line-height: 1.5; }
+.unlock-route details { margin-top: 12px; }
+.unlock-route summary { cursor: pointer; padding: 10px 0; font-size: 14px; font-weight: 600; }
+.route-expanded { max-height: 380px; overflow-y: auto; }
+.combat-badge { display: inline-block; width: fit-content; white-space: normal; font-size: 12px; font-weight: 700; padding: 5px 8px; border-radius: 7px; margin-block: 5px; line-height: 1.5; }
+.combat-II { background: #ffebee; color: #a2152b; }
+.combat-I { background: #fff0d5; color: #835000; }
+.combat-none { background: #e5f4e9; color: #235735; }
+.recommendation-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.recommendation-controls label { font-size: 14px; }
+.recommendation-controls input { width: auto; }
+.recommendation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 10px; }
+.recommendation-grid article { display: flex; flex-direction: column; gap: 6px; padding: 14px; border: 1px solid #cbd5e1; border-radius: 12px; min-width: 0; }
+.recommendation-title { padding: 0; background: none; color: inherit; text-align: left; font-weight: 700; }
+.recommendation-grid small, .monthly-links small { font-size: 12px; line-height: 1.6; }
+.recommendation-grid span { font-size: 13px; }
+.monthly-links { margin-block: 10px; font-size: 13px; }
+[data-theme="dark"] .route-chips button, [data-theme="dark"] .route-target { background: #1f354c; color: #e1ecff; }
+[data-theme="dark"] .combat-II { background: #511f29; color: #ffccd4; }
+[data-theme="dark"] .combat-I { background: #493820; color: #ffe0a1; }
+[data-theme="dark"] .combat-none { background: #203d2d; color: #c7ead1; }
+
+.return-recorded { display: block; font-size: 14px; font-weight: 700; color: #257343; padding: 8px 0; }
+[data-theme="dark"] .return-recorded { color: #a9e5bc; }

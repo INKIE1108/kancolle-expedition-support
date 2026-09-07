@@ -157,3 +157,23 @@ end $$;
 -- v3.1: 実行中タイマー同期ガード用。running/clearedの判定を軽くする補助index。
 create index if not exists active_timers_status_updated_idx
   on public.active_timers (user_id, status, updated_at desc);
+
+-- v5.7: additive upgrade for device metadata, retry checkpoints and realtime settings.
+alter table public.push_subscriptions
+  add column if not exists device_label text,
+  add column if not exists device_kind text,
+  add column if not exists browser_name text,
+  add column if not exists os_name text,
+  add column if not exists last_seen_at timestamptz,
+  add column if not exists last_tested_at timestamptz;
+alter table public.scheduled_notifications
+  add column if not exists attempts integer not null default 0,
+  add column if not exists next_attempt_at timestamptz,
+  add column if not exists claimed_at timestamptz,
+  add column if not exists delivery_state jsonb not null default '{}'::jsonb;
+do $$
+begin
+  alter publication supabase_realtime add table public.user_settings;
+exception
+  when duplicate_object then null;
+end $$;

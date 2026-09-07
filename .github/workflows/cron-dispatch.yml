@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "2-59/5 * * * *"
 
+concurrency:
+  group: notification-dispatch
+  cancel-in-progress: false
+
 jobs:
   dispatch:
     runs-on: ubuntu-latest
@@ -17,14 +21,14 @@ jobs:
         shell: bash
         run: |
           if [ -z "${CRON_SECRET}" ]; then
-            echo "::warning::CRON_SECRET is not configured in GitHub Actions. Notification dispatch is skipped to avoid repeated failure emails."
+            echo "::error::CRON_SECRET is not configured in GitHub Actions. Notification dispatch is skipped to avoid repeated failure emails."
             echo "Set the same CRON_SECRET in GitHub repository Secrets and in Vercel Environment Variables."
-            exit 0
+            exit 1
           fi
 
           echo "Run URL=${APP_URL}"
           body_file="$(mktemp)"
-          status="$(curl --silent --show-error \
+          status="$(curl --silent --show-error --max-time 55 \
             --output "${body_file}" \
             --write-out "%{http_code}" \
             -X POST "${APP_URL}/api/cron-dispatch" \

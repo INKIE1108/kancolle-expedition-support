@@ -441,7 +441,7 @@
     "requirements": {
       "flagshipLevel": "旗艦Lv40以上 / 艦隊合計Lv200以上",
       "ships": "最低5隻・マンスリー",
-      "formation": "護衛空母/軽巡1＋駆逐2＋駆逐/海防2、または駆逐1＋海防3＋自由1、または練巡/軽巡1＋海防2＋自由2。",
+      "formation": "護衛空母/軽巡1＋駆逐2＋自由2、または駆逐1＋海防3＋自由1、または練巡/軽巡1＋海防2＋自由2。",
       "stats": "火力300 / 対空200 / 対潜200 / 索敵120以上／補給満タン必須"
     },
     "greatSuccess": {
@@ -463,7 +463,8 @@
         "label": "A3: 長時間対潜警戒",
         "expeditionId": "A3"
       }
-    ]
+    ],
+    "combatType": "none"
   },
   {
     "id": "A5",
@@ -480,7 +481,7 @@
     "requirements": {
       "flagshipLevel": "旗艦Lv45以上 / 艦隊合計Lv230以上",
       "ships": "最低5隻・マンスリー・交戦I型",
-      "formation": "護衛空母/軽巡1＋駆逐3＋駆逐/海防1、または駆逐1＋海防3＋自由1、または練巡/軽巡1＋海防2＋自由2。",
+      "formation": "護衛空母/軽巡1＋駆逐3＋自由1、または駆逐1＋海防3＋自由1、または練巡/軽巡1＋海防2＋自由2。",
       "stats": "火力280 / 対空220 / 対潜240 / 索敵150以上／補給満タン必須"
     },
     "greatSuccess": {
@@ -509,7 +510,8 @@
         "expeditionId": "B3",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "I"
   },
   {
     "id": "A6",
@@ -557,7 +559,8 @@
         "expeditionId": "B4",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "II"
   },
   {
     "id": "09",
@@ -944,7 +947,8 @@
         "label": "A3: 長時間対潜警戒",
         "expeditionId": "A3"
       }
-    ]
+    ],
+    "combatType": "none"
   },
   {
     "id": "B3",
@@ -984,7 +988,8 @@
         "expeditionId": "B2",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "none"
   },
   {
     "id": "B4",
@@ -1025,7 +1030,8 @@
         "expeditionId": "B3",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "I"
   },
   {
     "id": "B5",
@@ -1068,7 +1074,8 @@
         "expeditionId": "B4",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "II"
   },
   {
     "id": "B6",
@@ -1116,7 +1123,8 @@
         "expeditionId": "B4",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "II"
   },
   {
     "id": "17",
@@ -1481,8 +1489,8 @@
     "itemReward": "家具箱(大) 0〜1 / 高速建造材 0〜3",
     "requirements": {
       "flagshipLevel": "旗艦Lv45以上 / 艦隊合計Lv200以上",
-      "ships": "最低5隻・マンスリー",
-      "formation": "護衛空母/軽巡1＋駆逐1＋駆逐/海防3。",
+      "ships": "4隻以上（大成功狙いは6隻推奨）",
+      "formation": "軽巡1＋駆逐2＋自由1、または護衛空母1＋駆逐2＋自由1。",
       "stats": "要求ステータスなし／補給満タン必須"
     },
     "greatSuccess": {
@@ -1502,7 +1510,8 @@
         "label": "41: ブルネイ泊地沖哨戒",
         "expeditionId": "41"
       }
-    ]
+    ],
+    "combatType": "none"
   },
   {
     "id": "43",
@@ -1543,7 +1552,8 @@
         "expeditionId": "42",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "I"
   },
   {
     "id": "44",
@@ -1593,7 +1603,8 @@
         "expeditionId": "A4",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "none"
   },
   {
     "id": "45",
@@ -1674,7 +1685,8 @@
         "label": "D1: 西方海域偵察作戦",
         "expeditionId": "D1"
       }
-    ]
+    ],
+    "combatType": "II"
   },
   {
     "id": "25",
@@ -2051,7 +2063,8 @@
         "label": "D1: 西方海域偵察作戦",
         "expeditionId": "D1"
       }
-    ]
+    ],
+    "combatType": "I"
   },
   {
     "id": "D3",
@@ -2093,7 +2106,8 @@
         "expeditionId": "D2",
         "note": "毎月この前提遠征の実施が必要"
       }
-    ]
+    ],
+    "combatType": "II"
   },
   {
     "id": "33",
@@ -2437,7 +2451,8 @@
         "label": "40: 水上機前線輸送",
         "expeditionId": "40"
       }
-    ]
+    ],
+    "combatType": "II"
   },
   {
     "id": "E2",
@@ -2477,6 +2492,7 @@
         "label": "38: 東京急行(弐)",
         "expeditionId": "38"
       }
-    ]
+    ],
+    "combatType": "II"
   }
 ]
