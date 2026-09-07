@@ -33,6 +33,7 @@ export type Expedition = {
   purposeTags: string[];
   memo: string;
   sourceNote: string;
+  combatType?: "none" | "I" | "II";
   prerequisites?: ExpeditionPrerequisite[];
 };
 

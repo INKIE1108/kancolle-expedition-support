@@ -27,6 +27,7 @@ export type CloudSnapshot = {
   nozakiTimer?: Record<string, unknown>;
   historyClearedAt?: number;
   resourceStockClearedAt?: number;
+  monthlyPeriodVersion?: number;
   monthlyCompletions?: Record<string, string[]>;
   setupNotificationTestDone?: boolean;
   setupGuideDismissed?: boolean;
@@ -86,17 +87,30 @@ export async function getCurrentAuthState(): Promise<AuthState> {
   return { session: data.session, user: data.session?.user ?? null };
 }
 
-export async function saveCloudSnapshot(userId: string, snapshot: CloudSnapshot): Promise<void> {
+export async function saveCloudSnapshot(userId: string, snapshot: CloudSnapshot, expected: CloudSnapshot | null): Promise<boolean> {
   if (!supabase) throw new Error("Supabaseが未設定です");
-  const { error } = await supabase.from("user_settings").upsert(
-    {
-      user_id: userId,
-      settings_json: snapshot,
-      updated_at: new Date().toISOString()
-    },
-    { onConflict: "user_id" }
-  );
+  const row = { user_id: userId, settings_json: snapshot, updated_at: new Date().toISOString() };
+  if (!expected) {
+    const { error } = await supabase.from("user_settings").insert(row);
+    if (error?.code === "23505") return false;
+    if (error) throw error;
+    return true;
+  }
+  let query = supabase.from("user_settings").update(row).eq("user_id", userId);
+  query = expected.savedAt ? query.eq("settings_json->>savedAt", expected.savedAt) : query.is("settings_json->>savedAt", null);
+  const { data, error } = await query.select("user_id");
   if (error) throw error;
+  return Boolean(data?.length);
+}
+
+const operationQueues = new Map<string, Promise<void>>();
+function orderedOperation(key: string, operation: () => Promise<void>): Promise<void> {
+  const previous = operationQueues.get(key) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(operation);
+  operationQueues.set(key, next);
+  const cleanup = () => { if (operationQueues.get(key) === next) operationQueues.delete(key); };
+  next.then(cleanup, cleanup);
+  return next;
 }
 
 export async function loadCloudSnapshot(userId: string): Promise<CloudSnapshot | null> {
@@ -110,17 +124,18 @@ export async function loadCloudSnapshot(userId: string): Promise<CloudSnapshot |
   return (data?.settings_json as CloudSnapshot | null) ?? null;
 }
 
-export async function scheduleCloudNotification(input: ScheduledNotificationInput): Promise<void> {
+async function scheduleCloudNotificationNow(input: ScheduledNotificationInput): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
 
   // 同じ艦隊の未送信予約が残っていると二重通知になりやすいので、開始時に古いpendingをキャンセル。
-  await supabase
+  const { error: cancelError } = await supabase
     .from("scheduled_notifications")
     .update({ status: "cancelled", error_message: "replaced by newer timer" })
     .eq("user_id", input.userId)
     .eq("fleet_no", input.fleetNo)
-    .eq("status", "pending");
+    .in("status", ["pending", "processing"]);
 
+  if (cancelError) throw cancelError;
   const { error } = await supabase.from("scheduled_notifications").insert({
     user_id: input.userId,
     fleet_no: input.fleetNo,
@@ -128,21 +143,28 @@ export async function scheduleCloudNotification(input: ScheduledNotificationInpu
     expedition_name: input.expeditionName,
     end_at: new Date(input.endAt).toISOString(),
     content: input.content,
-    webhook_url: input.webhookUrl.trim() || null,
+    webhook_url: input.webhookUrl.trim() || "push-only",
     status: "pending"
   });
   if (error) throw error;
 }
 
-export async function cancelCloudNotification(userId: string, fleetNo: number): Promise<void> {
+async function cancelCloudNotificationNow(userId: string, fleetNo: number): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
   const { error } = await supabase
     .from("scheduled_notifications")
     .update({ status: "cancelled", error_message: "cancelled by user" })
     .eq("user_id", userId)
     .eq("fleet_no", fleetNo)
-    .eq("status", "pending");
+    .in("status", ["pending", "processing"]);
   if (error) throw error;
+}
+
+export function scheduleCloudNotification(input: ScheduledNotificationInput): Promise<void> {
+  return orderedOperation(`notification:${input.userId}:${input.fleetNo}`, () => scheduleCloudNotificationNow(input));
+}
+export function cancelCloudNotification(userId: string, fleetNo: number): Promise<void> {
+  return orderedOperation(`notification:${userId}:${fleetNo}`, () => cancelCloudNotificationNow(userId, fleetNo));
 }
 
 function toActiveTimerRow(userId: string, fleet: FleetTimer, now = Date.now()) {
@@ -166,7 +188,7 @@ function toActiveTimerRow(userId: string, fleet: FleetTimer, now = Date.now()) {
 }
 
 
-export async function saveActiveTimer(userId: string, fleet: FleetTimer): Promise<void> {
+async function saveActiveTimerNow(userId: string, fleet: FleetTimer): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
   const row = toActiveTimerRow(userId, fleet);
   if (!row) return;
@@ -174,21 +196,17 @@ export async function saveActiveTimer(userId: string, fleet: FleetTimer): Promis
   if (error) throw error;
 }
 
+export function saveActiveTimer(userId: string, fleet: FleetTimer): Promise<void> {
+  return orderedOperation(`timer:${userId}:${fleet.fleetNo}`, () => saveActiveTimerNow(userId, fleet));
+}
 export async function saveActiveTimers(userId: string, fleets: FleetTimer[]): Promise<void> {
-  if (!supabase) throw new Error("Supabaseが未設定です");
-  const rows = fleets
-    .map((fleet) => toActiveTimerRow(userId, fleet))
-    .filter((row): row is NonNullable<ReturnType<typeof toActiveTimerRow>> => Boolean(row));
-
-  // v2.8: 未実行/0秒の艦隊はクラウドへupsertしない。
-  // 別端末の空状態で、実行中タイマーを上書きして0秒にする事故を防ぐ。
-  if (rows.length === 0) return;
-
-  const { error } = await supabase.from("active_timers").upsert(rows, { onConflict: "user_id,fleet_no" });
-  if (error) throw error;
+  await Promise.all(fleets.map(fleet => saveActiveTimer(userId, fleet)));
+}
+export function clearActiveTimer(userId: string, fleetNo: number, expeditionId = ""): Promise<void> {
+  return orderedOperation(`timer:${userId}:${fleetNo}`, () => clearActiveTimerNow(userId, fleetNo, expeditionId));
 }
 
-export async function clearActiveTimer(userId: string, fleetNo: number, expeditionId = ""): Promise<void> {
+async function clearActiveTimerNow(userId: string, fleetNo: number, expeditionId = ""): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
 
   // v3.1: deleteではなくclearedの墓標を残す。

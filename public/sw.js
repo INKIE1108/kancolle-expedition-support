@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kancolle-expedition-support-v5.6.2';
+const CACHE_NAME = 'kancolle-expedition-support-v5.7.0';
 
 function scopeUrl(path) {
   return new URL(path, self.registration.scope).toString();
@@ -97,7 +97,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(scopeUrl('./'), copy));
           return response;
         })
-        .catch(() => caches.match(scopeUrl('./')) || caches.match(scopeUrl('./index.html')))
+        .catch(async () => (await caches.match(scopeUrl('./'))) || (await caches.match(scopeUrl('./index.html'))) || Response.error())
     );
     return;
   }

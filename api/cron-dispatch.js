@@ -1,295 +1,65 @@
-import { createClient } from "@supabase/supabase-js";
-import webpush from "web-push";
-
-const FALLBACK_DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const CRON_SECRET = process.env.CRON_SECRET;
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:example@example.com";
-
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-}
-
-function getHeaderValue(value) {
-  if (Array.isArray(value)) return value[0] || "";
-  if (typeof value === "string") return value;
-  return "";
-}
-
-function getCronSecretFromRequest(req) {
-  const authHeader = getHeaderValue(req.headers.authorization);
-
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.replace("Bearer ", "").trim();
-  }
-
-  const xCronSecret = getHeaderValue(req.headers["x-cron-secret"]);
-  if (xCronSecret.trim()) {
-    return xCronSecret.trim();
-  }
-
-  const host = getHeaderValue(req.headers.host) || "localhost";
-  const protocol = getHeaderValue(req.headers["x-forwarded-proto"]) || "https";
-  const url = new URL(req.url || "", `${protocol}://${host}`);
-
-  return url.searchParams.get("secret") || "";
-}
-
-function checkCronAuth(req) {
-  const expected = CRON_SECRET || "";
-  const received = getCronSecretFromRequest(req);
-
-  return Boolean(expected && received && expected === received);
-}
-
-function buildPushPayload(content) {
-  const cleanBody = String(content || "")
-    .replace(/\*\*/g, "")
-    .split("\n")
-    .slice(0, 4)
-    .join("\n");
-
-  return JSON.stringify({
-    title: "艦これ遠征サポート",
-    body: cleanBody,
-    tag: "kancolle-expedition-complete",
-    url: "/"
-  });
-}
-
-async function sendDiscord(webhookUrl, content) {
-  if (!webhookUrl || webhookUrl === "push-only") {
-    return {
-      ok: false,
-      skipped: true,
-      reason: "webhook_missing"
-    };
-  }
-
-  const discordResponse = await fetch(webhookUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ content })
-  });
-
-  if (!discordResponse.ok) {
-    throw new Error(`Discord ${discordResponse.status}`);
-  }
-
-  return { ok: true };
-}
-
-async function sendPushToUser(supabase, userId, content) {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-    return {
-      ok: false,
-      skipped: true,
-      reason: "vapid_missing",
-      sent: 0,
-      removed: 0,
-      errors: []
-    };
-  }
-
-  if (!userId) {
-    return {
-      ok: false,
-      skipped: true,
-      reason: "user_id_missing",
-      sent: 0,
-      removed: 0,
-      errors: []
-    };
-  }
-
-  const { data, error } = await supabase
-    .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
-    .eq("user_id", userId)
-    .eq("enabled", true);
-
-  if (error) throw error;
-
-  const subscriptions = data || [];
-  let sent = 0;
-  let removed = 0;
-  const errors = [];
-
-  for (const subscription of subscriptions) {
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: subscription.p256dh,
-            auth: subscription.auth
-          }
-        },
-        buildPushPayload(content)
-      );
-
-      sent += 1;
-    } catch (error) {
-      const statusCode = error?.statusCode;
-
-      if (statusCode === 404 || statusCode === 410) {
-        await supabase
-          .from("push_subscriptions")
-          .update({ enabled: false })
-          .eq("id", subscription.id);
-
-        removed += 1;
-      } else {
-        errors.push(error instanceof Error ? error.message : "push_error");
-      }
-    }
-  }
-
-  return {
-    ok: errors.length === 0,
-    sent,
-    removed,
-    errors
-  };
-}
-
-async function markNotificationSent(supabase, id, errorMessage = null) {
-  await supabase
-    .from("scheduled_notifications")
-    .update({
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      error_message: errorMessage
-    })
-    .eq("id", id);
-}
-
-async function markNotificationError(supabase, id, errorInfo) {
-  await supabase
-    .from("scheduled_notifications")
-    .update({
-      status: "error",
-      error_message: JSON.stringify(errorInfo).slice(0, 1000)
-    })
-    .eq("id", id);
-}
+import { createClient } from '@supabase/supabase-js';
+import webpush from 'web-push';
+import { deliverNotification, deliveryUpdate, MAX_ATTEMPTS } from '../server/notifications.js';
 
 export default async function handler(req, res) {
-  res.setHeader("Cache-Control", "no-store");
-
-  if (req.method !== "GET" && req.method !== "POST") {
-    return res.status(405).json({
-      ok: false,
-      error: "Method not allowed",
-      allowed: ["GET", "POST"]
-    });
-  }
-
-  if (!CRON_SECRET) {
-    return res.status(500).json({
-      ok: false,
-      error: "CRON_SECRET is not configured"
-    });
-  }
-
-  if (!checkCronAuth(req)) {
-    return res.status(401).json({
-      ok: false,
-      error: "Unauthorized"
-    });
-  }
-
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(500).json({
-      ok: false,
-      error: "Supabase service environment variables are not configured"
-    });
-  }
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
-  });
-
-  const nowIso = new Date().toISOString();
-
-  const { data, error } = await supabase
-    .from("scheduled_notifications")
-    .select("id, user_id, content, webhook_url")
-    .eq("status", "pending")
-    .lte("end_at", nowIso)
-    .order("end_at", { ascending: true })
-    .limit(50);
-
-  if (error) {
-    return res.status(500).json({
-      ok: false,
-      error: error.message
-    });
-  }
-
-  const results = [];
-
-  for (const item of data || []) {
-    const webhookUrl = item.webhook_url || FALLBACK_DISCORD_WEBHOOK_URL;
-
-    const result = {
-      id: item.id,
-      discord: null,
-      push: null,
-      status: "sent"
-    };
-
-    try {
-      result.discord = await sendDiscord(webhookUrl, item.content);
-    } catch (error) {
-      result.discord = {
-        ok: false,
-        error: error instanceof Error ? error.message : "discord_error"
-      };
-    }
-
-    try {
-      result.push = await sendPushToUser(supabase, item.user_id, item.content);
-    } catch (error) {
-      result.push = {
-        ok: false,
-        error: error instanceof Error ? error.message : "push_error"
-      };
-    }
-
-    const discordOk = Boolean(result.discord?.ok || result.discord?.skipped);
-    const pushOk = Boolean(result.push?.ok || result.push?.skipped);
-    const sentSomething = Boolean(result.discord?.ok || (result.push?.sent ?? 0) > 0);
-
-    if (discordOk && pushOk && sentSomething) {
-      await markNotificationSent(supabase, item.id, null);
-      result.status = "sent";
-    } else if (sentSomething) {
-      await markNotificationSent(supabase, item.id, "partial notification success");
-      result.status = "partial_sent";
-    } else {
-      await markNotificationError(supabase, item.id, {
-        discord: result.discord,
-        push: result.push
-      });
-      result.status = "error";
-    }
-
-    results.push(result);
-  }
-
-  return res.status(200).json({
-    ok: true,
-    checkedAt: nowIso,
-    count: results.length,
-    results
-  });
+  res.setHeader('Cache-Control', 'no-store');
+  if (!['GET', 'POST'].includes(req.method)) return res.status(405).json({ ok: false });
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return res.status(500).json({ ok: false, error: 'CRON_SECRET is not configured' });
+  const auth = req.headers.authorization;
+  // Secrets in URLs leak into access logs; support only headers.
+  if (auth !== `Bearer ${secret}` && req.headers['x-cron-secret'] !== secret) return res.status(401).json({ ok: false });
+  const url = process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return res.status(500).json({ ok: false, error: 'Supabase is not configured' });
+  const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const pushConfigured = Boolean(publicKey && privateKey);
+  const now = new Date().toISOString();
+  try {
+    if (pushConfigured) webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:example@example.com', publicKey, privateKey);
+    // Recover abandoned claims after a ten-minute lease. Never touch cancelled rows.
+    const { error: recoveryError } = await db.from('scheduled_notifications').update({ status: 'pending', claimed_at: null })
+      .eq('status', 'processing').lt('claimed_at', new Date(Date.now() - 600000).toISOString());
+    if (recoveryError) throw recoveryError;
+    const { data, error } = await db.from('scheduled_notifications').select('*').eq('status', 'pending')
+      .lte('end_at', now).or(`next_attempt_at.is.null,next_attempt_at.lte.${now}`)
+      .order('end_at', { ascending: true }).limit(5);
+    if (error) throw error;
+    const results = await Promise.all((data || []).map(async row => {
+      // Compare-and-set claim: overlapping dispatches cannot both win this row.
+      const { data: item, error } = await db.from('scheduled_notifications')
+        .update({ status: 'processing', attempts: row.attempts + 1, claimed_at: now })
+        .eq('id', row.id).eq('status', 'pending').eq('attempts', row.attempts).select('*').maybeSingle();
+      if (error) throw error;
+      if (!item) return { id: row.id, status: 'claimed_elsewhere' };
+      let result;
+      try {
+        if (row.attempts >= MAX_ATTEMPTS) throw new Error('通知再送の上限に達しました');
+        result = await deliverNotification(db, item, {
+          pushConfigured,
+          sendDiscord: async (webhookUrl, content) => {
+            const response = await fetch(webhookUrl, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(8000),
+              headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content, allowed_mentions: { parse: [] } }) });
+            if (!response.ok) throw new Error(`Discord ${response.status}`);
+          },
+          sendPush: (s, payload) => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { timeout: 8000 })
+        });
+      } catch (error) {
+        // Read back destination checkpoints so an error never wipes successful deliveries.
+        const { data: saved, error: readError } = await db.from('scheduled_notifications').select('delivery_state').eq('id', item.id).single();
+        if (readError) throw readError;
+        result = { delivered: saved.delivery_state || {}, errors: [String(error.message)] };
+      }
+      const update = deliveryUpdate(item, result);
+      const { data: updated, error: updateError } = await db.from('scheduled_notifications').update(update)
+        .eq('id', item.id).eq('status', 'processing').eq('attempts', item.attempts).select('id');
+      if (updateError) throw updateError;
+      return { id: item.id, status: updated?.length ? update.status : 'cancelled', attempts: item.attempts };
+    }));
+    const failed = results.filter(r => r.status === 'error').length;
+    return res.status(failed ? 502 : 200).json({ ok: failed === 0, checkedAt: now, count: results.length, retrying: results.filter(r => r.status === 'pending').length, failed, results });
+  } catch (error) { return res.status(500).json({ ok: false, error: String(error.message) }); }
 }

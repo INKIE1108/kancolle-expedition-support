@@ -42,17 +42,10 @@ export function InitialSetupGuide({
       onAction: onJumpAccount
     },
     {
-      label: "Discord Webhook URL登録",
-      description: "遠征終了をDiscordチャンネルへ送れるようにする。",
-      done: webhookRegistered,
+      label: "通知先を登録",
+      description: "スマホ・PCのPush通知、またはDiscordを設定。どちらか一方でも使えます。",
+      done: webhookRegistered || deviceRegistered,
       actionLabel: "通知設定へ",
-      onAction: onJumpNotification
-    },
-    {
-      label: "スマホ通知を有効化",
-      description: "スマホやPCのPWA通知を受け取れるように、この端末を通知先として登録する。",
-      done: deviceRegistered,
-      actionLabel: "通知端末へ",
       onAction: onJumpNotification
     },
     {

@@ -26,6 +26,9 @@ import {
 import { sendDiscordNotification } from "./utils/notify";
 import type { DeviceStatus } from "./utils/deviceNotifications";
 import { NotificationDevicePanel } from "./components/NotificationDevicePanel";
+import { CombatBadge, UnlockRoute, MonthlyLinks, MonthlyRecommendations } from "./components/ExpeditionGuide";
+import { concreteFormation, monthlyPeriodKey, migrateMonthlyChecks } from "./utils/expeditionGuide";
+import { mergeNozaki, completeNozaki, nextOperationTime } from "./utils/nozaki";
 import { InitialSetupGuide } from "./components/InitialSetupGuide";
 
 const FLEET_STORAGE_KEY = "kancolle-expedition-fleets-v1";
@@ -35,7 +38,7 @@ const SORT_STORAGE_KEY = "kancolle-expedition-sort-v1";
 const CUSTOM_PRESETS_STORAGE_KEY = "kancolle-expedition-custom-presets-v1";
 const HISTORY_STORAGE_KEY = "kancolle-expedition-history-v1";
 const COLLAPSE_STORAGE_KEY = "kancolle-expedition-collapse-v1";
-const MONTHLY_STORAGE_KEY = "kancolle-expedition-monthly-v1";
+const MONTHLY_STORAGE_KEY = "kancolle-expedition-monthly-v2";
 const SETUP_TEST_STORAGE_KEY = "kancolle-expedition-setup-test-v1";
 const SETUP_GUIDE_DISMISSED_STORAGE_KEY = "kancolle-expedition-setup-guide-dismissed-v1";
 const REWARD_MODIFIER_STORAGE_KEY = "kancolle-expedition-reward-modifier-v1";
@@ -80,13 +83,7 @@ type ExpeditionHistory = {
 type MonthlyCompletionMap = Record<string, string[]>;
 
 
-type PrerequisiteTrailItem = {
-  expedition: Expedition;
-  depth: number;
-  note?: string;
-};
-
-const DATA_VERSION = "5.6.2";
+const DATA_VERSION = "5.7.0";
 
 const fallbackPrerequisiteMap: Record<string, ExpeditionPrerequisite[]> = Object.fromEntries(
   (fallbackExpeditions as Expedition[]).map((item) => [item.id, item.prerequisites ?? []])
@@ -100,27 +97,6 @@ function getExpeditionPrerequisites(expedition: Expedition | null | undefined): 
 
 function findExpeditionByIdIn(expeditionId: string, list: Expedition[]): Expedition | undefined {
   return list.find((item) => item.id === expeditionId) ?? (fallbackExpeditions as Expedition[]).find((item) => item.id === expeditionId);
-}
-
-function buildPrerequisiteTrail(expeditionId: string, list: Expedition[]): PrerequisiteTrailItem[] {
-  const result: PrerequisiteTrailItem[] = [];
-  const seen = new Set<string>();
-
-  function walk(targetId: string, depth: number) {
-    const target = findExpeditionByIdIn(targetId, list);
-    const prerequisites = getExpeditionPrerequisites(target);
-    for (const prerequisite of prerequisites) {
-      if (!prerequisite.expeditionId || seen.has(prerequisite.expeditionId)) continue;
-      const linked = findExpeditionByIdIn(prerequisite.expeditionId, list);
-      if (!linked) continue;
-      seen.add(linked.id);
-      walk(linked.id, depth + 1);
-      result.push({ expedition: linked, depth, note: prerequisite.note });
-    }
-  }
-
-  walk(expeditionId, 0);
-  return result;
 }
 
 function collectRouteRequirements(expeditionId: string, list: Expedition[]): ExpeditionPrerequisite[] {
@@ -812,86 +788,13 @@ type FormationPattern = {
   note?: string;
 };
 
-const COMPOSITION_NAME_MAP: Array<[RegExp, string]> = [
-  [/護衛空母/g, "護衛空母"],
-  [/軽空母/g, "軽空母"],
-  [/軽巡洋艦/g, "軽巡洋艦"],
-  [/軽巡/g, "軽巡洋艦"],
-  [/練巡/g, "練習巡洋艦"],
-  [/駆逐艦/g, "駆逐艦"],
-  [/駆逐/g, "駆逐艦"],
-  [/海防艦/g, "海防艦"],
-  [/海防/g, "海防艦"],
-  [/正規空母/g, "正規空母"],
-  [/装甲空母/g, "装甲空母"],
-  [/空母系/g, "空母系"],
-  [/航空戦艦/g, "航空戦艦"],
-  [/戦艦/g, "戦艦"],
-  [/重巡/g, "重巡洋艦"],
-  [/水母/g, "水上機母艦"],
-  [/潜水母艦/g, "潜水母艦"],
-  [/潜水空母/g, "潜水空母"],
-  [/潜水艦/g, "潜水艦"],
-  [/自由枠/g, "自由枠"],
-  [/自由/g, "自由枠"]
-];
-
-function normalizeCompositionText(value: string): string {
-  let text = value
-    .replace(/\s+/g, "")
-    .replace(/旗艦([0-9]+)/g, "(旗艦)×$1")
-    .replace(/([\u4e00-\u9fffA-Za-z/・]+)([0-9]+)/g, "$1×$2")
-    .replace(/\+/g, "＋")
-    .replace(/\//g, "または")
-    .replace(/or/g, "または")
-    .replace(/駆逐艦または海防艦/g, "駆逐艦または海防艦")
-    .replace(/駆逐または海防/g, "駆逐艦または海防艦");
-
-  for (const [pattern, replacement] of COMPOSITION_NAME_MAP) {
-    text = text.replace(pattern, replacement);
-  }
-
-  return text
-    .replace(/＋/g, " / ")
-    .replace(/または/g, " または ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function buildCompositionExample(value: string): string {
-  let text = value
-    .replace(/\s+/g, "")
-    .replace(/護衛空母\/軽巡/g, "護衛空母")
-    .replace(/練巡\/軽巡/g, "軽巡")
-    .replace(/練巡\/護衛空母/g, "練巡")
-    .replace(/駆逐\/海防/g, "駆逐")
-    .replace(/空母系\/水母/g, "軽空母")
-    .replace(/潜水艦\/潜水空母/g, "潜水艦")
-    .replace(/潜水艦\/潜水空母/g, "潜水艦")
-    .replace(/潜水艦\/潜水空母/g, "潜水艦")
-    .replace(/潜水空母/g, "潜水艦")
-    .replace(/\//g, "")
-    .replace(/旗艦/g, "")
-    .replace(/。.*$/, "")
-    .replace(/、.*$/, "")
-    .replace(/または.*$/, "");
-
-  text = normalizeCompositionText(text)
-    .replace(/\(旗艦\)/g, "")
-    .replace(/ または .+?(?=×|\/|$)/g, "")
-    .replace(/空母系×/g, "軽空母×")
-    .replace(/自由枠×/g, "自由枠×");
-
-  return text ? `${text} の例` : "この条件を満たす最小編成を使用";
-}
-
 function getFormationPatterns(expedition: Expedition): FormationPattern[] {
   if (expedition.id === "43") {
     return [
       {
         label: "パターン1：護衛空母ルート",
         requirement: "護衛空母(旗艦)×1 / 駆逐艦×2 または 海防艦×2 / 自由枠×3",
-        example: "護衛空母×1＋駆逐艦×2＋重巡洋艦×1＋軽巡洋艦×1＋駆逐艦×1",
+        example: "護衛空母1（旗艦）＋駆逐2（必須）＋重巡2・駆逐1（自由枠3隻）",
         note: "駆逐艦1＋海防艦1の混在は不可。護衛空母が旗艦。自由枠で火力・対空・対潜・索敵を調整。"
       },
       {
@@ -903,17 +806,16 @@ function getFormationPatterns(expedition: Expedition): FormationPattern[] {
     ];
   }
 
-  const rawParts = expedition.requirements.formation
-    .split(/、または|または|。例：|。/)
+  const rawParts = expedition.requirements.formation.split("。")[0]
+    .split(/、または/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0 && !item.includes("旗艦固定") && !item.includes("実際の支援威力"));
 
   const parts = rawParts.length > 0 ? rawParts : [expedition.requirements.formation];
   return parts.slice(0, 8).map((part, index) => ({
     label: parts.length > 1 ? `パターン${index + 1}` : "編成条件",
-    requirement: normalizeCompositionText(part),
-    example: buildCompositionExample(part),
-    note: expedition.requirements.formation.includes("旗艦固定") || part.includes("旗艦") ? "指定艦が旗艦。" : undefined
+    ...concreteFormation(part),
+    note: `${part.includes("旗艦") ? "指定艦が旗艦。" : ""}自由枠には例として駆逐を配置。必要Lv・火力・対潜・索敵などは別途満たしてください。`
   }));
 }
 
@@ -950,11 +852,6 @@ function formatShortDateTime(timestamp: number): string {
   }).format(new Date(timestamp));
 }
 
-function getMonthKey(timestamp = Date.now()): string {
-  const date = new Date(timestamp);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function getMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split("-");
   return `${year}年${Number(month)}月`;
@@ -983,6 +880,8 @@ function isMonthlyExpedition(expedition: Expedition): boolean {
 }
 
 function diagnoseNotification(row: NotificationLogRecord): string {
+  if (row.status === "processing") return "通知を配信中です";
+  if (row.status === "pending" && row.error_message) return "一部または全ての送信に失敗。次回の定期処理で再送します";
   if (row.status === "pending") return "まだ送信待ち。終了時刻を過ぎたあと、外部cron実行で送信される。";
   if (row.status === "sent") return row.error_message ? "一部成功。Discordまたはスマホ通知の片方で問題があった可能性。" : "送信完了。Discordまたは登録済み端末へ通知済み。";
   if (row.status === "cancelled") return "新しい遠征開始やクリア操作でキャンセル済み。二重通知防止の正常動作。";
@@ -1072,7 +971,7 @@ function App() {
     loadFromStorage(CUSTOM_PRESETS_STORAGE_KEY, [])
   );
   const [monthlyCompletions, setMonthlyCompletions] = useState<MonthlyCompletionMap>(() =>
-    loadFromStorage(MONTHLY_STORAGE_KEY, {})
+    loadFromStorage(MONTHLY_STORAGE_KEY, migrateMonthlyChecks(loadFromStorage("kancolle-expedition-monthly-v1", {}), loadFromStorage(HISTORY_STORAGE_KEY, [])))
   );
   const [setupNotificationTestDone, setSetupNotificationTestDone] = useState<boolean>(() =>
     loadFromStorage(SETUP_TEST_STORAGE_KEY, false)
@@ -1139,6 +1038,7 @@ function App() {
   const [authState, setAuthState] = useState<AuthState>({ session: null, user: null });
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authPassword, setAuthPassword] = useState<string>("");
+  const [cloudReadyUser, setCloudReadyUser] = useState<string | null>(null);
   const [cloudSyncBusy, setCloudSyncBusy] = useState<boolean>(false);
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
   const [pushMessage, setPushMessage] = useState<string>("");
@@ -1306,7 +1206,7 @@ function App() {
       if (sortMode === "ボーキ時給順") return getAdjustedResourceRate(b, rewardSettings).bauxite - getAdjustedResourceRate(a, rewardSettings).bauxite;
       return a.id.localeCompare(b.id, "ja", { numeric: true });
     });
-  }, [keyword, tagFilter, pinnedExpeditionIds, sortMode, rewardSettings]);
+  }, [keyword, tagFilter, pinnedExpeditionIds, sortMode, rewardSettings, expeditions]);
 
   const guideExpeditions = useMemo(() => {
     if (guideMode === "バケツ") {
@@ -1351,7 +1251,7 @@ function App() {
     (total, fleet) => addResources(total, getAdjustedResourceRate(findExpedition(fleet.expeditionId), rewardSettings, fleet.fleetNo)),
     { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
   );
-  const currentMonthKey = getMonthKey(now);
+  const currentMonthKey = monthlyPeriodKey(now);
   const monthlyExpeditions = useMemo(() => expeditions.filter(isMonthlyExpedition), [expeditions]);
   const currentMonthlyDoneIds = monthlyCompletions[currentMonthKey] ?? [];
   const monthlyDoneCount = monthlyExpeditions.filter((expedition) => currentMonthlyDoneIds.includes(expedition.id)).length;
@@ -1463,7 +1363,6 @@ function App() {
   const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt && !dismissedReturnKeys.includes(getReturnDismissKey(fleet)));
   const selectedFormationPatterns = getFormationPatterns(selectedDetail);
   const selectedPrerequisites = getExpeditionPrerequisites(selectedDetail);
-  const selectedPrerequisiteTrail = useMemo(() => buildPrerequisiteTrail(selectedDetail.id, expeditions), [selectedDetail.id, expeditions]);
   const selectedRouteRequirements = useMemo(() => collectRouteRequirements(selectedDetail.id, expeditions), [selectedDetail.id, expeditions]);
   const selectedGreatRewards = multiplyResources(selectedDetail.rewards, 1.5);
   const selectedAdjustedRewards = calculateAdjustedRewards(selectedDetail, rewardSettings);
@@ -1476,7 +1375,7 @@ function App() {
   const deviceRegistered = Boolean(deviceStatus?.currentDevice);
   const testNotificationDone = Boolean(setupNotificationTestDone || deviceStatus?.currentDevice?.last_tested_at || log.some((item) => item.includes("通知テスト")));
   const expeditionStarted = fleets.some((fleet) => fleet.startAt !== null) || log.some((item) => item.includes("開始:") || item.includes("通知予約"));
-  const setupGuideDone = loggedIn && webhookRegistered && deviceRegistered && testNotificationDone && expeditionStarted;
+  const setupGuideDone = loggedIn && (webhookRegistered || deviceRegistered) && testNotificationDone && expeditionStarted;
   const showSetupGuide = !setupGuideDismissed || !setupGuideDone;
 
   useEffect(() => {
@@ -1612,8 +1511,9 @@ function App() {
     const userId = authState.user?.id;
     if (!userId || lastAutoLoadedUserRef.current === userId) return;
     lastAutoLoadedUserRef.current = userId;
+    setCloudReadyUser(null);
 
-    applyCloudSnapshot(userId, false, { silent: false, reason: "ログイン時の自動読込" }).catch((error: unknown) => {
+    applyCloudSnapshot(userId, false, { silent: false, reason: "ログイン時の自動読込" }).then(() => setCloudReadyUser(userId)).catch((error: unknown) => {
       const message = error instanceof Error ? error.message : "クラウド自動読込に失敗";
       setCloudSyncMessage(message);
     });
@@ -1685,7 +1585,7 @@ function App() {
 
   useEffect(() => {
     const userId = authState.user?.id;
-    if (!userId) return;
+    if (!userId || cloudReadyUser !== userId) return;
 
     if (skipNextAutoSaveRef.current) {
       skipNextAutoSaveRef.current = false;
@@ -1696,7 +1596,7 @@ function App() {
     autoSaveTimerRef.current = window.setTimeout(() => {
       const snapshot = createCloudSnapshot();
       saveCloudSnapshotSafely(userId, snapshot)
-        .then(() => saveActiveTimers(userId, fleets))
+
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : "クラウド自動保存に失敗";
           addLog(message);
@@ -1706,7 +1606,7 @@ function App() {
     return () => {
       if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
-  }, [authState.user?.id, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, resourceTargetInputs, nozakiTimer, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
+  }, [authState.user?.id, cloudReadyUser, fleets, settings, rewardSettings, pinnedExpeditionIds, customPresets, history, resourceStockSnapshots, resourceTargetInputs, nozakiTimer, monthlyCompletions, setupNotificationTestDone, setupGuideDismissed, collapsedPanels]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1753,7 +1653,7 @@ function App() {
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const parsed = (await response.json()) as { serverTimeMs?: number };
-        if (typeof parsed.serverTimeMs !== "number") throw new Error("serverTimeMs missing");
+        if (typeof parsed.serverTimeMs !== "number" || !Number.isFinite(parsed.serverTimeMs)) throw new Error("serverTimeMs missing");
 
         const requestFinishedAtDate = Date.now();
         const requestFinishedAtPerf = performance.now();
@@ -1781,9 +1681,8 @@ function App() {
         }
       } catch {
         if (!cancelled) {
-          serverTimeAnchorRef.current = null;
           setTimeSyncOk(false);
-          setTimeSyncMessage("サーバー時刻同期に失敗。端末時刻で暫定計測中");
+          setTimeSyncMessage(serverTimeAnchorRef.current ? "時刻の再同期を待機中。直前のサーバー時刻で計測を継続" : "サーバー時刻同期に失敗。端末時刻で暫定計測中");
         }
       }
     }
@@ -1828,7 +1727,7 @@ function App() {
     if (!nozakiTimer.endAt || nozakiTimer.notifiedAt || now < nozakiTimer.endAt) return;
 
     const config = NOZAKI_TIMER_CONFIG[nozakiTimer.remodel];
-    if (nozakiTimer.notify && typeof Notification !== "undefined" && Notification.permission === "granted") {
+    if (!authState.user && nozakiTimer.notify && typeof Notification !== "undefined" && Notification.permission === "granted") {
       try {
         new Notification(`${config.label}タイマー 完了`, {
           body: `${config.durationMinutes}分経過しました。母港へ戻って給糧判定を確認してください。`,
@@ -1838,9 +1737,9 @@ function App() {
         // 通知非対応環境では画面内表示だけで完了を知らせる。
       }
     }
-    setNozakiTimer((current) => ({ ...current, notifiedAt: now, updatedAt: Date.now() }));
+    setNozakiTimer(current => completeNozaki(current, nozakiTimer.endAt!, now));
     addLog(`${config.label}タイマー完了`);
-  }, [now, nozakiTimer.endAt, nozakiTimer.notifiedAt, nozakiTimer.notify, nozakiTimer.remodel]);
+  }, [now, nozakiTimer.endAt, nozakiTimer.notifiedAt, nozakiTimer.notify, nozakiTimer.remodel, authState.user]);
 
   function addLog(message: string) {
     const stamped = `${new Intl.DateTimeFormat("ja-JP", {
@@ -1893,7 +1792,8 @@ function App() {
   function setFleetExpedition(fleetNo: FleetTimer["fleetNo"], expeditionId: string) {
     clearDismissedReturnForFleet(fleetNo);
     if (authState.user) {
-      clearActiveTimer(authState.user.id, fleetNo, expeditionId).catch(() => undefined);
+      cancelCloudNotification(authState.user.id, fleetNo).catch(error => addLog(String(error.message)));
+      clearActiveTimer(authState.user.id, fleetNo, expeditionId).catch(error => addLog(String(error.message)));
     }
     updateFleet(fleetNo, {
       expeditionId,
@@ -1930,13 +1830,14 @@ function App() {
         : `開始: 第${fleet.fleetNo}艦隊 ${expedition.name}`
     );
 
-    if (fleet.discordNotify) {
+    reserveFleetNotification(nextFleet);
+  }
+
+  function reserveFleetNotification(fleet: FleetTimer) {
+    const expedition = findExpedition(fleet.expeditionId);
+    if (fleet.discordNotify && fleet.endAt) {
       if (!authState.user) {
         addLog("通知予約は提督ログイン後に使えるよ");
-        return;
-      }
-      if (!settings.discordWebhookUrl.trim()) {
-        addLog("Discord Webhook URLを設定してから通知予約してね");
         return;
       }
       scheduleCloudNotification({
@@ -1944,14 +1845,14 @@ function App() {
         fleetNo: fleet.fleetNo,
         expeditionId: expedition.id,
         expeditionName: expedition.name,
-        endAt,
+        endAt: fleet.endAt,
         content: buildDiscordContent(
           fleet,
           expedition,
-          endAt,
+          fleet.endAt,
           `${formatResources(calculateAdjustedRewards(expedition, rewardSettings, undefined, fleet.fleetNo))}（${getRewardModifierLabel(rewardSettings, fleet.fleetNo)}）`
         ),
-        webhookUrl: settings.discordWebhookUrl
+        webhookUrl: settings.discordWebhookUrl.trim() || "push-only"
       })
         .then(() => addLog(`サーバー側通知を予約: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
         .catch((error: unknown) => {
@@ -1972,6 +1873,15 @@ function App() {
     setManualTimerInputs((current) => ({ ...current, [fleet.fleetNo]: "" }));
   }
 
+  function toggleFleetNotification(fleet: FleetTimer, enabled: boolean) {
+    const next = { ...fleet, discordNotify: enabled };
+    updateFleet(fleet.fleetNo, next);
+    if (!authState.user) return;
+    saveActiveTimer(authState.user.id, next).catch(error => addLog(String(error.message)));
+    if (!enabled) cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(error => addLog(String(error.message)));
+    else if (fleet.endAt && fleet.endAt > getSyncedNow()) reserveFleetNotification(next);
+  }
+
   function restartFleet(fleet: FleetTimer) {
     startFleet(fleet);
   }
@@ -1979,13 +1889,14 @@ function App() {
   function clearFleet(fleetNo: FleetTimer["fleetNo"]) {
     updateFleet(fleetNo, { startAt: null, endAt: null, notifiedAt: null, recordedAt: null });
     if (authState.user) {
-      cancelCloudNotification(authState.user.id, fleetNo).catch(() => undefined);
+      cancelCloudNotification(authState.user.id, fleetNo).catch(error => addLog(`通知キャンセル失敗: ${error.message}`));
       clearActiveTimer(authState.user.id, fleetNo, fleets.find((fleet) => fleet.fleetNo === fleetNo)?.expeditionId ?? "").catch(() => undefined);
     }
     addLog(`クリア: 第${fleetNo}艦隊`);
   }
 
   function applyPreset(preset: ExpeditionPreset) {
+    for (const fleet of fleets) clearFleet(fleet.fleetNo);
     setFleets((current) =>
       current.map((fleet) => ({
         ...fleet,
@@ -2047,10 +1958,10 @@ function App() {
   }
 
   function resetMonthlyCompletions() {
-    const ok = window.confirm(`${getMonthLabel(currentMonthKey)}のマンスリー遠征チェックをリセットする？`);
+    const ok = window.confirm(`${getMonthLabel(currentMonthKey)}15日開始分のマンスリー遠征チェックをリセットする？`);
     if (!ok) return;
     setMonthlyCompletions((current) => ({ ...current, [currentMonthKey]: [] }));
-    addLog(`${getMonthLabel(currentMonthKey)}のマンスリー遠征チェックをリセット`);
+    addLog(`${getMonthLabel(currentMonthKey)}15日開始分のマンスリー遠征チェックをリセット`);
   }
 
 
@@ -2081,11 +1992,12 @@ function App() {
 
     let nextMonthlyCompletions = monthlyCompletions;
     if (isMonthlyExpedition(expedition)) {
-      const monthItems = new Set(monthlyCompletions[currentMonthKey] ?? []);
+      const recordPeriod = monthlyPeriodKey(fleet.endAt ?? recordedAt);
+      const monthItems = new Set(monthlyCompletions[recordPeriod] ?? []);
       monthItems.add(expedition.id);
       nextMonthlyCompletions = {
         ...monthlyCompletions,
-        [currentMonthKey]: Array.from(monthItems).sort((a, b) => a.localeCompare(b, "ja", { numeric: true }))
+        [recordPeriod]: Array.from(monthItems).sort((a, b) => a.localeCompare(b, "ja", { numeric: true }))
       };
       setMonthlyCompletions(nextMonthlyCompletions);
     }
@@ -2094,7 +2006,7 @@ function App() {
 
     if (authState.user) {
       // 1分前帰投などで記録した場合、元の終了時刻に予約済みの通知が後から飛ばないようキャンセル。
-      cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(() => undefined);
+      cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(error => addLog(`通知キャンセル失敗: ${error.message}`));
       clearActiveTimer(authState.user.id, fleet.fleetNo, expedition.id).catch(() => undefined);
       saveImportantCloudChange({ history: nextHistory, monthlyCompletions: nextMonthlyCompletions });
     }
@@ -2274,11 +2186,12 @@ function App() {
       historyClearedAt: historyClearedAtRef.current,
       resourceStockClearedAt: resourceStockClearedAtRef.current,
       monthlyCompletions,
+      monthlyPeriodVersion: 2,
       setupNotificationTestDone,
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.6.2",
+      appVersion: "5.7.0",
       ...overrides
     };
   }
@@ -2353,7 +2266,7 @@ function App() {
     );
     const localNozaki = localSnapshot.nozakiTimer as NozakiTimerState | undefined;
     const remoteNozaki = remoteSnapshot.nozakiTimer as NozakiTimerState | undefined;
-    const mergedNozaki = (remoteNozaki?.updatedAt ?? 0) > (localNozaki?.updatedAt ?? 0) ? remoteNozaki : localNozaki;
+    const mergedNozaki = localNozaki ? mergeNozaki(localNozaki, remoteNozaki) : remoteNozaki;
 
     return {
       ...localSnapshot,
@@ -2367,11 +2280,17 @@ function App() {
   }
 
   async function saveCloudSnapshotSafely(userId: string, localSnapshot: CloudSnapshot): Promise<CloudSnapshot> {
-    const remoteSnapshot = await loadCloudSnapshot(userId).catch(() => null);
-    const mergedSnapshot = createMergedSnapshotForSave(localSnapshot, remoteSnapshot);
-    await saveCloudSnapshot(userId, mergedSnapshot);
-    latestCloudSavedAtRef.current = getCloudSavedAtMs(mergedSnapshot);
-    return mergedSnapshot;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const remoteSnapshot = await loadCloudSnapshot(userId);
+      const mergedSnapshot = createMergedSnapshotForSave(localSnapshot, remoteSnapshot);
+      // Monotonic revision also distinguishes two writes within one millisecond.
+      mergedSnapshot.savedAt = new Date(Math.max(Date.now(), getCloudSavedAtMs(remoteSnapshot) + 1)).toISOString();
+      if (await saveCloudSnapshot(userId, mergedSnapshot, remoteSnapshot)) {
+        latestCloudSavedAtRef.current = getCloudSavedAtMs(mergedSnapshot);
+        return mergedSnapshot;
+      }
+    }
+    throw new Error("別端末で更新されました。再度クラウド保存してください。");
   }
 
   function saveImportantCloudChange(overrides: Partial<CloudSnapshot> = {}) {
@@ -2527,11 +2446,8 @@ function App() {
       ...getResourceTargetInputDefaults(),
       ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
     });
-    setNozakiTimer({
-      ...initialNozakiTimer,
-      ...((snapshot?.nozakiTimer as NozakiTimerState | undefined) ?? nozakiTimer)
-    });
-    setMonthlyCompletions((snapshot?.monthlyCompletions as MonthlyCompletionMap | undefined) ?? monthlyCompletions);
+    setNozakiTimer(current => mergeNozaki(current, snapshot?.nozakiTimer as NozakiTimerState | undefined));
+    if (snapshot?.monthlyCompletions) setMonthlyCompletions(snapshot.monthlyPeriodVersion === 2 ? snapshot.monthlyCompletions : migrateMonthlyChecks(snapshot.monthlyCompletions, (snapshot.history ?? []) as ExpeditionHistory[], getCloudSavedAtMs(snapshot) || Date.now()));
     setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
     setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
     setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
@@ -2543,10 +2459,13 @@ function App() {
     return true;
   }
 
+  const applyCloudSnapshotRef = useRef(applyCloudSnapshot);
+  useEffect(() => { applyCloudSnapshotRef.current = applyCloudSnapshot; });
+
   function scheduleCloudRefresh(userId: string, reason: string) {
     if (cloudRefreshTimerRef.current) window.clearTimeout(cloudRefreshTimerRef.current);
     cloudRefreshTimerRef.current = window.setTimeout(() => {
-      applyCloudSnapshot(userId, false, { silent: true, reason }).catch((error: unknown) => {
+      applyCloudSnapshotRef.current(userId, false, { silent: true, reason }).catch((error: unknown) => {
         const message = error instanceof Error ? error.message : "クラウド自動更新に失敗";
         addLog(message);
       });
@@ -2600,6 +2519,8 @@ function App() {
   async function signOut() {
     if (!supabase) return;
     await supabase.auth.signOut();
+    lastAutoLoadedUserRef.current = null;
+    setCloudReadyUser(null);
     setCloudSyncMessage("ログアウトしたよ");
     addLog("ログアウト");
   }
@@ -2662,7 +2583,7 @@ function App() {
 
   async function runSetupNotificationTest() {
     const pushOk = await testLocalNotification();
-    const discordOk = await testDiscord();
+    const discordOk = settings.discordWebhookUrl.trim() ? await testDiscord() : false;
     if (pushOk || discordOk) {
       setSetupNotificationTestDone(true);
     }
@@ -2784,7 +2705,7 @@ function App() {
 
   function changeNozakiRemodel(remodel: NozakiRemodel) {
     if (nozakiRunning) return;
-    const next = { ...nozakiTimer, remodel, startAt: null, endAt: null, notifiedAt: null, updatedAt: Date.now() };
+    const next = { ...nozakiTimer, remodel, startAt: null, endAt: null, notifiedAt: null, updatedAt: nextOperationTime(nozakiTimer.updatedAt) };
     setNozakiTimer(next);
     saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
   }
@@ -2794,9 +2715,9 @@ function App() {
     const startAt = getSyncedNow();
     const endAt = startAt + config.durationMinutes * 60 * 1000;
     if (nozakiTimer.notify && typeof Notification !== "undefined" && Notification.permission === "default") {
-      try { await Notification.requestPermission(); } catch { /* noop */ }
+      void Notification.requestPermission().catch(() => undefined);
     }
-    const next = { ...nozakiTimer, startAt, endAt, notifiedAt: null, updatedAt: Date.now() };
+    const next = { ...nozakiTimer, startAt, endAt, notifiedAt: null, updatedAt: nextOperationTime(nozakiTimer.updatedAt) };
     setNozakiTimer(next);
     saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
 
@@ -2817,11 +2738,25 @@ function App() {
     addLog(`${config.label}タイマー開始（${config.durationMinutes}分）`);
   }
 
-  function resetNozakiTimer() {
-    const next = { ...nozakiTimer, startAt: null, endAt: null, notifiedAt: null, updatedAt: Date.now() };
+  function toggleNozakiNotification(enabled: boolean) {
+    const next = { ...nozakiTimer, notify: enabled, updatedAt: nextOperationTime(nozakiTimer.updatedAt) };
     setNozakiTimer(next);
     saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
-    if (authState.user) cancelCloudNotification(authState.user.id, 0).catch(() => undefined);
+    if (!authState.user) return;
+    if (!enabled) cancelCloudNotification(authState.user.id, 0).catch(error => addLog(String(error.message)));
+    else if (next.endAt && next.endAt > getSyncedNow()) {
+      const config = NOZAKI_TIMER_CONFIG[next.remodel];
+      scheduleCloudNotification({ userId: authState.user.id, fleetNo: 0, expeditionId: "NOZAKI", expeditionName: `${config.label}タイマー`,
+        endAt: next.endAt, content: `🍙 ${config.label}タイマー完了\n母港へ戻って給糧判定を確認してください。`,
+        webhookUrl: settings.discordWebhookUrl.trim() || "push-only" }).catch(error => addLog(String(error.message)));
+    }
+  }
+
+  function resetNozakiTimer() {
+    const next = { ...nozakiTimer, startAt: null, endAt: null, notifiedAt: null, updatedAt: nextOperationTime(nozakiTimer.updatedAt) };
+    setNozakiTimer(next);
+    saveImportantCloudChange({ nozakiTimer: next as unknown as Record<string, unknown> });
+    if (authState.user) cancelCloudNotification(authState.user.id, 0).catch(error => addLog(`通知キャンセル失敗: ${error.message}`));
     addLog(`${NOZAKI_TIMER_CONFIG[nozakiTimer.remodel].label}タイマーをリセット`);
   }
 
@@ -3401,8 +3336,8 @@ function App() {
           <div className="section-head">
             <div>
               <p className="eyebrow">Monthly Expedition</p>
-              <h2>{getMonthLabel(currentMonthKey)}のマンスリー遠征</h2>
-              <p>今月実施済みにしたマンスリー遠征は、艦隊カードの選択候補から選べないようにして誤出撃を防ぐよ。完了後に「成功/大成功で記録」しても自動で実施済みになる。</p>
+              <h2>{getMonthLabel(currentMonthKey)}15日開始分のマンスリー遠征</h2>
+              <p>毎月15日12:00（日本時間）に更新。実施済みにしたマンスリー遠征は、艦隊カードの選択候補から選べないようにして誤出撃を防ぐよ。完了後に「成功/大成功で記録」しても自動で実施済みになる。</p>
             </div>
             <div className="monthly-score">
               <span>進捗</span>
@@ -3411,6 +3346,7 @@ function App() {
             </div>
           </div>
 
+          <MonthlyRecommendations list={expeditions} done={currentMonthlyDoneIds} onSelect={jumpToExpeditionDetail} />
           {monthlyExpeditions.length === 0 ? (
             <p className="empty-text">マンスリー遠征タグ付きの遠征データがまだありません。</p>
           ) : (
@@ -3425,6 +3361,8 @@ function App() {
                         <span>{done ? "今月実施済み" : "未実施"}</span>
                       </div>
                       <p>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.join("・")}</p>
+                      <CombatBadge expedition={expedition} />
+                      <MonthlyLinks expedition={expedition} list={expeditions} done={currentMonthlyDoneIds} onSelect={jumpToExpeditionDetail} />
                       <small>{expedition.memo}</small>
                     </div>
                     <div className="monthly-actions">
@@ -3868,7 +3806,7 @@ function App() {
 
         <label className="ios-switch-row">
           <span><strong>完了時に端末通知</strong><small>許可済み端末で通知します</small></span>
-          <input type="checkbox" checked={nozakiTimer.notify} onChange={(event) => setNozakiTimer((current) => ({ ...current, notify: event.target.checked, updatedAt: Date.now() }))} />
+          <input type="checkbox" checked={nozakiTimer.notify} onChange={(event) => toggleNozakiNotification(event.target.checked)} />
         </label>
 
         <div className="nozaki-actions">
@@ -4062,7 +4000,7 @@ function App() {
                       大成功で記録
                     </button>
                   </div>
-                  {fleet.recordedAt && <p className="helper-text">今日の獲得資材に記録済み。</p>}
+                  {fleet.recordedAt && <p className="return-recorded">✓ 今日の獲得資材に記録済み。</p>}
                 </div>
               )}
 
@@ -4071,7 +4009,7 @@ function App() {
                   <input
                     type="checkbox"
                     checked={fleet.discordNotify}
-                    onChange={(event) => updateFleet(fleet.fleetNo, { discordNotify: event.target.checked })}
+                    onChange={(event) => toggleFleetNotification(fleet, event.target.checked)}
                   />
                   通知予約
                 </label>
@@ -4139,6 +4077,8 @@ function App() {
             </div>
           </div>
 
+          <CombatBadge expedition={selectedDetail} />
+          <MonthlyLinks expedition={selectedDetail} list={expeditions} done={currentMonthlyDoneIds} onSelect={jumpToExpeditionDetail} />
           <div className="resource-grid">
             <div>燃料<strong>{selectedAdjustedRewards.fuel}</strong><small>{selectedAdjustedRate.fuel}/h</small></div>
             <div>弾薬<strong>{selectedAdjustedRewards.ammo}</strong><small>{selectedAdjustedRate.ammo}/h</small></div>
@@ -4199,29 +4139,7 @@ function App() {
                         </article>
                       );
                     })}
-                    {selectedPrerequisiteTrail.length > 0 && (
-                      <div className="prerequisite-chain">
-                        <strong>開放ルート</strong>
-                        <p>前提の前提までまとめて表示。カードを押すとその遠征詳細へ移動するよ。</p>
-                        <div className="prerequisite-chain-list">
-                          {selectedPrerequisiteTrail.slice(0, 16).map((item) => (
-                            <button
-                              type="button"
-                              key={`${selectedDetail.id}-trail-${item.expedition.id}`}
-                              className={item.note?.includes("毎月") ? "monthly" : ""}
-                              style={{ marginLeft: `${Math.min(item.depth, 3) * 10}px` }}
-                              onClick={() => jumpToExpeditionDetail(item.expedition.id)}
-                            >
-                              <span>{item.expedition.id}</span>
-                              <strong>{item.expedition.name}</strong>
-                              {item.note?.includes("毎月") && <em>毎月</em>}
-                            </button>
-                          ))}
-                          {selectedPrerequisiteTrail.length > 16 && <small>ほか {selectedPrerequisiteTrail.length - 16} 件の前提あり</small>}
-                          <div className="prerequisite-current"><span>{selectedDetail.id}</span><strong>{selectedDetail.name}</strong></div>
-                        </div>
-                      </div>
-                    )}
+                    <UnlockRoute key={selectedDetail.id} expedition={selectedDetail} list={expeditions} onSelect={jumpToExpeditionDetail} />
                     {selectedRouteRequirements.length > 0 && (
                       <div className="route-requirement-list">
                         <strong>遠征以外の開放条件</strong>
@@ -4350,6 +4268,7 @@ function App() {
                     <span>{isMonthlyDone(expedition.id) ? "済 " : ""}{expedition.id}: {expedition.name}</span>
                     <small>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.join("・")}</small>
                     <small>時給目安：{formatResources(rate)} / h</small>
+                    <CombatBadge expedition={expedition} />
                   </button>
                   <button
                     className={`pin-button ${isPinned(expedition.id) ? "active" : ""}`}
@@ -4381,7 +4300,7 @@ function App() {
             <div>
               <p className="eyebrow">Diagnostics</p>
               <h2>通知履歴・失敗診断</h2>
-              <p>Supabaseに保存された通知予約の状態を確認できるよ。通知が来ない時は、pending / sent / error / cancelled と診断メモを見る。</p>
+              <p>Supabaseに保存された通知予約の状態を確認できるよ。通知が来ない時は、pending（待機・再送） / processing（配信中） / sent / error / cancelled と診断メモを見る。</p>
               <p className="diagnostic-tech-line">時刻同期：{timeSyncMessage}</p>
             </div>
             <button type="button" className="secondary" onClick={refreshNotificationHistory} disabled={!authState.user || notificationHistoryBusy}>
