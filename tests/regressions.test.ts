@@ -99,3 +99,36 @@ test('並行する配信APIは同じ予約を一度だけ取得する', async ()
   assert.equal(sent,1); assert.equal(row.status,'sent'); assert.equal(row.attempts,1);
  } finally {globalThis.fetch=originalFetch; for(const key of Object.keys(process.env))if(!(key in before))delete process.env[key]; Object.assign(process.env,before);}
 });
+
+test('おすすめのII型除外は深い前提も確認し、達成済みの月次前提は除外する', () => {
+ const base = list.find(e => e.id === '43');
+ const fixtures = [
+  { ...base, id: 'parent', combatType: 'II', prerequisites: [], durationMinutes: 60 },
+  { ...base, id: 'child', combatType: 'none', prerequisites: [{ expeditionId: 'parent', note: '毎月必要' }], durationMinutes: 30 },
+  { ...base, id: 'target', combatType: 'none', prerequisites: [{ expeditionId: 'child', note: '毎月必要' }], durationMinutes: 20 }
+ ];
+ assert.equal(recommendMonthly(fixtures, [], 'fuel', true).length, 0);
+ const doneParent = recommendMonthly(fixtures, ['parent'], 'fuel', true);
+ assert.ok(doneParent.some(r => r.expedition.id === 'target'));
+ assert.equal(doneParent.find(r => r.expedition.id === 'target').routeMinutes, 50);
+ const ready = recommendMonthly(fixtures, ['parent'], 'fuel', true, { readyOnly: true });
+ assert.deepEqual(ready.map(r => r.expedition.id), ['child']);
+});
+
+test('時間効率は未達成の前提時間を含め、合流する前提は二重計上しない', () => {
+ const base = list.find(e => e.id === '43');
+ const make = (id, durationMinutes, parents, fuel) => ({ ...base, id, durationMinutes,
+  rewards: { fuel, ammo: 0, steel: 0, bauxite: 0 },
+  prerequisites: parents.map(expeditionId => ({ expeditionId, note: '毎月必要' })) });
+ const fixtures = [make('a', 60, [], 1), make('b', 30, ['a'], 1), make('c', 20, ['a'], 1), make('d', 10, ['b', 'c'], 120), make('fast', 10, [], 100)];
+ const reward = recommendMonthly(fixtures, [], 'fuel', false);
+ assert.equal(reward[0].expedition.id, 'd');
+ assert.equal(reward[0].routeMinutes, 120);
+ assert.equal(recommendMonthly(fixtures, [], 'fuel', false, { strategy: 'efficiency' })[0].expedition.id, 'fast');
+});
+
+test('改修資材のおすすめに改修資材なしの遠征を補充しない', () => {
+ const only = list.filter(e => ['42', '43', 'B2'].includes(e.id));
+ assert.deepEqual(recommendMonthly(only, [], 'screws', false).map(r => r.expedition.id), ['43']);
+ assert.equal(recommendMonthly(only, ['43'], 'screws', false).length, 0);
+});
