@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { mergeNozaki, completeNozaki } from '../src/utils/nozaki.ts';
-import { monthlyPeriodKey, prerequisiteLayers, concreteFormation, recommendMonthly } from '../src/utils/expeditionGuide.ts';
+import { monthlyPeriodKey, prerequisiteLayers, concreteFormation, recommendMonthly, migrateMonthlyChecks, sanitizeMonthlyChecks, isMonthlyCompleted } from '../src/utils/expeditionGuide.ts';
 import { isDiscordWebhook, isPushEndpoint, deliveryUpdate, deliverNotification } from '../server/notifications.js';
 const list = JSON.parse(fs.readFileSync(new URL('../public/data/expeditions.json', import.meta.url), 'utf8'));
 
@@ -131,4 +131,25 @@ test('改修資材のおすすめに改修資材なしの遠征を補充しな�
  const only = list.filter(e => ['42', '43', 'B2'].includes(e.id));
  assert.deepEqual(recommendMonthly(only, [], 'screws', false).map(r => r.expedition.id), ['43']);
  assert.equal(recommendMonthly(only, ['43'], 'screws', false).length, 0);
+});
+
+
+test('通常遠征の帰投履歴はマンスリー実施済みに移行しない', () => {
+ const now = Date.parse('2026-09-07T12:00:00Z');
+ const history = ['05', '06', '21', '37', '38', '11', '43'].map(expeditionId => ({ expeditionId, completedAt: now }));
+ const original = structuredClone(history);
+ const migrated = migrateMonthlyChecks({ '2026-09': ['05', 'B6'] }, history, list, now);
+ assert.deepEqual(migrated['2026-08'], ['43', 'B6']);
+ assert.deepEqual(history, original);
+});
+
+test('混入済みのv2チェックを補正し、通常遠征は汚れた入力でも済判定しない', () => {
+ const corrupt = { '2026-08': ['05', '06', '21', '37', '38', '11', '43', 'B6', '43'], '2026-07': ['05', '42'] };
+ const repaired = sanitizeMonthlyChecks(corrupt, list);
+ assert.deepEqual(repaired, { '2026-08': ['43', 'B6'], '2026-07': ['42'] });
+ for (const id of ['05', '06', '21', '37', '38', '11']) {
+   assert.equal(isMonthlyCompleted(list.find(e => e.id === id), corrupt['2026-08']), false);
+ }
+ assert.equal(isMonthlyCompleted(list.find(e => e.id === '43'), corrupt['2026-08']), true);
+ assert.equal(isMonthlyCompleted(undefined, ['unknown']), false);
 });

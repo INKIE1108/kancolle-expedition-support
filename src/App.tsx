@@ -27,7 +27,7 @@ import { sendDiscordNotification } from "./utils/notify";
 import type { DeviceStatus } from "./utils/deviceNotifications";
 import { NotificationDevicePanel } from "./components/NotificationDevicePanel";
 import { CombatBadge, UnlockRoute, MonthlyLinks, MonthlyRecommendations } from "./components/ExpeditionGuide";
-import { concreteFormation, monthlyPeriodKey, migrateMonthlyChecks } from "./utils/expeditionGuide";
+import { concreteFormation, monthlyPeriodKey, migrateMonthlyChecks, sanitizeMonthlyChecks, isMonthlyCompleted } from "./utils/expeditionGuide";
 import { mergeNozaki, completeNozaki, nextOperationTime } from "./utils/nozaki";
 import { InitialSetupGuide } from "./components/InitialSetupGuide";
 
@@ -971,7 +971,7 @@ function App() {
     loadFromStorage(CUSTOM_PRESETS_STORAGE_KEY, [])
   );
   const [monthlyCompletions, setMonthlyCompletions] = useState<MonthlyCompletionMap>(() =>
-    loadFromStorage(MONTHLY_STORAGE_KEY, migrateMonthlyChecks(loadFromStorage("kancolle-expedition-monthly-v1", {}), loadFromStorage(HISTORY_STORAGE_KEY, [])))
+    sanitizeMonthlyChecks(loadFromStorage(MONTHLY_STORAGE_KEY, migrateMonthlyChecks(loadFromStorage("kancolle-expedition-monthly-v1", {}), loadFromStorage(HISTORY_STORAGE_KEY, []), fallbackExpeditions)), fallbackExpeditions)
   );
   const [setupNotificationTestDone, setSetupNotificationTestDone] = useState<boolean>(() =>
     loadFromStorage(SETUP_TEST_STORAGE_KEY, false)
@@ -1964,10 +1964,11 @@ function App() {
     if (target) addLog(`カスタムプリセット削除: ${target.name}`);
   }
   function isMonthlyDone(expeditionId: string): boolean {
-    return (monthlyCompletions[currentMonthKey] ?? []).includes(expeditionId);
+    return isMonthlyCompleted(expeditions.find(e => e.id === expeditionId), monthlyCompletions[currentMonthKey] ?? []);
   }
 
   function setMonthlyDone(expeditionId: string, done: boolean) {
+    if (!expeditions.some(e => e.id === expeditionId && e.purposeTags.includes("マンスリー"))) return;
     setMonthlyCompletions((current) => {
       const monthItems = new Set(current[currentMonthKey] ?? []);
       if (done) monthItems.add(expeditionId);
@@ -2206,14 +2207,14 @@ function App() {
       nozakiTimer,
       historyClearedAt: historyClearedAtRef.current,
       resourceStockClearedAt: resourceStockClearedAtRef.current,
-      monthlyCompletions,
       monthlyPeriodVersion: 2,
       setupNotificationTestDone,
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.8.0",
-      ...overrides
+      appVersion: "5.8.1",
+      ...overrides,
+      monthlyCompletions: sanitizeMonthlyChecks(overrides.monthlyCompletions ?? monthlyCompletions, expeditions)
     };
   }
 
@@ -2515,7 +2516,7 @@ function App() {
         ...((snapshot?.resourceTargetInputs as ResourceTargetInputs | undefined) ?? resourceTargetInputs)
       });
       setNozakiTimer(current => mergeNozaki(current, snapshot?.nozakiTimer as NozakiTimerState | undefined));
-      if (snapshot?.monthlyCompletions) setMonthlyCompletions(snapshot.monthlyPeriodVersion === 2 ? snapshot.monthlyCompletions : migrateMonthlyChecks(snapshot.monthlyCompletions, (snapshot.history ?? []) as ExpeditionHistory[], getCloudSavedAtMs(snapshot) || Date.now()));
+      if (snapshot?.monthlyCompletions) setMonthlyCompletions(snapshot.monthlyPeriodVersion === 2 ? sanitizeMonthlyChecks(snapshot.monthlyCompletions, expeditions) : migrateMonthlyChecks(snapshot.monthlyCompletions, (snapshot.history ?? []) as ExpeditionHistory[], expeditions, getCloudSavedAtMs(snapshot) || Date.now()));
       setSetupNotificationTestDone(Boolean(snapshot?.setupNotificationTestDone ?? setupNotificationTestDone));
       setSetupGuideDismissed(Boolean(snapshot?.setupGuideDismissed ?? setupGuideDismissed));
       setCollapsedPanels((snapshot?.collapsedPanels as CollapseState | undefined) ?? collapsedPanels);
