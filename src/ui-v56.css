@@ -628,6 +628,9 @@ html[data-theme="dark"] .app-shell .pinned-main,
 
 /* Normal expedition list follows the same language. */
 .app-shell .expedition-list {
+  /* The grouped-row rules hide overflow; this height-limited list must scroll. */
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   background: var(--ui-surface) !important;
   border: 1px solid var(--ui-border) !important;
   border-radius: 14px !important;
