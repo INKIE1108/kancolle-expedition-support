@@ -269,6 +269,28 @@ export async function loadNotificationHistory(userId: string, limit = 30): Promi
   return (data ?? []) as NotificationLogRecord[];
 }
 
+export async function loadFleetNotificationStatus(userId: string, fleetNo: number, endAt: number) {
+  if (!supabase) throw new Error("Supabaseが未設定です");
+  const { data, error } = await supabase
+    .from("scheduled_notifications")
+    .select("status")
+    .eq("user_id", userId)
+    .eq("fleet_no", fleetNo)
+    .eq("end_at", new Date(endAt).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  switch (data?.status) {
+    case "pending": return "pending";
+    case "processing": return "processing";
+    case "sent": return "sent";
+    case "error": return "error";
+    case "cancelled": return "cancelled";
+    default: return null;
+  }
+}
+
 export async function disablePushSubscription(endpoint: string): Promise<void> {
   if (!supabase) throw new Error("Supabaseが未設定です");
   const { error } = await supabase

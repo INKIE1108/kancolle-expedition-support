@@ -29,12 +29,12 @@ try {
  assert.equal(writes,0);console.log('PASS initial read failure does not claim sync success');
  failReads=false;
  await page.getByRole('button',{name:'設定',exact:true}).click();
- await page.getByRole('button',{name:'アカウント・同期 ログイン・クラウド保存'}).click();
+ await page.getByRole('button',{name:/アカウント・同期/}).click();
  await page.getByRole('button',{name:'クラウドから読込',exact:true}).click();
- await page.waitForFunction(()=>document.querySelector('.sync-feedback')?.textContent.includes('同期済み'),{},{timeout:8000});
+ await page.waitForFunction(()=>document.querySelector('.settings-sync-status')?.textContent.includes('同期済み'),{},{timeout:8000});
  assert.ok(writes>0);console.log('PASS manual read success re-enables automatic saving');
  await page.getByRole('button',{name:'遠征',exact:true}).click();
- await page.getByPlaceholder('遠征名・IDで検索').fill('E1');
+ await page.getByPlaceholder('遠征名・番号で検索').fill('E1');
  const pin=page.locator('.expedition-item .pin-button');
  const oldPinned=snapshot.pinnedExpeditionIds.includes('E1');
  failWrites=true;
@@ -43,7 +43,7 @@ try {
  console.log('PASS failed autosave is visibly reported');
  failWrites=false;
  await page.evaluate(()=>{window.dispatchEvent(new Event('offline'));window.dispatchEvent(new Event('online'));});
- await page.waitForFunction(()=>document.querySelector('.sync-feedback')?.textContent.includes('同期済み'),{},{timeout:8000});
+ await page.waitForFunction(()=>document.querySelector('.settings-sync-status')?.textContent.includes('同期済み'),{},{timeout:8000});
  assert.notEqual(snapshot.pinnedExpeditionIds.includes('E1'),oldPinned);console.log('PASS reconnect saves the unsaved favorite instead of overwriting it');
  failWrites=true;
  await pin.click();
@@ -51,7 +51,7 @@ try {
  const expected=await page.evaluate(()=>JSON.parse(localStorage.getItem('kancolle-expedition-pinned-v1')).includes('E1'));
  failWrites=false;
  await page.reload();
- await page.waitForFunction(()=>document.querySelector('.sync-feedback')?.textContent.includes('同期済み'),{},{timeout:8000});
+ await page.waitForFunction(()=>document.querySelector('.settings-sync-status')?.textContent.includes('同期済み'),{},{timeout:8000});
  assert.equal(snapshot.pinnedExpeditionIds.includes('E1'),expected);
  console.log('PASS pending edits survive reload and are uploaded on recovery');
  assert.equal(errors.length,0,errors.join('\n'));

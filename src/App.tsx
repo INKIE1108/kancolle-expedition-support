@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { expeditions as fallbackExpeditions } from "./data/expeditions";
 import type { AppSettings, Expedition, ExpeditionPrerequisite, FleetTimer, ResourceRewards } from "./types";
-import { formatClock, formatDateTime, formatRemaining, minutesToLabel } from "./utils/time";
+import { formatClock, formatDateTime, formatFleetArrival, formatRemaining, minutesToLabel } from "./utils/time";
 import { loadFromStorage, saveToStorage } from "./utils/storage";
 import {
   buildRewardSummary,
@@ -13,10 +13,10 @@ import {
   loadActiveTimers,
   loadCloudSnapshot,
   loadNotificationHistory,
+  loadFleetNotificationStatus,
   saveActiveTimer,
   saveActiveTimers,
   saveCloudSnapshot,
-  savePushSubscription,
   scheduleCloudNotification,
   supabase,
   type AuthState,
@@ -67,7 +67,31 @@ type ExpeditionPreset = {
   createdAt?: number;
 };
 
-type HistoryResult = "success" | "great";
+type HistoryResult = "success" | "great" | "failure";
+const historyResultLabels: Record<HistoryResult, string> = {
+  success: "成功",
+  great: "大成功",
+  failure: "失敗"
+};
+
+const fleetNotificationLabels = {
+  checking: "予約を確認中",
+  reserving: "予約中…",
+  pending: "予約済み",
+  processing: "配信中",
+  sent: "送信済み",
+  error: "配信に失敗",
+  failed: "予約できませんでした",
+  cancelled: "取り消し済み",
+  missing: "予約なし",
+  unknown: "予約状況を確認できません"
+} as const;
+
+type FleetNotificationStatus = keyof typeof fleetNotificationLabels;
+
+function fleetNotificationKey(userId: string, fleet: Pick<FleetTimer, "fleetNo" | "endAt">) {
+  return `${userId}:${fleet.fleetNo}:${Math.trunc(fleet.endAt ?? 0)}`;
+}
 
 type ExpeditionHistory = {
   id: string;
@@ -418,7 +442,7 @@ const pageSubtitleMap: Record<MobileTab, string> = {
 const settingsViewLabels: Record<Exclude<SettingsView, "hub">, string> = {
   account: "アカウント・同期",
   pwa: "スマホ・PWA",
-  notifications: "通知・Push",
+  notifications: "遠征の完了通知",
   rewards: "報酬補正",
   diagnostics: "通知履歴・診断",
   log: "ログ"
@@ -984,12 +1008,13 @@ function App() {
   );
   const [selectedDetailId, setSelectedDetailId] = useState<string>(fallbackExpeditions[0]?.id ?? "");
   const [detailOpen, setDetailOpen] = useState(false);
-  const [showAllPinned, setShowAllPinned] = useState(false);
+  const [listMode, setListMode] = useState<"all" | "favorites" | "monthly">("all");
   const [editingPins, setEditingPins] = useState(false);
   const [showListDetails, setShowListDetails] = useState(false);
   const detailTriggerRef = useRef<HTMLElement | null>(null);
   const listPositionRef = useRef({ page: 0, list: 0 });
-  const detailOriginRef = useRef<"search" | "assist">("search");
+  const detailOriginRef = useRef<ExpeditionSubTab>("search");
+  const detailOriginTabRef = useRef<MobileTab>("expeditions");
   const [tagFilter, setTagFilter] = useState<string>("すべて");
   const [keyword, setKeyword] = useState<string>("");
   const [sortMode, setSortMode] = useState<SortMode>(() => loadFromStorage(SORT_STORAGE_KEY, "ID順" as SortMode));
@@ -1039,9 +1064,6 @@ function App() {
     loadFromStorage(NOZAKI_TIMER_STORAGE_KEY, initialNozakiTimer)
   );
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => loadFromStorage(THEME_STORAGE_KEY, "light" as ThemeMode));
-  const [compactFleetCards, setCompactFleetCards] = useState<boolean>(() =>
-    loadFromStorage("kancolle-expedition-compact-fleet-v1", false)
-  );
   const [authState, setAuthState] = useState<AuthState>({ session: null, user: null });
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authPassword, setAuthPassword] = useState<string>("");
@@ -1056,8 +1078,10 @@ function App() {
   const [cloudSyncBusy, setCloudSyncBusy] = useState<boolean>(false);
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string>("");
   const [pushMessage, setPushMessage] = useState<string>("");
-  const [pushBusy, setPushBusy] = useState<boolean>(false);
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
+  const [returnPickerKey, setReturnPickerKey] = useState<string | null>(null);
+  const [fleetNotificationStates, setFleetNotificationStates] = useState<Record<string, FleetNotificationStatus>>({});
+  const notificationOperations = useRef(new Map<string, number>());
   const [recordingFleetNos, setRecordingFleetNos] = useState<FleetTimer["fleetNo"][]>([]);
   const [dismissedReturnKeys, setDismissedReturnKeys] = useState<string[]>([]);
   const [notificationHistory, setNotificationHistory] = useState<NotificationLogRecord[]>([]);
@@ -1199,16 +1223,22 @@ function App() {
     const normalizedKeyword = keyword.trim().toLowerCase();
     const pinnedSet = new Set(pinnedExpeditionIds);
     const result = expeditions.filter((expedition) => {
-      const tagOk =
-        tagFilter === "すべて" ||
-        (tagFilter === "ピン留め" ? pinnedSet.has(expedition.id) : expedition.purposeTags.includes(tagFilter));
+      const modeOk = listMode === "all" || (listMode === "favorites"
+        ? pinnedSet.has(expedition.id)
+        : isMonthlyExpedition(expedition));
+      const tagOk = tagFilter === "すべて" || expedition.purposeTags.includes(tagFilter);
       const keywordOk =
         normalizedKeyword.length === 0 ||
         `${expedition.id} ${expedition.name} ${expedition.area} ${expedition.purposeTags.join(" ")}`
           .toLowerCase()
           .includes(normalizedKeyword);
-      return tagOk && keywordOk;
+      return modeOk && tagOk && keywordOk;
     });
+
+    if (listMode === "favorites") {
+      const order = new Map(pinnedExpeditionIds.map((id, index) => [id, index]));
+      return result.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    }
 
     return [...result].sort((a, b) => {
       if (sortMode === "短時間順") return a.durationMinutes - b.durationMinutes;
@@ -1219,7 +1249,7 @@ function App() {
       if (sortMode === "ボーキ時給順") return getAdjustedResourceRate(b, rewardSettings).bauxite - getAdjustedResourceRate(a, rewardSettings).bauxite;
       return a.id.localeCompare(b.id, "ja", { numeric: true });
     });
-  }, [keyword, tagFilter, pinnedExpeditionIds, sortMode, rewardSettings, expeditions]);
+  }, [keyword, tagFilter, listMode, pinnedExpeditionIds, sortMode, rewardSettings, expeditions]);
 
   const guideExpeditions = useMemo(() => {
     if (guideMode === "バケツ") {
@@ -1373,7 +1403,14 @@ function App() {
   const targetTotalRemaining = targetTotalGoal - targetTotalCurrent;
   const targetTotalDailyAverage = getTotalResources(targetDailyAverage);
   const targetTotalDays = targetTotalRemaining <= 0 ? 0 : targetTotalDailyAverage > 0 ? Math.ceil(targetTotalRemaining / targetTotalDailyAverage) : null;
-  const pendingReturnFleets = fleets.filter((fleet) => fleet.endAt !== null && now >= fleet.endAt && !fleet.recordedAt && !dismissedReturnKeys.includes(getReturnDismissKey(fleet)));
+  const pendingReturnFleets = fleets.filter((fleet) =>
+    fleet.endAt !== null && fleet.endAt - now <= 60_000 && !fleet.recordedAt && !dismissedReturnKeys.includes(getReturnDismissKey(fleet))
+  );
+  const overviewFleets = [...fleets].sort((a, b) =>
+    Number(pendingReturnFleets.includes(b)) - Number(pendingReturnFleets.includes(a))
+    || (a.recordedAt ? Infinity : a.endAt ?? Infinity) - (b.recordedAt ? Infinity : b.endAt ?? Infinity)
+    || a.fleetNo - b.fleetNo
+  );
   const selectedFormationPatterns = getFormationPatterns(selectedDetail);
   const selectedPrerequisites = getExpeditionPrerequisites(selectedDetail);
   const selectedRouteRequirements = useMemo(() => collectRouteRequirements(selectedDetail.id, expeditions), [selectedDetail.id, expeditions]);
@@ -1383,6 +1420,41 @@ function App() {
   const defaultRewardModifier = getFleetRewardModifier(rewardSettings);
   const defaultRewardBreakdown = getRewardBonusBreakdown(rewardSettings);
   const userId = authState.user?.id ?? null;
+  const activeFleet = mobileTab === "timers" ? fleets.find(fleet => fleet.fleetNo === timerFocus) : undefined;
+  const activeFleetNo = activeFleet?.fleetNo;
+  const activeFleetEnd = activeFleet?.recordedAt ? null : activeFleet?.endAt;
+
+  useEffect(() => {
+    if (!userId || !activeFleetNo || !activeFleetEnd || !activeFleet?.discordNotify) return;
+    const key = fleetNotificationKey(userId, { fleetNo: activeFleetNo, endAt: activeFleetEnd });
+    let disposed = false;
+    let request = 0;
+
+    const refresh = async () => {
+      const currentRequest = ++request;
+      const operation = notificationOperations.current.get(key);
+      const status = await loadFleetNotificationStatus(userId, activeFleetNo, activeFleetEnd)
+        .then(result => result ?? "missing", () => "unknown" as const);
+      if (disposed || currentRequest !== request || notificationOperations.current.get(key) !== operation) return;
+      setFleetNotificationStates(current => {
+        const existing = current[key];
+        if (existing === "reserving" || (existing === "failed" && (status === "missing" || status === "cancelled" || status === "unknown"))) return current;
+        if (status === "unknown" && existing && existing !== "checking") return current;
+        return { ...current, [key]: status };
+      });
+    };
+
+    void refresh();
+    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener("online", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      window.removeEventListener("online", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [userId, activeFleetNo, activeFleetEnd, activeFleet?.discordNotify]);
   const loggedIn = Boolean(userId);
   const webhookRegistered = Boolean(settings.discordWebhookUrl.trim());
   const deviceRegistered = Boolean(deviceStatus?.currentDevice);
@@ -1488,10 +1560,6 @@ function App() {
   useEffect(() => {
     saveToStorage(COLLAPSE_STORAGE_KEY, collapsedPanels);
   }, [collapsedPanels]);
-
-  useEffect(() => {
-    saveToStorage("kancolle-expedition-compact-fleet-v1", compactFleetCards);
-  }, [compactFleetCards]);
 
   useEffect(() => {
     saveToStorage(THEME_STORAGE_KEY, themeMode);
@@ -1807,6 +1875,7 @@ function App() {
   }
 
   function clearDismissedReturnForFleet(fleetNo: FleetTimer["fleetNo"]) {
+    setReturnPickerKey(null);
     setDismissedReturnKeys((current) => current.filter((key) => !key.startsWith(`${fleetNo}-`)));
   }
 
@@ -1826,16 +1895,22 @@ function App() {
     setSelectedDetailId(expeditionId);
   }
 
+  function assignExpedition(expeditionId: string, fleet: FleetTimer) {
+    setFleetExpedition(fleet.fleetNo, expeditionId);
+    openFleetTimer(fleet, false);
+  }
+
   function startFleet(fleet: FleetTimer, manualRemainingMinutes?: number) {
     clearDismissedReturnForFleet(fleet.fleetNo);
     const expedition = findExpedition(fleet.expeditionId);
     const syncedNow = getSyncedNow();
+    if (isMonthlyDone(expedition.id)) return;
     const totalMinutes = expedition.durationMinutes;
     const remainingMinutes =
       typeof manualRemainingMinutes === "number"
         ? clampNumber(manualRemainingMinutes, 1, totalMinutes)
         : totalMinutes;
-    const endAt = syncedNow + remainingMinutes * 60 * 1000;
+    const endAt = Math.trunc(syncedNow + remainingMinutes * 60_000);
     const startAt = endAt - totalMinutes * 60 * 1000;
     const nextFleet = { ...fleet, startAt, endAt, notifiedAt: null, recordedAt: null };
     updateFleet(fleet.fleetNo, nextFleet);
@@ -1851,45 +1926,56 @@ function App() {
         : `開始: 第${fleet.fleetNo}艦隊 ${expedition.name}`
     );
 
-    reserveFleetNotification(nextFleet);
+    if (settings.autoReserveFleetNotifications !== false && nextFleet.discordNotify) {
+      reserveFleetNotification(nextFleet);
+    } else if (authState.user && fleet.endAt && !fleet.recordedAt) {
+      cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(error => addLog(String(error.message)));
+    }
   }
 
   function reserveFleetNotification(fleet: FleetTimer) {
+    const accountId = authState.user?.id;
+    if (!fleet.discordNotify || !fleet.endAt || !accountId) return;
+
     const expedition = findExpedition(fleet.expeditionId);
-    if (fleet.discordNotify && fleet.endAt) {
-      if (!authState.user) {
-        addLog("通知予約は提督ログイン後に使えるよ");
-        return;
-      }
-      scheduleCloudNotification({
-        userId: authState.user.id,
-        fleetNo: fleet.fleetNo,
-        expeditionId: expedition.id,
-        expeditionName: expedition.name,
-        endAt: fleet.endAt,
-        content: buildDiscordContent(
-          fleet,
-          expedition,
-          fleet.endAt,
-          `${formatResources(calculateAdjustedRewards(expedition, rewardSettings, undefined, fleet.fleetNo))}（${getRewardModifierLabel(rewardSettings, fleet.fleetNo)}）`
-        ),
-        webhookUrl: settings.discordWebhookUrl.trim() || "push-only"
-      })
-        .then(() => addLog(`サーバー側通知を予約: 第${fleet.fleetNo}艦隊 ${expedition.name}`))
-        .catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : "サーバー側通知予約に失敗";
-          addLog(message);
-        });
-    }
+    const key = fleetNotificationKey(accountId, fleet);
+    const operation = (notificationOperations.current.get(key) ?? 0) + 1;
+    notificationOperations.current.set(key, operation);
+    setFleetNotificationStates(current => {
+      const fleetPrefix = `${accountId}:${fleet.fleetNo}:`;
+      const others = Object.fromEntries(Object.entries(current).filter(([item]) => !item.startsWith(fleetPrefix)));
+      return { ...others, [key]: "reserving" };
+    });
+
+    const showStatus = (status: FleetNotificationStatus) => {
+      if (cloudUserRef.current !== accountId || notificationOperations.current.get(key) !== operation) return;
+      setFleetNotificationStates(current => ({ ...current, [key]: status }));
+    };
+    scheduleCloudNotification({
+      userId: accountId,
+      fleetNo: fleet.fleetNo,
+      expeditionId: expedition.id,
+      expeditionName: expedition.name,
+      endAt: fleet.endAt,
+      content: buildDiscordContent(
+        fleet,
+        expedition,
+        fleet.endAt,
+        `${formatResources(calculateAdjustedRewards(expedition, rewardSettings, undefined, fleet.fleetNo))}（${getRewardModifierLabel(rewardSettings, fleet.fleetNo)}）`
+      ),
+      webhookUrl: settings.discordWebhookUrl.trim() || "push-only"
+    }).then(() => {
+      showStatus("pending");
+      addLog(`サーバー側通知を予約: 第${fleet.fleetNo}艦隊 ${expedition.name}`);
+    }).catch((error: unknown) => {
+      showStatus("failed");
+      addLog(error instanceof Error ? error.message : "サーバー側通知予約に失敗");
+    });
   }
 
   function startFleetWithManualRemaining(fleet: FleetTimer) {
-    const rawValue = manualTimerInputs[fleet.fleetNo];
-    const minutes = Number(rawValue);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      addLog("残り時間は1分以上で入力してね");
-      return;
-    }
+    const minutes = Number(manualTimerInputs[fleet.fleetNo]);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > findExpedition(fleet.expeditionId).durationMinutes) return;
     startFleet(fleet, minutes);
     setManualTimerInputs((current) => ({ ...current, [fleet.fleetNo]: "" }));
   }
@@ -1899,12 +1985,13 @@ function App() {
     updateFleet(fleet.fleetNo, next);
     if (!authState.user) return;
     saveActiveTimer(authState.user.id, next).catch(error => addLog(String(error.message)));
-    if (!enabled) cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(error => addLog(String(error.message)));
-    else if (fleet.endAt && fleet.endAt > getSyncedNow()) reserveFleetNotification(next);
-  }
-
-  function restartFleet(fleet: FleetTimer) {
-    startFleet(fleet);
+    if (!enabled) {
+      const key = fleetNotificationKey(authState.user.id, fleet);
+      notificationOperations.current.set(key, (notificationOperations.current.get(key) ?? 0) + 1);
+      cancelCloudNotification(authState.user.id, fleet.fleetNo).catch(error => addLog(String(error.message)));
+    } else if (settings.autoReserveFleetNotifications !== false && fleet.endAt && fleet.endAt > getSyncedNow()) {
+      reserveFleetNotification(next);
+    }
   }
 
   function clearFleet(fleetNo: FleetTimer["fleetNo"]) {
@@ -1917,6 +2004,7 @@ function App() {
   }
 
   function applyPreset(preset: ExpeditionPreset) {
+    if (fleets.some(fleet => fleet.endAt && !fleet.recordedAt) && !window.confirm("プリセットを適用すると、稼働中のタイマーと完了通知の予約を取り消します。適用しますか？")) return;
     for (const fleet of fleets) clearFleet(fleet.fleetNo);
     setFleets((current) =>
       current.map((fleet) => ({
@@ -1989,31 +2077,33 @@ function App() {
 
   function recordFleetResult(fleet: FleetTimer, result: HistoryResult) {
     const returnDismissKey = getReturnDismissKey(fleet);
-    if (fleet.recordedAt || recordingFleetNos.includes(fleet.fleetNo) || dismissedReturnKeys.includes(returnDismissKey)) return;
-
     const recordedAt = getSyncedNow();
+    if (!fleet.endAt || fleet.endAt - recordedAt > 60_000 || fleet.recordedAt || recordingFleetNos.includes(fleet.fleetNo) || dismissedReturnKeys.includes(returnDismissKey)) return;
+
+    setReturnPickerKey(null);
     const earlyReturn = Boolean(fleet.endAt && recordedAt < fleet.endAt);
     setRecordingFleetNos((current) => (current.includes(fleet.fleetNo) ? current : [...current, fleet.fleetNo]));
     setDismissedReturnKeys((current) => (current.includes(returnDismissKey) ? current : [...current, returnDismissKey]));
 
     const expedition = findExpedition(fleet.expeditionId);
-    const rewards = calculateAdjustedRewards(expedition, rewardSettings, result === "great", fleet.fleetNo);
+    const rewards = result === "failure" ? { fuel: 0, ammo: 0, steel: 0, bauxite: 0 }
+      : calculateAdjustedRewards(expedition, rewardSettings, result === "great", fleet.fleetNo);
     const record: ExpeditionHistory = {
-      id: `${recordedAt}-${fleet.fleetNo}-${expedition.id}-${result}`,
+      id: `return-${fleet.endAt}-${fleet.fleetNo}-${expedition.id}`,
       completedAt: recordedAt,
       fleetNo: fleet.fleetNo,
       expeditionId: expedition.id,
       expeditionName: expedition.name,
       result,
       rewards,
-      itemReward: expedition.itemReward
+      itemReward: result === "failure" ? "なし" : expedition.itemReward
     };
 
     const nextHistory = mergeExpeditionHistories([record, ...history], [], historyClearedAtRef.current);
     setHistory((current) => mergeExpeditionHistories([record, ...current], [], historyClearedAtRef.current));
 
     let nextMonthlyCompletions = monthlyCompletions;
-    if (isMonthlyExpedition(expedition)) {
+    if (result !== "failure" && isMonthlyExpedition(expedition)) {
       const recordPeriod = monthlyPeriodKey(fleet.endAt ?? recordedAt);
       const monthItems = new Set(monthlyCompletions[recordPeriod] ?? []);
       monthItems.add(expedition.id);
@@ -2033,7 +2123,7 @@ function App() {
       saveImportantCloudChange({ history: nextHistory, monthlyCompletions: nextMonthlyCompletions });
     }
 
-    addLog(`${earlyReturn ? "1分前帰投記録" : "帰投記録"}: 第${fleet.fleetNo}艦隊 ${expedition.name}（${result === "great" ? "大成功" : "成功"}）`);
+    addLog(`${earlyReturn ? "1分前帰投記録" : "帰投記録"}: 第${fleet.fleetNo}艦隊 ${expedition.name}（${historyResultLabels[result]}）`);
 
     window.setTimeout(() => {
       setRecordingFleetNos((current) => current.filter((fleetNo) => fleetNo !== fleet.fleetNo));
@@ -2212,7 +2302,7 @@ function App() {
       setupGuideDismissed,
       collapsedPanels,
       savedAt: new Date().toISOString(),
-      appVersion: "5.8.1",
+      appVersion: "5.9.0",
       ...overrides,
       monthlyCompletions: sanitizeMonthlyChecks(overrides.monthlyCompletions ?? monthlyCompletions, expeditions)
     };
@@ -2668,55 +2758,6 @@ function App() {
   }
 
 
-  async function enableWebPush() {
-    if (!authState.user) {
-      setPushMessage("スマホ通知は提督ログイン後に有効化してね");
-      return;
-    }
-    if (!vapidPublicKey) {
-      setPushMessage("VITE_VAPID_PUBLIC_KEYが未設定です");
-      return;
-    }
-    if (!isPushSupported()) {
-      setPushMessage("このブラウザはWeb Push通知に未対応です");
-      return;
-    }
-
-    setPushBusy(true);
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") throw new Error("通知が許可されませんでした");
-      const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
-      const subscription =
-        existing ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource
-        }));
-
-      const json = subscription.toJSON();
-      const p256dh = json.keys?.p256dh;
-      const auth = json.keys?.auth;
-      if (!json.endpoint || !p256dh || !auth) throw new Error("Push購読情報を取得できませんでした");
-
-      await savePushSubscription(authState.user.id, {
-        endpoint: json.endpoint,
-        p256dh,
-        auth,
-        userAgent: navigator.userAgent
-      });
-      setPushMessage("スマホ/PWA通知を有効化したよ。通知予約の送信時にDiscordと一緒に届くよ");
-      addLog("Web Push通知を有効化");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "スマホ通知の有効化に失敗";
-      setPushMessage(message);
-      addLog(message);
-    } finally {
-      setPushBusy(false);
-    }
-  }
-
   async function testLocalNotification(): Promise<boolean> {
     if (!isPushSupported()) {
       setPushMessage("このブラウザは通知テストに未対応です");
@@ -2755,20 +2796,28 @@ function App() {
     ? Math.min(100, Math.max(0, ((now - nozakiTimer.startAt) / (nozakiTimer.endAt - nozakiTimer.startAt)) * 100))
     : 0;
 
-  const runningFleetCount = fleets.filter((fleet) => fleet.endAt !== null && now < fleet.endAt).length;
-  const completedFleetCount = pendingReturnFleets.length;
-  const almostDoneFleetCount = fleets.filter((fleet) => {
-    if (!fleet.endAt || now >= fleet.endAt) return false;
-    return fleet.endAt - now <= 5 * 60 * 1000;
-  }).length;
-  const nextFleet = fleets
-    .filter((fleet) => fleet.endAt !== null && now < fleet.endAt)
-    .sort((a, b) => (a.endAt ?? 0) - (b.endAt ?? 0))[0];
-  const nextFleetExpedition = nextFleet ? findExpedition(nextFleet.expeditionId) : null;
   const quickPresets = allPresets.slice(0, 3);
   const cloudStatusLabel = !authState.user ? "端末に保存" : !isOnline ? "オフライン・端末に保存"
     : ({ pending: "未同期・保存待ち", syncing: "クラウド同期中", saved: "クラウド同期済み", error: "同期失敗・再試行が必要" })[syncPhase];
-  const notificationStatusLabel = deviceStatus?.permission === "granted" ? "スマホ通知OK" : "通知設定確認";
+  const showSyncWarning = Boolean(authState.user && (!isOnline || syncPhase === "error"));
+
+  function fleetNotificationLabel(fleet: FleetTimer) {
+    if (!fleet.discordNotify) return "オフ";
+    if (!userId) return "ログインで利用可能";
+    const status = fleetNotificationStates[fleetNotificationKey(userId, fleet)] ?? (isOnline ? "checking" : "unknown");
+    if (status === "missing" && settings.autoReserveFleetNotifications === false) return "自動予約オフ";
+    return fleetNotificationLabels[status];
+  }
+
+  function openFleetTimer(fleet: FleetTimer, showResultPicker: boolean) {
+    setTimerFocus(fleet.fleetNo);
+    const key = getReturnDismissKey(fleet);
+    setReturnPickerKey(showResultPicker ? key : null);
+    switchAppTab("timers");
+    if (showResultPicker) {
+      window.requestAnimationFrame(() => document.getElementById(`return-success-${fleet.fleetNo}`)?.focus({ preventScroll: true }));
+    }
+  }
 
   function switchAppTab(tab: MobileTab, targetId?: string) {
     setMobileTab(tab);
@@ -2845,8 +2894,9 @@ function App() {
   }
 
   function jumpToExpeditionDetail(expeditionId: string) {
-    if (!detailOpen || expeditionSubTab === "assist") {
+    if (!detailOpen || expeditionSubTab === "assist" || mobileTab !== "expeditions") {
       detailOriginRef.current = expeditionSubTab;
+      detailOriginTabRef.current = mobileTab;
       detailTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       listPositionRef.current = { page: window.scrollY, list: document.querySelector(".expedition-list")?.scrollTop ?? 0 };
     }
@@ -2860,6 +2910,7 @@ function App() {
 
   function returnToExpeditionList() {
     setDetailOpen(false);
+    setMobileTab(detailOriginTabRef.current);
     setExpeditionSubTab(detailOriginRef.current);
     window.requestAnimationFrame(() => {
       const list = document.querySelector(".expedition-list");
@@ -2869,9 +2920,9 @@ function App() {
     });
   }
 
-  function jumpToAssist(targetId: "preset-section" | "strategy-section" = "preset-section") {
+  function jumpToAssist(targetId: "preset-section" | "strategy-section" | "monthly-section" = "preset-section") {
     setExpeditionSubTab("assist");
-    setCollapsedPanels((current) => ({ ...current, presets: false, strategy: false }));
+    setCollapsedPanels((current) => ({ ...current, presets: false, monthly: false, strategy: false }));
     switchAppTab("expeditions", targetId);
   }
 
@@ -2896,6 +2947,7 @@ function App() {
     setMobileTab("account");
     setSettingsView(panel);
     setCollapsedPanels((current) => ({ ...current, [panel]: false }));
+    if (panel === "diagnostics" && authState.user) void refreshNotificationHistory();
     window.setTimeout(() => {
       document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
@@ -2945,19 +2997,19 @@ function App() {
     : pageSubtitleMap[mobileTab];
 
   return (
-    <main className={`app-shell mobile-tab-${mobileTab} settings-view-${settingsView} expedition-subtab-${expeditionSubTab} timer-focus-${timerFocus} theme-${themeMode} ${compactFleetCards ? "compact-fleets" : ""}`}>
+    <main className={`app-shell mobile-tab-${mobileTab} settings-view-${settingsView} expedition-subtab-${expeditionSubTab} timer-focus-${timerFocus} theme-${themeMode}`}>
       <header className="hero ios-app-header">
         <div className="ios-brand">
-          <p className="eyebrow">KanColle Expedition Support</p>
           <h1>{currentPageTitle}</h1>
           <p className="ios-subtitle">{currentPageSubtitle}</p>
         </div>
       </header>
-      <div className={`sync-feedback sync-${syncPhase}`} role="status">
-        <strong>{cloudStatusLabel}</strong>
-        {authState.user && lastSyncAt && <small>最終成功 {formatDateTime(lastSyncAt)}</small>}
-        {authState.user && (syncPhase === "error" || syncPhase === "pending") && <button type="button" disabled={!isOnline || cloudSyncBusy} onClick={() => scheduleCloudRefresh(authState.user!.id, "同期の再試行")}>再試行</button>}
-      </div>
+      {showSyncWarning && (
+        <div className={`sync-feedback sync-${syncPhase}`} role="status">
+          <strong>{cloudStatusLabel}</strong>
+          <button type="button" disabled={!isOnline || cloudSyncBusy} onClick={() => scheduleCloudRefresh(authState.user!.id, "同期の再試行")}>再試行</button>
+        </div>
+      )}
 
       <nav className="desktop-tabbar ios-tabbar" aria-label="画面タブ">
         <button type="button" className={mobileTab === "home" ? "active" : ""} onClick={() => switchAppTab("home")}><b className="tab-icon"><TabIcon tab="home" /></b><span>ホーム</span></button>
@@ -2967,62 +3019,35 @@ function App() {
         <button type="button" className={mobileTab === "account" ? "active" : ""} onClick={openSettingsHub}><b className="tab-icon"><TabIcon tab="account" /></b><span>設定</span></button>
       </nav>
 
-      {mobileTab === "expeditions" && (
-        <div className="ios-segmented-control expedition-view-switch" role="tablist" aria-label="遠征画面切替">
-          <button type="button" className={expeditionSubTab === "search" ? "active" : ""} onClick={() => { setDetailOpen(false); setExpeditionSubTab("search"); }}>一覧・検索</button>
-          <button type="button" className={expeditionSubTab === "assist" ? "active" : ""} onClick={() => setExpeditionSubTab("assist")}>おすすめ・マンスリー</button>
+      {mobileTab === "expeditions" && expeditionSubTab === "assist" && (
+        <div className="ios-segmented-control expedition-view-switch" role="group" aria-label="遠征画面切替">
+          <button type="button" onClick={() => { setDetailOpen(false); setExpeditionSubTab("search"); }}>遠征一覧に戻る</button>
         </div>
       )}
 
-      <section className={`ops-overview ${pendingReturnFleets.length > 0 ? "has-returns" : "no-returns"}`}>
-      {pendingReturnFleets.length > 0 && (
-        <section className="return-check-card" aria-label="帰投チェック">
-          <div className="section-head compact">
-            <div>
-              <p className="eyebrow">Return Check</p>
-              <h2>帰投チェック</h2>
-            </div>
-            <span className="status done">{pendingReturnFleets.length}件 完了待ち</span>
-          </div>
-          <div className="return-check-list">
-            {pendingReturnFleets.map((fleet) => {
-              const expedition = findExpedition(fleet.expeditionId);
-              return (
-                <article className="return-check-item" key={`return-${fleet.fleetNo}`}>
-                  <div>
-                    <strong>第{fleet.fleetNo}艦隊が帰投</strong>
-                    <span>{expedition.id}: {expedition.name}</span>
-                    <small>終了予定 {formatDateTime(fleet.endAt)} / {getRewardModifierLabel(rewardSettings, fleet.fleetNo)}</small>
-                  </div>
-                  <div className="return-check-actions">
-                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>成功で記録</button>
-                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>大成功で記録</button>
-                    <button type="button" className="ghost" onClick={() => jumpToExpeditionDetail(expedition.id)}>条件を見る</button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <section id="dashboard-section" className="dashboard-strip" aria-label="遠征司令室">
-        <article className="command-card status-command-card">
-          <p className="eyebrow">Command Deck</p>
-          <h2>遠征司令室</h2>
-          <div className="command-status-grid">
-            <span><strong>{runningFleetCount}</strong>遠征中</span>
-            <span><strong>{completedFleetCount}</strong>完了待ち</span>
-            <span><strong>{almostDoneFleetCount}</strong>残り5分</span>
-          </div>
-          <p className="helper-text">{nextFleet && nextFleetExpedition ? `次の帰投：第${nextFleet.fleetNo}艦隊 ${nextFleetExpedition.name} / ${formatDateTime(nextFleet.endAt)}` : "現在、帰投待ちの艦隊はないよ。"}</p>
+      <section className="ops-overview">
+      <section id="dashboard-section" className="dashboard-strip" aria-label="ホームの概要">
+        <article className="command-card status-command-card fleet-overview">
+          <h2>遠征状況</h2>
+          {overviewFleets.map(fleet => {
+            const ready = pendingReturnFleets.includes(fleet);
+            const expedition = findExpedition(fleet.expeditionId);
+            const underway = Boolean(fleet.endAt && !fleet.recordedAt && !ready);
+            return (
+              <button type="button" className="fleet-overview-row" key={fleet.fleetNo} onClick={() => openFleetTimer(fleet, ready)}>
+                <span><strong>第{fleet.fleetNo}艦隊</strong><small>{ready || underway ? expedition.name : fleet.recordedAt ? "帰投記録済み" : "待機中"}</small></span>
+                <span className={`fleet-overview-status ${ready ? "return-ready" : ""}`}>
+                  {ready ? "帰投を記録 ›" : underway && fleet.endAt ? `${formatFleetArrival(fleet.endAt, now)} 帰投予定` : "›"}
+                </span>
+              </button>
+            );
+          })}
         </article>
 
         <article className="command-card resource-command-card">
           <div className="section-head compact">
             <div>
-              <p className="eyebrow">Today</p>
-              <h3>今日の獲得資材</h3>
+              <h3>今日の獲得資源</h3>
             </div>
             <button type="button" className="ghost small" onClick={jumpToRecords}>詳細</button>
           </div>
@@ -3032,34 +3057,11 @@ function App() {
             <button type="button" data-resource="steel" className={`resource-summary-button ${dailyChartMode === "鋼材" ? "active" : ""}`} onClick={() => setDailyChartMode("鋼材")}><span>鋼材</span><strong>{todayTotal.steel}</strong></button>
             <button type="button" data-resource="bauxite" className={`resource-summary-button ${dailyChartMode === "ボーキ" ? "active" : ""}`} onClick={() => setDailyChartMode("ボーキ")}><span>ボーキ</span><strong>{todayTotal.bauxite}</strong></button>
           </div>
-          <p className="helper-text">{todayHistory.length}件記録 / 大成功{todayGreatCount}件</p>
-        </article>
-
-        <article className="command-card stock-command-card">
-          <div className="section-head compact">
-            <div>
-              <p className="eyebrow">Stock</p>
-              <h3>所持資源</h3>
-            </div>
-            <button type="button" className="ghost small" onClick={jumpToRecords}>記録</button>
-          </div>
-          {latestStockSnapshot ? (
-            <>
-              <div className="home-stock-grid game-resource-grid">
-                <span className="resource-stock-tile" data-resource="fuel"><small>燃料</small><strong>{latestStockSnapshot.resources.fuel.toLocaleString("ja-JP")}</strong></span>
-                <span className="resource-stock-tile" data-resource="steel"><small>鋼材</small><strong>{latestStockSnapshot.resources.steel.toLocaleString("ja-JP")}</strong></span>
-                <span className="resource-stock-tile" data-resource="ammo"><small>弾薬</small><strong>{latestStockSnapshot.resources.ammo.toLocaleString("ja-JP")}</strong></span>
-                <span className="resource-stock-tile" data-resource="bauxite"><small>ボーキ</small><strong>{latestStockSnapshot.resources.bauxite.toLocaleString("ja-JP")}</strong></span>
-              </div>
-              <p className="helper-text">最終記録 {formatShortDateTime(latestStockSnapshot.recordedAt)}</p>
-            </>
-          ) : <p className="empty-text">まだ所持資源の記録がないよ。</p>}
         </article>
 
         <article className="command-card quick-preset-command-card">
           <div className="section-head compact">
             <div>
-              <p className="eyebrow">Quick Preset</p>
               <h3>ワンタップ編成</h3>
             </div>
             <button type="button" className="ghost small" onClick={() => jumpToAssist("preset-section")}>全部</button>
@@ -3095,23 +3097,20 @@ function App() {
         </div>
 
         <div className="settings-menu-panel">
-          <div className="settings-menu-copy">
-            <h3>アカウント・通知</h3>
-          </div>
           <div className="settings-menu-grid">
+            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("notifications", "notification-section")}>
+              <span className="settings-menu-icon"><SettingsGlyph kind="bell" /></span>
+              <span><strong>遠征の完了通知</strong><small>自動予約・Discord・スマホ</small></span>
+              <em>›</em>
+            </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("account", "account-cloud-section")}>
               <span className="settings-menu-icon"><SettingsGlyph kind="cloud" /></span>
-              <span><strong>アカウント・同期</strong><small>ログイン・クラウド保存</small></span>
+              <span><strong>アカウント・同期</strong><small>{cloudStatusLabel}</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("pwa", "pwa-section")}>
               <span className="settings-menu-icon"><SettingsGlyph kind="phone" /></span>
               <span><strong>スマホ・PWA</strong><small>インストール・バックアップ</small></span>
-              <em>›</em>
-            </button>
-            <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("notifications", "notification-section")}>
-              <span className="settings-menu-icon"><SettingsGlyph kind="bell" /></span>
-              <span><strong>通知・Push</strong><small>Discord・スマホ通知</small></span>
               <em>›</em>
             </button>
             <button type="button" className="settings-menu-item" onClick={() => jumpToSettingsPanel("rewards", "reward-section")}>
@@ -3171,6 +3170,7 @@ function App() {
               </div>
             </div>
           )}
+          <p className="settings-sync-status"><strong>{cloudStatusLabel}</strong>{authState.user && lastSyncAt && <small>最終成功 {formatDateTime(lastSyncAt)}</small>}</p>
           <p className="sync-message">{cloudSyncMessage || (isSupabaseConfigured ? "クラウド同期はログイン後に利用できます。" : "Supabase環境変数が未設定です。")}</p>
         </div>
       </details>
@@ -3215,41 +3215,46 @@ function App() {
           <em>{collapsedPanels.notifications ? "開く" : "閉じる"}</em>
         </summary>
         <div className="fold-content settings-content">
-        <div>
-          <h2>通知設定</h2>
-          <p>
-            通知は「通知予約」に一本化。Discord Webhook URLを保存し、必要ならスマホ/PWA通知も有効化しておくと、遠征終了時にDiscordとスマホ通知の両方で受け取りやすくなるよ。
-          </p>
-        </div>
-        <div className="settings-grid simplified">
-          <input
-            value={settings.discordWebhookUrl}
-            onChange={(event) =>
-              setSettings((current) => ({ ...current, discordWebhookUrl: event.target.value, discordNotifyMode: "direct", serverNotificationMode: "supabase" }))
-            }
-            placeholder="Discord Webhook URL（提督ごとにクラウド保存）"
-            type="password"
-          />
-          <button className="secondary" onClick={testDiscord} disabled={!settings.discordWebhookUrl.trim()}>
-            Discordテスト
-          </button>
-          <button className="secondary" type="button" onClick={enableWebPush} disabled={pushBusy || !authState.user || !vapidPublicKey}>
-            スマホ通知を有効化
-          </button>
-          <button className="ghost" type="button" onClick={testLocalNotification} disabled={!isPushSupported()}>
-            端末通知テスト
-          </button>
-        </div>
-        <p className="helper-text">遠征開始時に、終了予定時刻・Discord通知先・スマホ通知先をクラウドへ保存する。実際の送信はcron-dispatchが定期実行された時に行うよ。</p>
-        <p className="helper-text">{pushMessage || (vapidPublicKey ? "スマホ通知は、ホーム画面に追加したPWAや対応ブラウザで通知許可すると使えるよ。" : "スマホ通知を使うにはVAPIDキーの設定が必要です。")}</p>
-        <p className="notification-timing-note">通知は約5分ごとに配信を確認します。終了から通常0〜5分程度、混雑や再送時はさらに遅れる場合があります。画面の残り時間と通知の到着時刻は一致しないことがあります。</p>
-        <NotificationDevicePanel
-          supabase={supabase}
-          userId={userId}
-          vapidPublicKey={vapidPublicKey}
-          onSendTestNotification={testLocalNotification}
-          onStatusChange={setDeviceStatus}
-        />
+          <h2>遠征の完了通知</h2>
+          <label className="ios-switch-row">
+            <span><strong>遠征開始時に自動で予約</strong><small>次に開始する遠征から適用</small></span>
+            <input type="checkbox" checked={settings.autoReserveFleetNotifications !== false}
+              onChange={event => setSettings(current => ({ ...current, autoReserveFleetNotifications: event.target.checked }))} />
+          </label>
+          <details className="simple-disclosure">
+            <summary>艦隊ごとの通知設定</summary>
+            {fleets.map(fleet => (
+              <label className="ios-switch-row" key={fleet.fleetNo}>
+                <span>第{fleet.fleetNo}艦隊</span>
+                <input type="checkbox" checked={fleet.discordNotify} onChange={event => toggleFleetNotification(fleet, event.target.checked)} />
+              </label>
+            ))}
+            <label className="ios-switch-row">
+              <span>野埼タイマーの完了通知</span>
+              <input type="checkbox" checked={nozakiTimer.notify} onChange={event => toggleNozakiNotification(event.target.checked)} />
+            </label>
+          </details>
+          <details className="simple-disclosure">
+            <summary>Discord <small>{webhookRegistered ? "設定済み" : "未設定"}</small></summary>
+            <label className="label">
+              <span>Discord Webhook URL</span>
+              <input type="password" value={settings.discordWebhookUrl}
+                onChange={event => setSettings(current => ({ ...current, discordWebhookUrl: event.target.value, discordNotifyMode: "direct", serverNotificationMode: "supabase" }))} />
+            </label>
+            <button className="secondary" type="button" onClick={testDiscord} disabled={!webhookRegistered}>Discordテスト</button>
+          </details>
+          <details className="simple-disclosure">
+            <summary>スマホ・ブラウザ通知 <small>{deviceRegistered ? "この端末に登録済み" : "この端末は未登録"}</small></summary>
+            <NotificationDevicePanel
+              supabase={supabase}
+              userId={userId}
+              vapidPublicKey={vapidPublicKey}
+              onSendTestNotification={testLocalNotification}
+              onStatusChange={setDeviceStatus}
+            />
+          </details>
+          <button type="button" className="ghost" onClick={() => jumpToSettingsPanel("diagnostics", "diagnostics-section")}>通知履歴・診断を見る</button>
+          <p className="helper-text">{pushMessage || "通知は約5分間隔で配信を確認します。混雑や再送時はさらに遅れる場合があります。"}</p>
         </div>
       </details>
 
@@ -3594,7 +3599,7 @@ function App() {
                 selectedDailyEntries.slice(0, 5).map((item) => (
                   <p key={item.id}>
                     <span>{formatShortDateTime(item.completedAt)}</span>
-                    第{item.fleetNo} {item.expeditionName} / {item.result === "great" ? "大成功" : "成功"} / {formatResources(item.rewards)}
+                    第{item.fleetNo} {item.expeditionName} / {historyResultLabels[item.result]} / {formatResources(item.rewards)}
                   </p>
                 ))
               )}
@@ -3679,7 +3684,7 @@ function App() {
                 selectedDailyEntries.slice(0, 8).map((item) => (
                   <p key={`records-${item.id}`}>
                     <span>{formatShortDateTime(item.completedAt)}</span>
-                    第{item.fleetNo} {item.expeditionName} / {item.result === "great" ? "大成功" : "成功"} / {formatResources(item.rewards)}
+                    第{item.fleetNo} {item.expeditionName} / {historyResultLabels[item.result]} / {formatResources(item.rewards)}
                   </p>
                 ))
               )}
@@ -3864,21 +3869,19 @@ function App() {
       </section>
 
       <section id="timer-hub-section" className="timer-hub-card" aria-label="タイマー切替">
-        <div className="timer-hub-actions">
-          <button type="button" className="ghost small" onClick={() => setCompactFleetCards((value) => !value)}>{compactFleetCards ? "標準表示" : "コンパクト"}</button>
-        </div>
-        <div className="ios-segmented-control timer-focus-control" role="tablist" aria-label="タイマー選択">
-          <button type="button" className={timerFocus === 2 ? "active" : ""} onClick={() => setTimerFocus(2)}>第2艦隊</button>
-          <button type="button" className={timerFocus === 3 ? "active" : ""} onClick={() => setTimerFocus(3)}>第3艦隊</button>
-          <button type="button" className={timerFocus === 4 ? "active" : ""} onClick={() => setTimerFocus(4)}>第4艦隊</button>
-          <button type="button" className={timerFocus === "nozaki" ? "active" : ""} onClick={() => setTimerFocus("nozaki")}>野埼</button>
+        <div className="ios-segmented-control timer-focus-control" role="group" aria-label="タイマー選択">
+          {([2, 3, 4, "nozaki"] as const).map(focus => (
+            <button type="button" key={focus} aria-pressed={timerFocus === focus} className={timerFocus === focus ? "active" : ""}
+              onClick={() => { setTimerFocus(focus); setReturnPickerKey(null); }}>
+              {focus === "nozaki" ? "野埼" : `第${focus}艦隊`}
+            </button>
+          ))}
         </div>
       </section>
 
       <section className="nozaki-timer-card" aria-label="野埼タイマー">
         <div className="nozaki-header">
           <div>
-            <p className="eyebrow">Home-port Supply</p>
             <h2>野埼タイマー</h2>
           </div>
           <span className={`status ${nozakiCompleted ? "done" : nozakiRunning ? "running" : "idle"}`}>
@@ -3907,27 +3910,27 @@ function App() {
           <div><small>経過</small><strong>{nozakiCompletedCycles}/{nozakiConfig.cycles} cycle</strong></div>
         </div>
 
-        <label className="ios-switch-row">
-          <span><strong>完了時に端末通知</strong><small>許可済み端末で通知します</small></span>
-          <input type="checkbox" checked={nozakiTimer.notify} onChange={(event) => toggleNozakiNotification(event.target.checked)} />
-        </label>
-
         <div className="nozaki-actions">
           <button type="button" onClick={startNozakiTimer}>{nozakiRunning ? "最初から計測" : nozakiCompleted ? "もう一度計測" : "タイマー開始"}</button>
           <button type="button" className="secondary" onClick={resetNozakiTimer} disabled={!nozakiTimer.startAt && !nozakiTimer.endAt}>リセット</button>
         </div>
-        <p className="nozaki-note">編成変更や、15分以上経過後に母港へ戻って判定が行われた場合はゲーム側のタイマーがリセットされます。</p>
+        <details className="simple-disclosure">
+          <summary>野埼の計測について</summary>
+          <p className="nozaki-note">編成変更や、15分以上経過後に母港へ戻って給糧判定が行われた場合は、ゲーム側のタイマーがリセットされます。</p>
+        </details>
       </section>
 
       <section id="fleet-timer-section" className="fleet-grid">
         {fleets.map((fleet) => {
           const expedition = findExpedition(fleet.expeditionId);
           const running = fleet.endAt !== null && now < fleet.endAt;
-          const completed = fleet.endAt !== null && now >= fleet.endAt;
           const remainingMs = fleet.endAt ? fleet.endAt - now : 0;
           const earlyReturnWindow = running && remainingMs <= 60 * 1000;
           const almostDone = running && remainingMs <= 5 * 60 * 1000;
-          const remaining = fleet.endAt ? formatRemaining(remainingMs) : "--:--:--";
+          const canRecord = pendingReturnFleets.includes(fleet);
+          const recording = returnPickerKey === getReturnDismissKey(fleet);
+          const waiting = !fleet.endAt || Boolean(fleet.recordedAt);
+          const remaining = formatRemaining(remainingMs);
           const fleetProgress = fleet.recordedAt
             ? 100
             : fleet.startAt && fleet.endAt && fleet.endAt > fleet.startAt
@@ -3939,75 +3942,100 @@ function App() {
           const adjustedRewards = calculateAdjustedRewards(expedition, rewardSettings, undefined, fleet.fleetNo);
 
           return (
-            <article data-fleet-no={fleet.fleetNo} className={`fleet-card ${completed ? "completed" : almostDone ? "almost-done" : ""}`} key={fleet.fleetNo}>
-              <div className="fleet-card-head">
-                <div>
-                  <p className="eyebrow">Fleet {fleet.fleetNo}</p>
-                  <h2>第{fleet.fleetNo}艦隊</h2>
-                </div>
-                <span className={`status ${running ? "running" : completed ? "done" : "idle"}`}>
-                  {running ? (earlyReturnWindow ? "帰投可能" : almostDone ? "残り5分" : "遠征中") : completed ? "完了" : "待機"}
+            <article data-fleet-no={fleet.fleetNo} className="fleet-card simple-fleet-card" key={fleet.fleetNo}>
+              <div className="simple-fleet-heading">
+                <h2>第{fleet.fleetNo}艦隊</h2>
+                <span className={`status ${canRecord || fleet.recordedAt ? "done" : running ? "running" : "idle"}`}>
+                  {canRecord ? (earlyReturnWindow ? "帰投可能" : "帰投待ち") : fleet.recordedAt ? "記録済み" : almostDone ? "残り5分" : running ? "遠征中" : "待機中"}
                 </span>
               </div>
 
-              <div className="label">
-                <div className="field-head">
-                  <span>遠征</span>
-                  <button
-                    type="button"
-                    className={`favorite-toggle ${isPinned(fleet.expeditionId) ? "active" : ""}`}
-                    onClick={() => togglePin(fleet.expeditionId)}
-                  >
-                    {isPinned(fleet.expeditionId) ? "★ お気に入り済み" : "☆ お気に入り追加"}
-                  </button>
-                </div>
-                <select
-                  value={fleet.expeditionId}
-                  onChange={(event) => setFleetExpedition(fleet.fleetNo, event.target.value)}
-                >
-                  {pinnedExpeditions.length > 0 && (
-                    <optgroup label={`★ お気に入り ${pinnedExpeditions.length}件`}>
-                      {pinnedExpeditions.map((item) => {
-                        const monthlyDone = isMonthlyDone(item.id);
-                        return (
-                          <option value={item.id} key={`fav-${fleet.fleetNo}-${item.id}`} disabled={monthlyDone && item.id !== fleet.expeditionId}>
-                            ★ {monthlyDone ? "済 " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
-                          </option>
-                        );
-                      })}
-                    </optgroup>
-                  )}
-                  <optgroup label={`全遠征 ${totalExpeditionCount}件`}>
-                    {expeditions.map((item) => {
-                      const monthlyDone = isMonthlyDone(item.id);
-                      return (
-                        <option value={item.id} key={item.id} disabled={monthlyDone && item.id !== fleet.expeditionId}>
-                          {isPinned(item.id) ? "★ " : ""}{monthlyDone ? "済 " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                </select>
-                <div className="fleet-reward-mini fleet-reward-mini-v36">
-                  <div className="bonus-pill">
-                    <span>大発系補正</span>
-                    <strong>+{formatBonusPercent(fleetBonusBreakdown.totalBonus)}</strong>
+              {waiting ? (
+                <>
+                  <label className="simple-fleet-choice">
+                    <span>遠征</span>
+                    <select value={fleet.expeditionId} onChange={event => setFleetExpedition(fleet.fleetNo, event.target.value)}>
+                      {pinnedExpeditions.length > 0 && (
+                        <optgroup label={`★ お気に入り ${pinnedExpeditions.length}件`}>
+                          {pinnedExpeditions.map((item) => {
+                            const monthlyDone = isMonthlyDone(item.id);
+                            return (
+                              <option value={item.id} key={`fav-${fleet.fleetNo}-${item.id}`} disabled={monthlyDone && item.id !== fleet.expeditionId}>
+                                ★ {monthlyDone ? "済 " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
+                              </option>
+                            );
+                          })}
+                        </optgroup>
+                      )}
+                      <optgroup label={`全遠征 ${totalExpeditionCount}件`}>
+                        {expeditions.map((item) => {
+                          const monthlyDone = isMonthlyDone(item.id);
+                          return (
+                            <option value={item.id} key={item.id} disabled={monthlyDone && item.id !== fleet.expeditionId}>
+                              {isPinned(item.id) ? "★ " : ""}{monthlyDone ? "済 " : ""}{item.id}: {item.name}（{minutesToLabel(item.durationMinutes)}）
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    </select>
+                  </label>
+                  <p className="simple-fleet-muted">所要時間 {minutesToLabel(expedition.durationMinutes)}</p>
+                  <button type="button" className="simple-primary" disabled={isMonthlyDone(expedition.id)} onClick={() => startFleet(fleet)}>遠征を開始</button>
+                  {isMonthlyDone(expedition.id) && <p className="simple-fleet-muted">このマンスリー遠征は実施済みです。</p>}
+                </>
+              ) : (
+                <>
+                  <p className="simple-expedition-name">{expedition.id} {expedition.name}</p>
+                  <div className="simple-countdown">
+                    <span>残り時間</span>
+                    <strong>{remaining}</strong>
+                    <div className="simple-progress" role="progressbar" aria-label="遠征の進捗" aria-valuenow={Math.round(fleetProgress)} aria-valuemin={0} aria-valuemax={100}>
+                      <span style={{ width: `${fleetProgress}%` }} />
+                    </div>
+                    <p>帰投予定 <strong>{formatFleetArrival(fleet.endAt!, now)}</strong></p>
                   </div>
-                  <label className="mini-check">
-                    <input
-                      type="checkbox"
-                      checked={fleetModifier.kinuKaiNiBonus}
-                      onChange={(event) => updateFleetRewardModifier(fleet.fleetNo, { kinuKaiNiBonus: event.target.checked })}
-                    />
+                  {canRecord && (
+                    <div className="simple-return-actions">
+                      <button type="button" className="simple-primary" aria-expanded={recording}
+                        onClick={() => setReturnPickerKey(recording ? null : getReturnDismissKey(fleet))}>帰投結果を記録</button>
+                      {recording && (
+                        <div className="simple-result-picker" role="group" aria-label="帰投結果">
+                          {(["success", "great", "failure"] as const).map(result => (
+                            <button type="button" className="secondary" key={result} id={`return-${result}-${fleet.fleetNo}`}
+                              disabled={recordingFleetNos.includes(fleet.fleetNo)}
+                              onClick={() => recordFleetResult(fleet, result)}>{historyResultLabels[result]}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="simple-notify-summary"><span>完了通知</span><span role="status">{fleetNotificationLabel(fleet)}</span></div>
+                </>
+              )}
+
+              {waiting && (
+                <details className="simple-disclosure" key={`remaining-${fleet.expeditionId}-${fleet.recordedAt ?? "idle"}`}>
+                  <summary>残り時間から開始</summary>
+                  <form className="simple-manual-form" onSubmit={event => { event.preventDefault(); startFleetWithManualRemaining(fleet); }}>
+                    <label>
+                      <span>残り分数</span>
+                      <input type="number" inputMode="numeric" min={1} max={expedition.durationMinutes} required
+                        value={manualTimerInputs[fleet.fleetNo]}
+                        onChange={event => setManualTimerInputs(current => ({ ...current, [fleet.fleetNo]: event.target.value }))} />
+                    </label>
+                    <button type="submit" className="secondary" disabled={isMonthlyDone(expedition.id)}>開始</button>
+                  </form>
+                </details>
+              )}
+
+              <details className="simple-disclosure simple-reward-settings">
+                  <summary>報酬補正 <small>大発 +{formatBonusPercent(fleetBonusBreakdown.totalBonus)}</small></summary>
+                  <label className="simple-inline-check">
+                    <input type="checkbox" checked={fleetModifier.kinuKaiNiBonus}
+                      onChange={event => updateFleetRewardModifier(fleet.fleetNo, { kinuKaiNiBonus: event.target.checked })} />
                     鬼怒改二
                   </label>
-                  <small>{getLandingCraftSummary(rewardSettings, fleet.fleetNo)}</small>
-                </div>
-                <details className="craft-editor fleet-craft-editor">
-                  <summary>
-                    <span>大発系装備・改修★を編集</span>
-                    <em>{fleetBonusBreakdown.craftCount}/{MAX_LANDING_CRAFT_SLOTS}</em>
-                  </summary>
+                  <p className="simple-fleet-muted">大発系装備・改修★（{fleetBonusBreakdown.craftCount}/{MAX_LANDING_CRAFT_SLOTS}）</p>
                   <div className="craft-slot-list">
                     {(fleetModifier.landingCrafts ?? []).length === 0 ? (
                       <p className="empty-text">この艦隊の大発系装備は未設定。</p>
@@ -4027,125 +4055,32 @@ function App() {
                     ))}
                     <button type="button" className="secondary" onClick={() => addFleetLandingCraft(fleet.fleetNo)} disabled={(fleetModifier.landingCrafts?.length ?? 0) >= MAX_LANDING_CRAFT_SLOTS}>装備を追加</button>
                   </div>
-                </details>
-                {pinnedExpeditions.length > 0 && (
-                  <div className="fleet-pinned-shortcuts" aria-label="お気に入り遠征ショートカット">
-                    {pinnedExpeditions.slice(0, 10).map((item) => (
-                      <button
-                        type="button"
-                        key={`fleet-${fleet.fleetNo}-pin-${item.id}`}
-                        className={`${fleet.expeditionId === item.id ? "active" : ""} ${isMonthlyDone(item.id) ? "done-disabled" : ""}`}
-                        onClick={() => setFleetExpedition(fleet.fleetNo, item.id)}
-                        disabled={isMonthlyDone(item.id) && item.id !== fleet.expeditionId}
-                        title={isMonthlyDone(item.id) ? "今月実施済みのマンスリー遠征" : undefined}
-                      >
-                        ★ {isMonthlyDone(item.id) ? "済" : ""}{item.id}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </details>
 
-              <div className="timer-box">
-                <span>残り時間</span>
-                <strong>{remaining}</strong>
-                <div className="fleet-progress-track" aria-label={`遠征進捗 ${Math.round(fleetProgress)}%`}>
-                  <i style={{ width: `${fleetProgress}%` }} />
+              <details className="simple-disclosure" key={`details-${waiting ? "waiting" : fleet.endAt}`}>
+                <summary>{waiting ? "遠征の詳細" : "遠征の詳細と操作"}</summary>
+                <dl className="simple-fleet-details">
+                  <div><dt>補正込み報酬</dt><dd>{formatResources(adjustedRewards)}</dd></div>
+                  <div><dt>補正込み時給</dt><dd>{formatResources(rate)} / h</dd></div>
+                  {!waiting && <div><dt>帰投予定</dt><dd>{formatDateTime(fleet.endAt)}</dd></div>}
+                </dl>
+                <div className="simple-secondary-actions">
+                  <button type="button" className="ghost" onClick={() => jumpToExpeditionDetail(expedition.id)}>成功条件を見る</button>
+                  <button type="button" className="ghost" aria-pressed={isPinned(expedition.id)} onClick={() => togglePin(expedition.id)}>
+                    {isPinned(expedition.id) ? "★ お気に入り済み" : "☆ お気に入りに追加"}
+                  </button>
+                  {!waiting && (
+                    <>
+                      <button type="button" className="secondary" disabled={isMonthlyDone(expedition.id)} onClick={() => {
+                        if (window.confirm("このタイマーを終了し、同じ遠征を最初から計測しますか？")) startFleet(fleet);
+                      }}>同じ遠征で再スタート</button>
+                      <button type="button" className="ghost" onClick={() => {
+                        if (window.confirm("この艦隊のタイマーと完了通知の予約を取り消しますか？")) clearFleet(fleet.fleetNo);
+                      }}>タイマーをクリア</button>
+                    </>
+                  )}
                 </div>
-                <small className="fleet-progress-label">{running || completed ? `進捗 ${Math.round(fleetProgress)}%` : "開始すると進捗を表示"}</small>
-              </div>
-
-              <dl className="mini-info">
-                <div>
-                  <dt>終了予定</dt>
-                  <dd>{formatDateTime(fleet.endAt)}</dd>
-                </div>
-                <div>
-                  <dt>補正込み報酬</dt>
-                  <dd>{formatResources(adjustedRewards)}</dd>
-                </div>
-                <div>
-                  <dt>補正込み時給</dt>
-                  <dd>{formatResources(rate)} / h</dd>
-                </div>
-              </dl>
-
-              {earlyReturnWindow && !fleet.recordedAt && (
-                <div className="early-return-card">
-                  <div>
-                    <strong>帰投可能（残り1分以内）</strong>
-                    <p>艦これでは終了予定の約1分前に帰投します。母港で結果を確認できたら、そのまま記録してタイマーを終了できます。</p>
-                  </div>
-                  <div className="early-return-actions">
-                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>
-                      成功で帰投記録
-                    </button>
-                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={recordingFleetNos.includes(fleet.fleetNo)}>
-                      大成功で帰投記録
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {completed && (
-                <div className="next-actions">
-                  <strong>次にやること</strong>
-                  <ol>
-                    {getNextActions(expedition).map((action) => (
-                      <li key={action}>{action}</li>
-                    ))}
-                  </ol>
-                  <div className="record-actions">
-                    <button type="button" onClick={() => recordFleetResult(fleet, "success")} disabled={Boolean(fleet.recordedAt) || recordingFleetNos.includes(fleet.fleetNo)}>
-                      成功で記録
-                    </button>
-                    <button type="button" onClick={() => recordFleetResult(fleet, "great")} disabled={Boolean(fleet.recordedAt) || recordingFleetNos.includes(fleet.fleetNo)}>
-                      大成功で記録
-                    </button>
-                  </div>
-                  {fleet.recordedAt && <p className="return-recorded">✓ 今日の獲得資材に記録済み。</p>}
-                </div>
-              )}
-
-              <div className="checkbox-row">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={fleet.discordNotify}
-                    onChange={(event) => toggleFleetNotification(fleet, event.target.checked)}
-                  />
-                  通知予約
-                </label>
-              </div>
-
-              <div className="manual-timer-row">
-                <label>
-                  <span>押し忘れ用：残り分</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={expedition.durationMinutes}
-                    value={manualTimerInputs[fleet.fleetNo]}
-                    onChange={(event) => setManualTimerInputs((current) => ({ ...current, [fleet.fleetNo]: event.target.value }))}
-                    placeholder={`最大${expedition.durationMinutes}`}
-                  />
-                </label>
-                <button type="button" className="secondary" onClick={() => startFleetWithManualRemaining(fleet)}>残り時間でセット</button>
-              </div>
-
-              <div className="button-row">
-                <button onClick={() => startFleet(fleet)}>開始</button>
-                <button className="secondary" onClick={() => restartFleet(fleet)} disabled={!fleet.endAt}>
-                  同じ遠征を再セット
-                </button>
-                <button className="ghost" onClick={() => clearFleet(fleet.fleetNo)}>
-                  クリア
-                </button>
-              </div>
-
-              <button className="detail-link" onClick={() => jumpToExpeditionDetail(expedition.id)}>
-                成功条件・大成功条件を見る
-              </button>
+              </details>
             </article>
           );
         })}
@@ -4163,7 +4098,7 @@ function App() {
         </summary>
         <section className="two-column fold-content">
         <article className="detail-card">
-          <button type="button" className="back-to-list" onClick={returnToExpeditionList}>← {detailOriginRef.current === "assist" ? "おすすめに戻る" : "一覧に戻る"}</button>
+          <button type="button" className="back-to-list" onClick={returnToExpeditionList}>← {detailOriginTabRef.current !== "expeditions" ? `${pageTitleMap[detailOriginTabRef.current]}に戻る` : detailOriginRef.current === "assist" ? "おすすめに戻る" : "一覧に戻る"}</button>
           <div className="section-head">
             <div>
               <p className="eyebrow">Expedition Detail</p>
@@ -4182,6 +4117,16 @@ function App() {
           </div>
 
           <CombatBadge expedition={selectedDetail} />
+          <details className="simple-disclosure">
+            <summary>タイマーにセット</summary>
+            <div className="simple-secondary-actions">
+              {fleets.map(fleet => (
+                <button type="button" className="secondary" key={fleet.fleetNo}
+                  disabled={isMonthlyDone(selectedDetail.id) || Boolean(fleet.endAt && !fleet.recordedAt)}
+                  onClick={() => assignExpedition(selectedDetail.id, fleet)}>第{fleet.fleetNo}艦隊</button>
+              ))}
+            </div>
+          </details>
           <MonthlyLinks expedition={selectedDetail} list={expeditions} done={currentMonthlyDoneIds} onSelect={jumpToExpeditionDetail} />
           <div className="resource-grid">
             <div>燃料<strong>{selectedAdjustedRewards.fuel}</strong><small>{selectedAdjustedRate.fuel}/h</small></div>
@@ -4305,85 +4250,65 @@ function App() {
         </article>
 
         <aside className="list-card">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Search</p>
-              <h2>遠征一覧 <small>全{totalExpeditionCount}件</small></h2>
-            </div>
+          <input className="simple-expedition-search" type="search" value={keyword} onChange={event => setKeyword(event.target.value)}
+            placeholder="遠征名・番号で検索" aria-label="遠征名・番号で検索" />
+          <div className="simple-list-modes" role="group" aria-label="遠征一覧の表示">
+            {([["all", "一覧"], ["favorites", "お気に入り"], ["monthly", "マンスリー"]] as const).map(([mode, label]) => (
+              <button type="button" key={mode} aria-pressed={listMode === mode} onClick={() => {
+                setListMode(mode);
+                setTagFilter("すべて");
+                setEditingPins(false);
+                document.querySelector(".expedition-list")?.scrollTo({ top: 0 });
+              }}>{label}</button>
+            ))}
           </div>
-          <div className="search-row search-row-v04">
-            <input
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder="遠征名・IDで検索" aria-label="遠征名・IDで検索"
-            />
-            <select aria-label="遠征の絞り込み" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
-              <option>すべて</option>
-              <option>ピン留め</option>
-              {expeditionTags.map((tag) => (
-                <option key={tag}>{tag}</option>
-              ))}
-            </select>
-            <select aria-label="遠征の並び順" value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
-              {sortModes.map((mode) => (
-                <option key={mode}>{mode}</option>
-              ))}
-            </select>
-          </div>
-          <section className="pinned-box">
-            <div className="section-head compact">
-              <div>
-                <p className="eyebrow">Pinned</p>
-                <h3>よく使う遠征</h3>
-              </div>
-              <div className="pinned-toolbar"><small>{pinnedExpeditions.length}件</small><button type="button" aria-pressed={editingPins} onClick={() => setEditingPins(v => !v)}>{editingPins ? "並べ替え完了" : "並べ替え"}</button></div>
-            </div>
-            {pinnedExpeditions.length === 0 ? (
-              <p className="empty-text">☆ボタンでよく使う遠征をピン留めできるよ。</p>
-            ) : (
-              <div className="pinned-list pinned-list-editable">
-                {(showAllPinned || editingPins ? pinnedExpeditions : pinnedExpeditions.slice(0, 3)).map((expedition, index) => (
-                  <div className={`pinned-edit-item ${editingPins ? "editing" : "browse"} ${selectedDetailId === expedition.id ? "selected" : ""}`} key={`quick-${expedition.id}`}>
-                    <button
-                      className="pinned-main"
-                      type="button"
-                      onClick={() => jumpToExpeditionDetail(expedition.id)}
-                    >
-                      <span>{expedition.id}: {expedition.name}</span>
-                      <small>{minutesToLabel(expedition.durationMinutes)} / {expedition.purposeTags.slice(0, 3).join("・")}</small>
-                    </button>
-                    <CombatBadge expedition={expedition} />
-                    {editingPins && <div className="pin-order-actions">
-                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, -1)} disabled={index === 0} aria-label={`${expedition.name}を上へ`}>↑</button>
-                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, 1)} disabled={index === pinnedExpeditions.length - 1} aria-label={`${expedition.name}を下へ`}>↓</button>
-                    </div>}
-                  </div>
-                ))}
-              </div>
+          <div className="simple-list-actions">
+            {listMode === "favorites" && pinnedExpeditions.length > 1 && (
+              <button type="button" className="ghost" aria-pressed={editingPins} onClick={() => {
+                if (!editingPins) { setKeyword(""); setTagFilter("すべて"); }
+                setEditingPins(!editingPins);
+              }}>{editingPins ? "並べ替え完了" : "並べ替え"}</button>
             )}
-            {pinnedExpeditions.length > 3 && !editingPins && <button type="button" className="show-more" aria-expanded={showAllPinned} onClick={() => setShowAllPinned(v => !v)}>{showAllPinned ? "3件にたたむ" : `すべて表示（${pinnedExpeditions.length}件）`}</button>}
-          </section>
-
-          <label className="list-density-toggle"><input type="checkbox" checked={showListDetails} onChange={e => setShowListDetails(e.target.checked)} />タグ・時給も表示</label>
-          <p className="result-count">表示中：{filteredExpeditions.length}件 / 全{totalExpeditionCount}件</p>
+            {listMode === "monthly" && <button type="button" className="ghost" onClick={() => jumpToAssist("monthly-section")}>マンスリーのおすすめ ›</button>}
+            {listMode !== "monthly" && <button type="button" className="ghost" onClick={() => jumpToAssist("preset-section")}>おすすめ・プリセット ›</button>}
+          </div>
+          <details className="simple-disclosure">
+            <summary>絞り込み・表示設定</summary>
+            <div className="search-row search-row-v04">
+              <select aria-label="遠征の絞り込み" value={tagFilter} onChange={event => setTagFilter(event.target.value)}>
+                <option>すべて</option>
+                {expeditionTags.map(tag => <option key={tag}>{tag}</option>)}
+              </select>
+              {listMode !== "favorites" && <select aria-label="遠征の並び順" value={sortMode} onChange={event => setSortMode(event.target.value as SortMode)}>
+                {sortModes.map(mode => <option key={mode}>{mode}</option>)}
+              </select>}
+              <label className="list-density-toggle"><input type="checkbox" checked={showListDetails} onChange={event => setShowListDetails(event.target.checked)} />タグ・時給も表示</label>
+            </div>
+          </details>
+          {filteredExpeditions.length === 0 && <p className="empty-text">
+            {listMode === "favorites" && !pinnedExpeditions.length ? "☆で遠征をお気に入りに追加できます。" : "該当する遠征がありません。"}
+          </p>}
           <div className="expedition-list">
-            {filteredExpeditions.map((expedition) => {
-              const rate = getAdjustedResourceRate(expedition, rewardSettings);
+            {(editingPins ? pinnedExpeditions : filteredExpeditions).map((expedition, index) => {
               return (
                 <div className={`expedition-item ${selectedDetailId === expedition.id ? "selected" : ""} ${isMonthlyDone(expedition.id) ? "monthly-done" : ""}`} key={expedition.id}>
                   <button className="expedition-main" onClick={() => jumpToExpeditionDetail(expedition.id)}>
                     <span>{isMonthlyDone(expedition.id) ? "済 " : ""}{expedition.id}: {expedition.name}</span>
-                    <small>{minutesToLabel(expedition.durationMinutes)} ・ {expedition.purposeTags.filter(tag => ["燃料", "弾薬", "鋼材", "ボーキ", "ネジ", "バケツ", "伊良湖"].includes(tag)).slice(0, 3).join("・")}</small>
-                    {showListDetails && <small>{expedition.purposeTags.join("・")}<br />時給目安：{formatResources(rate)} / h</small>}
-                    <CombatBadge expedition={expedition} />
+                    <small>{minutesToLabel(expedition.durationMinutes)}</small>
+                    {isMonthlyExpedition(expedition) && <CombatBadge expedition={expedition} />}
+                    {showListDetails && <small>{expedition.purposeTags.join("・")}<br />時給目安：{formatResources(getAdjustedResourceRate(expedition, rewardSettings))} / h</small>}
                   </button>
-                  <button
-                    className={`pin-button ${isPinned(expedition.id) ? "active" : ""}`}
-                    onClick={() => togglePin(expedition.id)}
-                    title={isPinned(expedition.id) ? "ピン留め解除" : "ピン留め"}
-                  >
-                    {isPinned(expedition.id) ? "★" : "☆"}
-                  </button>
+                  {editingPins ? (
+                    <div className="pin-order-actions">
+                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, -1)} disabled={index === 0} aria-label={`${expedition.name}を上へ`}>↑</button>
+                      <button type="button" className="tiny" onClick={() => movePinned(expedition.id, 1)} disabled={index === pinnedExpeditions.length - 1} aria-label={`${expedition.name}を下へ`}>↓</button>
+                    </div>
+                  ) : (
+                    <button type="button" className={`pin-button ${isPinned(expedition.id) ? "active" : ""}`} onClick={() => togglePin(expedition.id)}
+                      aria-label={`${expedition.name}のお気に入り`} aria-pressed={isPinned(expedition.id)}>
+                      {isPinned(expedition.id) ? "★" : "☆"}
+                    </button>
+                  )}
                 </div>
               );
             })}
