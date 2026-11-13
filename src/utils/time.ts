@@ -18,6 +18,18 @@ export function formatDateTime(timestamp: number | null): string {
   }).format(new Date(timestamp));
 }
 
+const arrivalTimeFormat = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit" });
+const arrivalDateTimeFormat = new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+export function formatFleetArrival(timestamp: number, now: number): string {
+  const arrival = new Date(timestamp);
+  const today = new Date(now);
+  const sameDay = arrival.getFullYear() === today.getFullYear()
+    && arrival.getMonth() === today.getMonth()
+    && arrival.getDate() === today.getDate();
+  return (sameDay ? arrivalTimeFormat : arrivalDateTimeFormat).format(arrival);
+}
+
 export function formatRemaining(ms: number): string {
   const safeMs = Math.max(0, ms);
   const totalSeconds = Math.floor(safeMs / 1000);

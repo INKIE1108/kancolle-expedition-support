@@ -1,0 +1,303 @@
+/* Compact daily-use screens. Use the existing light and dark theme tokens. */
+.app-shell {
+  --action-blue: #1c5978;
+  --action-text: #fff;
+  --action-soft: #e3eff7;
+  --return-text: #21654c;
+  --return-bg: #e4f4eb;
+}
+[data-theme="dark"] .app-shell {
+  --action-blue: #8bcbea;
+  --action-text: #112735;
+  --action-soft: #253e51;
+  --return-text: #a9e5bc;
+  --return-bg: #203d2d;
+}
+
+.app-shell .ios-app-header {
+  margin-bottom: 8px !important;
+}
+.app-shell > .sync-feedback {
+  order: 1 !important;
+}
+.app-shell > .sync-feedback strong {
+  color: var(--ui-text);
+}
+
+.app-shell .simple-fleet-card {
+  min-width: 0;
+  display: block;
+  gap: 0 !important;
+  padding: clamp(15px, 4vw, 22px) !important;
+  min-height: 0 !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  background: var(--ui-surface) !important;
+}
+.app-shell .simple-fleet-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+.app-shell .simple-fleet-heading h2 {
+  margin: 0 !important;
+  font-size: 18px !important;
+}
+.app-shell .simple-expedition-name,
+.app-shell .simple-fleet-muted {
+  margin: 0;
+  color: var(--ui-text-secondary);
+  overflow-wrap: anywhere;
+}
+.app-shell .simple-fleet-muted {
+  font-size: 13px;
+  margin: 8px 0;
+}
+.app-shell .simple-fleet-choice {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.app-shell .simple-fleet-choice select {
+  min-width: 0;
+  min-height: 44px;
+}
+.app-shell .simple-countdown {
+  text-align: center;
+  padding: 18px 0 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-text-secondary);
+  font-size: 13px;
+}
+.app-shell .simple-countdown > strong {
+  display: block;
+  margin: 4px 0 14px;
+  color: var(--ui-text);
+  font-size: clamp(38px, 12vw, 54px);
+  font-weight: 750;
+  letter-spacing: -.04em;
+  line-height: 1.05;
+}
+.app-shell .simple-countdown p {
+  margin: 10px 0 0;
+}
+.app-shell .simple-countdown p strong {
+  margin-left: 6px;
+  color: var(--ui-text);
+}
+.app-shell .simple-progress {
+  height: 5px;
+  border-radius: 5px;
+  background: var(--action-soft);
+  overflow: hidden;
+}
+.app-shell .simple-progress span {
+  display: block;
+  height: 100%;
+  background: var(--action-blue);
+  border-radius: inherit;
+}
+.app-shell .simple-primary {
+  width: 100%;
+  min-height: 46px !important;
+  margin: 5px 0 8px;
+  border: 0 !important;
+  border-radius: 10px !important;
+  color: var(--action-text) !important;
+  background: var(--action-blue) !important;
+}
+.app-shell .simple-primary:disabled {
+  opacity: .55;
+}
+.app-shell .simple-result-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.app-shell .simple-result-picker button {
+  min-height: 44px !important;
+  padding-inline: 4px !important;
+}
+.app-shell .simple-notify-summary,
+.app-shell .settings-sync-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ui-border-soft);
+  margin: 0;
+  font-size: 13px;
+}
+.app-shell .simple-notify-summary [role="status"],
+.app-shell .settings-sync-status small {
+  color: var(--ui-text-secondary);
+}
+.app-shell .simple-disclosure {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--ui-border-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell .simple-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 0;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.app-shell .simple-disclosure > summary::-webkit-details-marker { display: none; }
+.app-shell .simple-disclosure > summary::after {
+  content: "";
+  flex: 0 0 7px;
+  height: 7px;
+  margin: 0 4px 0 auto;
+  border: solid var(--ui-text-secondary);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+}
+.app-shell .simple-disclosure[open] > summary::after { transform: rotate(45deg); }
+.app-shell .simple-disclosure > summary small {
+  margin-left: auto;
+  color: var(--ui-text-secondary);
+  font-weight: 400;
+}
+.app-shell .simple-disclosure > summary small + span,
+.app-shell .simple-disclosure > summary:has(small)::after { margin-left: 4px; }
+.app-shell .simple-inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.app-shell .simple-inline-check input { width: auto !important; }
+.app-shell .simple-manual-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(75px, auto);
+  align-items: end;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.app-shell .simple-manual-form label { display: grid; gap: 4px; min-width: 0; font-size: 13px; }
+.app-shell .simple-manual-form :is(input, button) { min-height: 44px; }
+.app-shell .simple-fleet-details { margin: 0 0 8px; font-size: 13px; }
+.app-shell .simple-fleet-details > div { padding-block: 4px; }
+.app-shell .simple-fleet-details dt { color: var(--ui-text-secondary); }
+.app-shell .simple-fleet-details dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.app-shell .simple-secondary-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.app-shell .simple-secondary-actions button { min-height: 44px; }
+
+.app-shell.mobile-tab-home .dashboard-strip {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+}
+.app-shell .fleet-overview { grid-row: span 2; }
+.app-shell .fleet-overview h2 { margin: 0 0 6px !important; font-size: 18px !important; }
+.app-shell .fleet-overview-row {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px !important;
+  padding: 8px 0 !important;
+  text-align: left;
+  color: var(--ui-text) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.app-shell .fleet-overview-row + .fleet-overview-row { border-top: 1px solid var(--ui-border-soft) !important; }
+.app-shell .fleet-overview-row > span:first-child { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.app-shell .fleet-overview-row small { color: var(--ui-text-secondary); font-size: 12px; }
+.app-shell .fleet-overview-status {
+  flex: none;
+  border-radius: 16px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--action-blue);
+  background: var(--action-soft);
+}
+.app-shell .fleet-overview-status.return-ready { color: var(--return-text); background: var(--return-bg); }
+.app-shell .resource-command-card .mini-dashboard-resources { gap: 5px !important; }
+.app-shell .resource-command-card .resource-summary-button {
+  min-width: 0 !important;
+  padding: 6px 3px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.app-shell .resource-command-card .resource-summary-button strong { overflow-wrap: anywhere; }
+
+.app-shell #detail-search-section .simple-expedition-search { width: 100%; min-height: 46px; }
+.app-shell .simple-list-modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 8px 0 2px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.app-shell .simple-list-modes button {
+  min-height: 44px !important;
+  padding: 4px 2px !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ui-text-secondary) !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+}
+.app-shell .simple-list-modes button[aria-pressed="true"] {
+  border-bottom-color: var(--action-blue) !important;
+  color: var(--action-blue) !important;
+}
+.app-shell .simple-list-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.app-shell .simple-list-actions button { min-height: 44px !important; padding-inline: 5px !important; }
+.app-shell #detail-search-section .expedition-item { grid-template-columns: minmax(0, 1fr) auto !important; }
+.app-shell #detail-search-section .expedition-item .expedition-main {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.app-shell #detail-search-section .expedition-main > span:first-child { flex: 1 1 150px; overflow-wrap: anywhere; }
+.app-shell #detail-search-section .expedition-main > small:first-of-type { white-space: nowrap; }
+.app-shell #detail-search-section .expedition-main > small:not(:first-of-type) { flex-basis: 100%; }
+.app-shell #detail-search-section .expedition-item .pin-order-actions { display: flex; flex-wrap: wrap; gap: 3px; }
+.app-shell #detail-search-section .expedition-item .pin-order-actions button { min-height: 44px; }
+
+.app-shell #notification-section .settings-content {
+  display: grid;
+  gap: 4px;
+}
+.app-shell #notification-section .settings-content h2 { margin: 0 0 8px; }
+.app-shell #notification-section .simple-disclosure > :is(.label, .device-panel, button) { margin-bottom: 10px; }
+
+@media (max-width: 640px) {
+  .app-shell.mobile-tab-home .dashboard-strip { grid-template-columns: minmax(0, 1fr) !important; }
+  .app-shell .fleet-overview { grid-row: auto; }
+}
+
+.app-shell .simple-fleet-card:has(.simple-countdown) .simple-reward-settings {
+  margin-top: 0;
+}
+.app-shell .simple-disclosure > summary small {
+  text-align: right;
+}

@@ -149,9 +149,10 @@ export function sanitizeMonthlyChecks(checks: Record<string, string[]>, list: Ex
 
 // Legacy manual checks have no individual timestamps. Preserve the latest calendar-month
 // checks in the period containing their snapshot; reconstruct dated records accurately.
-export function migrateMonthlyChecks(old: Record<string, string[]>, history: { expeditionId: string; completedAt: number }[], list: Expedition[], savedAt = Date.now()) {
+export function migrateMonthlyChecks(old: Record<string, string[]>, history: { expeditionId: string; completedAt: number; result?: string }[], list: Expedition[], savedAt = Date.now()) {
   const migrated: Record<string, string[]> = {};
   for (const record of history) {
+    if (record.result === "failure") continue;
     const key = monthlyPeriodKey(record.completedAt);
     migrated[key] = [...new Set([...(migrated[key] ?? []), record.expeditionId])];
   }

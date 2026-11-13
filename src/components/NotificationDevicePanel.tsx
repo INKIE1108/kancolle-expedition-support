@@ -79,7 +79,8 @@ export function NotificationDevicePanel({
     try {
       setBusy(true);
       if (onSendTestNotification) {
-        await onSendTestNotification();
+        const sent = await onSendTestNotification();
+        if (sent === false) throw new Error("端末通知を表示できませんでした。通知の許可を確認してください。");
       }
       await markCurrentDeviceTested(supabase, userId);
       await refresh();

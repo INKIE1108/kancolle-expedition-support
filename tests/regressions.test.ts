@@ -153,3 +153,9 @@ test('混入済みのv2チェックを補正し、通常遠征は汚れた入力
  assert.equal(isMonthlyCompleted(list.find(e => e.id === '43'), corrupt['2026-08']), true);
  assert.equal(isMonthlyCompleted(undefined, ['unknown']), false);
 });
+
+test('失敗したマンスリー帰投は旧履歴から実施済みに移行しない', () => {
+ const completedAt = Date.parse('2026-09-16T00:00:00Z');
+ const history = [{ expeditionId: 'E1', completedAt, result: 'failure' }, { expeditionId: 'E2', completedAt, result: 'great' }];
+ assert.deepEqual(migrateMonthlyChecks({}, history, list, completedAt), { '2026-09': ['E2'] });
+});
